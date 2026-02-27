@@ -1,0 +1,392 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   CHARTE GRAPHIQUE ARTCI
+   ============================================ */
+
+:root {
+  /* Couleurs principales */
+  --artci-orange: #FF8C00;
+  --artci-green: #228B22;
+  --artci-black: #000000;
+  --artci-white: #FFFFFF;
+  --artci-gray-light: #F5F5F5;
+  --artci-gray: #666666;
+  
+  /* Statuts de conformité */
+  --status-conforme: #228B22;
+  --status-achevee: #FF8C00;
+  --status-encours: #4A90E2;
+  --status-rejete: #DC143C;
+  
+  /* Autres couleurs */
+  --color-warning: #FFA500;
+  --color-info: #4A90E2;
+}
+
+/* Reset & Base */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background-color: var(--artci-gray-light);
+  color: var(--artci-black);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+/* Typography */
+h1 {
+  font-size: 32px;
+  font-weight: bold;
+  color: var(--artci-orange);
+}
+
+h2 {
+  font-size: 28px;
+  font-weight: bold;
+  color: var(--artci-green);
+}
+
+h3 {
+  font-size: 24px;
+  font-weight: bold;
+  color: var(--artci-black);
+}
+
+/* Navbar ARTCI Standard */
+.navbar-artci {
+  background-color: var(--artci-white);
+  border-bottom: 3px solid var(--artci-orange);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.navbar-artci a {
+  color: var(--artci-black);
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.navbar-artci a:hover {
+  background-color: var(--artci-orange);
+  color: var(--artci-white);
+}
+
+.navbar-artci a.nav-logo:hover {
+  background-color: transparent;
+  color: var(--artci-black);
+}
+
+/* Buttons */
+.btn {
+  padding: 12px 24px;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.btn-primary {
+  background-color: var(--artci-orange);
+  color: var(--artci-white);
+}
+
+.btn-primary:hover {
+  background-color: #E67E00;
+}
+
+.btn-secondary {
+  background-color: var(--artci-green);
+  color: var(--artci-white);
+}
+
+.btn-secondary:hover {
+  background-color: #1a6b1a;
+}
+
+.btn-outline {
+  background-color: transparent;
+  color: var(--artci-orange);
+  border: 2px solid var(--artci-orange);
+}
+
+.btn-outline:hover {
+  background-color: var(--artci-orange);
+  color: var(--artci-white);
+}
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badge-conforme {
+  background-color: var(--status-conforme);
+  color: var(--artci-white);
+}
+
+.badge-achevee {
+  background-color: var(--status-achevee);
+  color: var(--artci-white);
+}
+
+.badge-encours {
+  background-color: var(--status-encours);
+  color: var(--artci-white);
+}
+
+.badge-rejete {
+  background-color: var(--status-rejete);
+  color: var(--artci-white);
+}
+
+/* Cards */
+.card {
+  background-color: var(--artci-white);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  padding: 20px;
+  transition: all 0.2s;
+}
+
+.card:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+
+.card-orange {
+  border-left: 4px solid var(--artci-orange);
+}
+
+.card-green {
+  border-left: 4px solid var(--artci-green);
+}
+
+/* Table */
+.table-container {
+  background-color: var(--artci-white);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+table thead {
+  background-color: var(--artci-orange);
+  color: var(--artci-white);
+}
+
+table th, table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+table tbody tr:hover {
+  background-color: #f9f9f9;
+}
+
+/* Forms */
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: var(--artci-black);
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--artci-orange);
+}
+
+/* Leaflet Map Customization */
+.leaflet-container {
+  height: 100%;
+  border-radius: 8px;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 8px;
+  padding: 0;
+}
+
+.leaflet-popup-content {
+  margin: 0;
+}
+
+.leaflet-popup-content a.popup-btn {
+  color: #fff !important;
+}
+
+/* Custom Marker Color */
+.marker-orange {
+  filter: hue-rotate(0deg) saturate(200%);
+}
+
+/* Progress Bar */
+.progress {
+  background-color: #e0e0e0;
+  border-radius: 10px;
+  height: 20px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--artci-orange), var(--artci-green));
+  transition: width 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--artci-white);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Stepper */
+.stepper {
+  display: flex;
+  justify-content: space-between;
+  margin: 30px 0;
+  position: relative;
+}
+
+.stepper::before {
+  content: '';
+  position: absolute;
+  top: 20px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: #ddd;
+  z-index: 0;
+}
+
+.step {
+  flex: 1;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+.step-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #e0e0e0;
+  color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 10px;
+  font-weight: bold;
+  border: 3px solid var(--artci-white);
+}
+
+.step.active .step-circle {
+  background-color: var(--artci-orange);
+  color: var(--artci-white);
+}
+
+.step.completed .step-circle {
+  background-color: var(--artci-green);
+  color: var(--artci-white);
+}
+
+/* Alerts */
+.alert {
+  padding: 15px 20px;
+  border-radius: 4px;
+  margin: 15px 0;
+  border-left: 4px solid;
+}
+
+.alert-info {
+  background-color: #E3F2FD;
+  border-left-color: #2196F3;
+  color: #1565C0;
+}
+
+.alert-success {
+  background-color: #E8F5E9;
+  border-left-color: #4CAF50;
+  color: #2E7D32;
+}
+
+.alert-warning {
+  background-color: #FFF3E0;
+  border-left-color: #FF9800;
+  color: #E65100;
+}
+
+.alert-danger {
+  background-color: #FFEBEE;
+  border-left-color: #F44336;
+  color: #C62828;
+}
+
+/* Loading Spinner */
+.spinner {
+  border: 4px solid rgba(255, 140, 0, 0.1);
+  border-top: 4px solid var(--artci-orange);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Utility Classes */
+.text-orange {
+  color: var(--artci-orange);
+}
+
+.text-green {
+  color: var(--artci-green);
+}
+
+.bg-orange {
+  background-color: var(--artci-orange);
+}
+
+.bg-green {
+  background-color: var(--artci-green);
+}
+
+.border-orange {
+  border-color: var(--artci-orange);
+}
+
+.border-green {
+  border-color: var(--artci-green);
+}

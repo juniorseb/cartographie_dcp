@@ -1,0 +1,28 @@
+databases:
+  - name: artci-dcp-db
+    plan: free
+    databaseName: artci_dcp
+    region: frankfurt
+
+services:
+  - type: web
+    name: artci-dcp-api
+    plan: free
+    runtime: python
+    region: frankfurt
+    rootDir: backend
+    buildCommand: chmod +x build.sh && ./build.sh
+    startCommand: gunicorn run:app -c gunicorn.conf.py
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: artci-dcp-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: CORS_ORIGINS
+        sync: false
