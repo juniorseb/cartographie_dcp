@@ -390,3 +390,88 @@ table tbody tr:hover {
 .border-green {
   border-color: var(--artci-green);
 }
+
+/* ============================================
+   MOBILE: BOTTOM SHEET & CARTE
+   ============================================ */
+
+/* Bottom sheet slide-up animation */
+.bottom-sheet-enter {
+  animation: slideUp 400ms ease-out forwards;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+/* Bottom sheet overlay fade-in */
+.bottom-sheet-overlay {
+  animation: fadeIn 300ms ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Hide scrollbar for horizontal stats scroll */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Mobile map: no border-radius, full bleed */
+@media (max-width: 1023px) {
+  .leaflet-container {
+    border-radius: 0;
+  }
+
+  /* Leaflet zoom controls: position right side, touch-friendly */
+  .leaflet-control-zoom a {
+    width: 40px !important;
+    height: 40px !important;
+    line-height: 40px !important;
+    font-size: 20px !important;
+  }
+
+  /* Bigger touch targets for layer control */
+  .leaflet-control-layers-toggle {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  /* Popup mobile : wider */
+  .leaflet-popup-content-wrapper {
+    max-width: 90vw;
+  }
+
+  .leaflet-popup-content {
+    max-width: none !important;
+  }
+
+  /* Account for sticky bottom filter bar */
+  .leaflet-control-attribution {
+    margin-bottom: 60px !important;
+  }
+}
+
+/* Carte page container heights */
+.carte-page-container {
+  height: calc(100vh - 70px);
+}
+
+@media (max-width: 767px) {
+  .carte-page-container {
+    height: calc(100vh - 60px);
+    /* Account for sticky bottom filter button */
+    padding-bottom: 80px;
+  }
+
+  .navbar-artci {
+    border-bottom-width: 2px;
+  }
+}

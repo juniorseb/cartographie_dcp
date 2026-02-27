@@ -18,11 +18,11 @@ export default function Navbar() {
   const { isAuthenticated, userType } = useAuth();
 
   return (
-    <nav className="navbar-artci fixed top-0 left-0 right-0 z-[1000] h-[70px]">
-      <div className="h-full px-[30px] flex items-center justify-between">
+    <nav className="navbar-artci fixed top-0 left-0 right-0 z-[1000] h-[60px] md:h-[70px]">
+      <div className="h-full px-4 md:px-[30px] flex items-center justify-between">
         {/* Logo + Titre */}
-        <Link to="/" className="nav-logo flex items-center gap-[15px] no-underline">
-          <img src={logoArtci} alt="Logo ARTCI" className="w-14 h-14 object-contain" />
+        <Link to="/" className="nav-logo flex items-center gap-2 md:gap-[15px] no-underline">
+          <img src={logoArtci} alt="Logo ARTCI" className="w-10 h-10 md:w-14 md:h-14 object-contain" />
           <span className="hidden sm:inline font-bold text-lg text-black">
             Cartographie DCP
           </span>

@@ -55,7 +55,7 @@ function FitBounds({ entites }: { entites: EntiteListItem[] }) {
 export default function MapView({ entites, isLoading }: MapProps) {
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center bg-gray-100 rounded-lg h-full min-h-[400px]">
+      <div className="flex items-center justify-center bg-gray-100 lg:rounded-lg h-full min-h-[250px] lg:min-h-[400px]">
         <Loading text="Chargement de la carte..." />
       </div>
     );
@@ -66,8 +66,8 @@ export default function MapView({ entites, isLoading }: MapProps) {
       center={DEFAULT_MAP_CENTER}
       zoom={DEFAULT_MAP_ZOOM}
       scrollWheelZoom={true}
-      style={{ height: '100%', minHeight: '400px' }}
-      className="rounded-lg z-0"
+      style={{ height: '100%', minHeight: '250px' }}
+      className="lg:rounded-lg z-0"
     >
       <LayersControl position="topright">
         <LayersControl.BaseLayer checked name="Plan">
