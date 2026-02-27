@@ -34,14 +34,14 @@ NOW = datetime.now(timezone.utc)
 
 
 def seed():
-    app = create_app('development')
+    env = os.getenv('FLASK_ENV', 'development')
+    app = create_app(env)
 
     with app.app_context():
         # ── Vérification doublons ────────────────────────────────────
         if User.query.first():
-            print("La base contient déjà des données. Abandon.")
-            print("Pour re-seeder, videz la base d'abord (flask db downgrade base && flask db upgrade).")
-            sys.exit(1)
+            print("La base contient déjà des données. Seed ignoré.")
+            return
 
         print("=== Seed ARTCI DCP Platform ===\n")
 
