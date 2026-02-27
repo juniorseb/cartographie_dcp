@@ -28,7 +28,9 @@ class Config:
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=7)
     
     # CORS
-    CORS_ORIGINS = os.getenv('CORS_ORIGINS', 'http://localhost:5173').split(',')
+    CORS_ORIGINS = [
+        o.strip().rstrip('/') for o in os.getenv('CORS_ORIGINS', 'http://localhost:5173').split(',') if o.strip()
+    ]
     
     # Email
     MAIL_SERVER = os.getenv('MAIL_SERVER', 'smtp.gmail.com')

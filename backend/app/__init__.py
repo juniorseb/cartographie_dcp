@@ -24,7 +24,13 @@ def create_app(config_name='default'):
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
-    cors.init_app(app, origins=app.config['CORS_ORIGINS'])
+    cors.init_app(
+        app,
+        origins=app.config['CORS_ORIGINS'],
+        supports_credentials=True,
+        allow_headers=['Content-Type', 'Authorization'],
+        methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    )
     mail.init_app(app)
 
     # JWT blocklist loader : vérifie si un token est blacklisté
