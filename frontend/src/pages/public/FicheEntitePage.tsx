@@ -1,5 +1,5 @@
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, MapPin, Shield, Users, FileText, UserCheck, Phone, Mail } from 'lucide-react';
+import { ArrowLeft, MapPin, Shield, Users, FileText, UserCheck, Phone, Mail, Download } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import * as publicApi from '@/api/public.api';
 import StatusBadge from '@/components/common/StatusBadge';
@@ -120,7 +120,23 @@ export default function FicheEntitePage() {
               )}
               <InfoRow label="CPD (DPO)" value={entite.a_dpo ? 'Oui' : 'Non'} />
               {entite.numero_autorisation && (
-                <InfoRow label="N° Autorisation" value={entite.numero_autorisation} />
+                <div className="flex flex-col sm:flex-row gap-1">
+                  <span className="text-sm font-semibold text-gray-600 sm:w-40 flex-shrink-0">N° Autorisation</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm">{entite.numero_autorisation}</span>
+                    {entite.autorisation_pdf_url && (
+                      <a
+                        href={`${import.meta.env.VITE_API_URL || '/api'}${entite.autorisation_pdf_url.replace('/api', '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-white bg-[var(--artci-orange)] px-2.5 py-1 rounded hover:bg-[#E67E00] transition-colors no-underline"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        PDF
+                      </a>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           </div>

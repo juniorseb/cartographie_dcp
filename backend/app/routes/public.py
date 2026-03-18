@@ -1,11 +1,15 @@
 """
 Routes publiques pour ARTCI DCP Platform.
-Entités conformes, statistiques, export.
-4 endpoints, pas d'authentification requise.
+Entités conformes, statistiques, export, téléchargement documents.
+5 endpoints, pas d'authentification requise.
 """
-from flask import Blueprint, request, send_file
+import os
+from flask import Blueprint, request, send_file, current_app
 from app.services.public_service import PublicService
 from app.utils.responses import success_response, error_response
+from app.extensions import db
+from app.models.documents_joints import DocumentJoint
+from app.models.enums import TypeDocumentEnum
 
 
 public_bp = Blueprint('public', __name__)
@@ -82,3 +86,26 @@ def export_entites():
         )
     except ValueError as e:
         return error_response(str(e), 400)
+
+
+@public_bp.route('/documents/<string:document_id>/download', methods=['GET'])
+def download_document(document_id):
+    """Télécharger un document public (autorisation uniquement)."""
+    doc = db.session.get(DocumentJoint, document_id)
+    if not doc:
+        return error_response('Document non trouvé.', 404)
+
+    # Seuls les documents de type "autorisation" sont téléchargeables publiquement
+    if doc.type_document != TypeDocumentEnum.autorisation:
+        return error_response('Ce document n\'est pas accessible publiquement.', 403)
+
+    file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], doc.chemin_fichier)
+    if not os.path.exists(file_path):
+        return error_response('Fichier introuvable sur le serveur.', 404)
+
+    return send_file(
+        file_path,
+        mimetype=doc.mime_type or 'application/pdf',
+        as_attachment=True,
+        download_name=doc.nom_fichier
+    )

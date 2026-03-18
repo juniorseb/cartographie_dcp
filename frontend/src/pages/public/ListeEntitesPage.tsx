@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Eye, MapPin, Phone, Mail, User } from 'lucide-react';
+import { Eye, MapPin, Phone, Mail, User, Download } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import * as publicApi from '@/api/public.api';
 import SearchBar from '@/components/common/SearchBar';
@@ -195,7 +195,21 @@ export default function ListeEntitesPage() {
                     {/* Autorisation */}
                     <td className="text-sm">
                       {entite.numero_autorisation ? (
-                        <span className="whitespace-nowrap">{entite.numero_autorisation}</span>
+                        <div className="space-y-1">
+                          <span className="whitespace-nowrap">{entite.numero_autorisation}</span>
+                          {entite.autorisation_pdf_url && (
+                            <a
+                              href={`${import.meta.env.VITE_API_URL || '/api'}${entite.autorisation_pdf_url.replace('/api', '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1 text-[var(--artci-orange)] hover:underline text-xs font-semibold"
+                              title="Télécharger l'autorisation PDF"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                              PDF
+                            </a>
+                          )}
+                        </div>
                       ) : (
                         <span className="text-gray-300">-</span>
                       )}

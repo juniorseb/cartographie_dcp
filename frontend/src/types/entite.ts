@@ -26,6 +26,7 @@ export interface EntiteListItem {
   finalite_principale: string | null;
   finalites_top: { nom: string; pourcentage: number }[];
   numero_autorisation: string | null;
+  autorisation_pdf_url: string | null;
   createdAt: string;
 }
 
@@ -57,6 +58,7 @@ export interface EntitePublicDetail {
   score_conformite: number | null;
   a_dpo: boolean | null;
   numero_autorisation: string | null;
+  autorisation_pdf_url: string | null;
   latitude: number | null;
   longitude: number | null;
   contact: EntiteContact | null;

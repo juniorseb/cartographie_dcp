@@ -4,6 +4,7 @@ Le fichier le plus volumineux : couvre les 17 tables liées à EntiteBase.
 """
 from marshmallow import Schema, fields, validate
 from app.schemas.common import EnumField
+from app.models.enums import TypeDocumentEnum
 
 
 # ============================================================
@@ -289,6 +290,7 @@ class EntiteListOutputSchema(Schema):
     finalite_principale = fields.Method('get_finalite_principale')
     finalites_top = fields.Method('get_finalites_top')
     numero_autorisation = fields.Method('get_numero_autorisation')
+    autorisation_pdf_url = fields.Method('get_autorisation_pdf_url')
     createdAt = fields.DateTime()
 
     def get_statut_conformite(self, obj):
@@ -354,6 +356,14 @@ class EntiteListOutputSchema(Schema):
     def get_numero_autorisation(self, obj):
         return obj.workflow.numero_autorisation_artci if obj.workflow else None
 
+    def get_autorisation_pdf_url(self, obj):
+        """URL de téléchargement du document d'autorisation (s'il existe)."""
+        docs = list(obj.documents) if obj.documents else []
+        for doc in docs:
+            if doc.type_document == TypeDocumentEnum.autorisation:
+                return f"/api/public/documents/{doc.id}/download"
+        return None
+
 
 class EntiteDetailOutputSchema(Schema):
     """Détail complet d'une entité avec toutes les relations."""
@@ -411,6 +421,7 @@ class EntitePublicDetailSchema(Schema):
     latitude = fields.Method('get_latitude')
     longitude = fields.Method('get_longitude')
     numero_autorisation = fields.Method('get_numero_autorisation')
+    autorisation_pdf_url = fields.Method('get_autorisation_pdf_url')
     contact = fields.Nested(EntiteContactSchema, dump_default=None)
     dpos = fields.List(fields.Nested(DPOSchema))
     finalites = fields.List(fields.Nested(FinaliteBaseLegaleSchema))
@@ -434,6 +445,14 @@ class EntitePublicDetailSchema(Schema):
 
     def get_numero_autorisation(self, obj):
         return obj.workflow.numero_autorisation_artci if obj.workflow else None
+
+    def get_autorisation_pdf_url(self, obj):
+        """URL de téléchargement du document d'autorisation (s'il existe)."""
+        docs = list(obj.documents) if obj.documents else []
+        for doc in docs:
+            if doc.type_document == TypeDocumentEnum.autorisation:
+                return f"/api/public/documents/{doc.id}/download"
+        return None
 
 
 class EntiteFilterSchema(Schema):

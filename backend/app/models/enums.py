@@ -76,6 +76,7 @@ class TypeDocumentEnum(enum.Enum):
     statuts = 'statuts'
     attestation_fiscale = 'attestation_fiscale'
     rapport_activite = 'rapport_activite'
+    autorisation = 'autorisation'
     autre = 'autre'
 
 
