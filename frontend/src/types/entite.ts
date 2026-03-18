@@ -20,10 +20,25 @@ export interface EntiteListItem {
   latitude: number | null;
   longitude: number | null;
   a_dpo: boolean | null;
+  dpo_nom: string | null;
+  dpo_email: string | null;
+  dpo_telephone: string | null;
   finalite_principale: string | null;
   finalites_top: { nom: string; pourcentage: number }[];
   numero_autorisation: string | null;
   createdAt: string;
+}
+
+/** DPO / Correspondant Protection des Données */
+export interface DPOPublic {
+  id: string;
+  nom: string;
+  prenom?: string | null;
+  email?: string | null;
+  telephone?: string | null;
+  type: 'interne' | 'externe';
+  organisme?: string | null;
+  date_designation?: string | null;
 }
 
 /** Vue détail publique (EntitePublicDetailSchema) */
@@ -41,9 +56,11 @@ export interface EntitePublicDetail {
   statut_conformite: StatutConformite | null;
   score_conformite: number | null;
   a_dpo: boolean | null;
+  numero_autorisation: string | null;
   latitude: number | null;
   longitude: number | null;
   contact: EntiteContact | null;
+  dpos: DPOPublic[];
   finalites: FinaliteBaseLegale[];
 }
 

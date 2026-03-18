@@ -283,6 +283,9 @@ class EntiteListOutputSchema(Schema):
     latitude = fields.Method('get_latitude')
     longitude = fields.Method('get_longitude')
     a_dpo = fields.Method('get_a_dpo')
+    dpo_nom = fields.Method('get_dpo_nom')
+    dpo_email = fields.Method('get_dpo_email')
+    dpo_telephone = fields.Method('get_dpo_telephone')
     finalite_principale = fields.Method('get_finalite_principale')
     finalites_top = fields.Method('get_finalites_top')
     numero_autorisation = fields.Method('get_numero_autorisation')
@@ -307,6 +310,28 @@ class EntiteListOutputSchema(Schema):
 
     def get_a_dpo(self, obj):
         return obj.conformite.a_dpo if obj.conformite else None
+
+    def _get_first_dpo(self, obj):
+        """Retourne le premier DPO de l'entité (s'il existe)."""
+        dpos = list(obj.dpos) if obj.dpos else []
+        return dpos[0] if dpos else None
+
+    def get_dpo_nom(self, obj):
+        dpo = self._get_first_dpo(obj)
+        if dpo:
+            nom_complet = dpo.nom
+            if dpo.prenom:
+                nom_complet = f"{dpo.prenom} {dpo.nom}"
+            return nom_complet
+        return None
+
+    def get_dpo_email(self, obj):
+        dpo = self._get_first_dpo(obj)
+        return dpo.email if dpo else None
+
+    def get_dpo_telephone(self, obj):
+        dpo = self._get_first_dpo(obj)
+        return dpo.telephone if dpo else None
 
     def get_finalite_principale(self, obj):
         finalites = list(obj.finalites) if obj.finalites else []
@@ -385,7 +410,9 @@ class EntitePublicDetailSchema(Schema):
     a_dpo = fields.Method('get_a_dpo')
     latitude = fields.Method('get_latitude')
     longitude = fields.Method('get_longitude')
+    numero_autorisation = fields.Method('get_numero_autorisation')
     contact = fields.Nested(EntiteContactSchema, dump_default=None)
+    dpos = fields.List(fields.Nested(DPOSchema))
     finalites = fields.List(fields.Nested(FinaliteBaseLegaleSchema))
 
     def get_statut_conformite(self, obj):
@@ -404,6 +431,9 @@ class EntitePublicDetailSchema(Schema):
 
     def get_longitude(self, obj):
         return obj.localisation.longitude if obj.localisation else None
+
+    def get_numero_autorisation(self, obj):
+        return obj.workflow.numero_autorisation_artci if obj.workflow else None
 
 
 class EntiteFilterSchema(Schema):

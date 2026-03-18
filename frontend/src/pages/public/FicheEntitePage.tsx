@@ -1,5 +1,5 @@
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, MapPin, Shield, Users, FileText } from 'lucide-react';
+import { ArrowLeft, MapPin, Shield, Users, FileText, UserCheck, Phone, Mail } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import * as publicApi from '@/api/public.api';
 import StatusBadge from '@/components/common/StatusBadge';
@@ -119,8 +119,60 @@ export default function FicheEntitePage() {
                 </div>
               )}
               <InfoRow label="CPD (DPO)" value={entite.a_dpo ? 'Oui' : 'Non'} />
+              {entite.numero_autorisation && (
+                <InfoRow label="N° Autorisation" value={entite.numero_autorisation} />
+              )}
             </div>
           </div>
+
+          {/* DPO / Correspondant Protection des Données */}
+          {entite.dpos && entite.dpos.length > 0 && (
+            <div className="card">
+              <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                <UserCheck className="w-5 h-5 text-[var(--artci-green)]" />
+                Correspondant Protection des Données (DPO)
+              </h3>
+              <div className="space-y-4">
+                {entite.dpos.map((dpo, idx) => (
+                  <div key={dpo.id ?? idx} className={idx > 0 ? 'pt-4 border-t border-gray-200' : ''}>
+                    <div className="space-y-2">
+                      <InfoRow
+                        label="Nom"
+                        value={dpo.prenom ? `${dpo.prenom} ${dpo.nom}` : dpo.nom}
+                      />
+                      {dpo.email && (
+                        <div className="flex flex-col sm:flex-row gap-1">
+                          <span className="text-sm font-semibold text-gray-600 sm:w-40 flex-shrink-0">Email</span>
+                          <a
+                            href={`mailto:${dpo.email}`}
+                            className="text-sm text-[var(--artci-orange)] hover:underline flex items-center gap-1"
+                          >
+                            <Mail className="w-3.5 h-3.5" />
+                            {dpo.email}
+                          </a>
+                        </div>
+                      )}
+                      {dpo.telephone && (
+                        <div className="flex flex-col sm:flex-row gap-1">
+                          <span className="text-sm font-semibold text-gray-600 sm:w-40 flex-shrink-0">Téléphone</span>
+                          <a
+                            href={`tel:${dpo.telephone}`}
+                            className="text-sm text-[var(--artci-orange)] hover:underline flex items-center gap-1"
+                          >
+                            <Phone className="w-3.5 h-3.5" />
+                            {dpo.telephone}
+                          </a>
+                        </div>
+                      )}
+                      <InfoRow label="Type" value={dpo.type === 'interne' ? 'Interne' : 'Externe'} />
+                      {dpo.organisme && <InfoRow label="Organisme" value={dpo.organisme} />}
+                      {dpo.date_designation && <InfoRow label="Date désignation" value={dpo.date_designation} />}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Contact */}
@@ -144,7 +196,7 @@ export default function FicheEntitePage() {
         {entite.finalites && entite.finalites.length > 0 && (
           <div className="card">
             <h3 className="text-lg font-bold mb-4">Finalités de traitement</h3>
-            <div className="table-container">
+            <div className="table-container overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr>

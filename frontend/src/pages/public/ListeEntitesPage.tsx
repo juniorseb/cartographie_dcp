@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Eye, MapPin } from 'lucide-react';
+import { Eye, MapPin, Phone, Mail, User } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import * as publicApi from '@/api/public.api';
 import SearchBar from '@/components/common/SearchBar';
@@ -91,6 +91,11 @@ export default function ListeEntitesPage() {
         </div>
       </div>
 
+      {/* Indicateur scroll mobile */}
+      <p className="text-xs text-gray-400 mb-2 md:hidden flex items-center gap-1">
+        <span>&larr;</span> Glissez horizontalement pour voir toutes les colonnes <span>&rarr;</span>
+      </p>
+
       {/* Table */}
       {isLoading ? (
         <Loading fullPage text="Chargement des entités..." />
@@ -100,29 +105,30 @@ export default function ListeEntitesPage() {
         <EmptyState />
       ) : (
         <>
-          <div className="table-container overflow-x-auto">
-            <table className="w-full">
+          <div className="table-container overflow-x-auto -mx-4 md:mx-0">
+            <table className="w-full min-w-[1100px]">
               <thead>
                 <tr>
-                  <th>Dénomination</th>
-                  <th>Forme juridique</th>
-                  <th>Secteur</th>
-                  <th>Ville</th>
-                  <th>Géo</th>
-                  <th>Finalité principale</th>
-                  <th>CPD</th>
-                  <th>Autorisation</th>
-                  <th>Statut</th>
-                  <th>Actions</th>
+                  <th className="whitespace-nowrap">Dénomination</th>
+                  <th className="whitespace-nowrap">Forme juridique</th>
+                  <th className="whitespace-nowrap">Secteur</th>
+                  <th className="whitespace-nowrap">Ville</th>
+                  <th className="whitespace-nowrap">Géo</th>
+                  <th className="whitespace-nowrap">Finalité principale</th>
+                  <th className="whitespace-nowrap">CPD (DPO)</th>
+                  <th className="whitespace-nowrap">Coordonnées DPO</th>
+                  <th className="whitespace-nowrap">Autorisation</th>
+                  <th className="whitespace-nowrap">Statut</th>
+                  <th className="whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {data.items.map((entite) => (
                   <tr key={entite.id}>
-                    <td className="font-semibold">{entite.denomination}</td>
-                    <td className="text-sm">{entite.forme_juridique ?? '-'}</td>
-                    <td className="text-sm">{entite.secteur_activite ?? '-'}</td>
-                    <td className="text-sm">{entite.ville ?? '-'}</td>
+                    <td className="font-semibold whitespace-nowrap">{entite.denomination}</td>
+                    <td className="text-sm whitespace-nowrap">{entite.forme_juridique ?? '-'}</td>
+                    <td className="text-sm whitespace-nowrap">{entite.secteur_activite ?? '-'}</td>
+                    <td className="text-sm whitespace-nowrap">{entite.ville ?? '-'}</td>
                     <td>
                       {entite.latitude && entite.longitude ? (
                         <a
@@ -141,6 +147,7 @@ export default function ListeEntitesPage() {
                     <td className="text-sm max-w-[150px] truncate">
                       {entite.finalite_principale ?? '-'}
                     </td>
+                    {/* CPD (DPO) */}
                     <td className="text-sm">
                       {entite.a_dpo ? (
                         <span className="text-[var(--artci-green)] font-semibold">Oui</span>
@@ -148,14 +155,58 @@ export default function ListeEntitesPage() {
                         <span className="text-gray-400">Non</span>
                       )}
                     </td>
-                    <td className="text-sm">{entite.numero_autorisation ?? '-'}</td>
+                    {/* Coordonnées DPO */}
+                    <td className="text-sm">
+                      {entite.a_dpo && (entite.dpo_nom || entite.dpo_email || entite.dpo_telephone) ? (
+                        <div className="space-y-1 min-w-[180px]">
+                          {entite.dpo_nom && (
+                            <div className="flex items-center gap-1.5">
+                              <User className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                              <span className="truncate">{entite.dpo_nom}</span>
+                            </div>
+                          )}
+                          {entite.dpo_email && (
+                            <div className="flex items-center gap-1.5">
+                              <Mail className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                              <a
+                                href={`mailto:${entite.dpo_email}`}
+                                className="text-[var(--artci-orange)] hover:underline truncate"
+                              >
+                                {entite.dpo_email}
+                              </a>
+                            </div>
+                          )}
+                          {entite.dpo_telephone && (
+                            <div className="flex items-center gap-1.5">
+                              <Phone className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                              <a
+                                href={`tel:${entite.dpo_telephone}`}
+                                className="text-[var(--artci-orange)] hover:underline"
+                              >
+                                {entite.dpo_telephone}
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-gray-300">-</span>
+                      )}
+                    </td>
+                    {/* Autorisation */}
+                    <td className="text-sm">
+                      {entite.numero_autorisation ? (
+                        <span className="whitespace-nowrap">{entite.numero_autorisation}</span>
+                      ) : (
+                        <span className="text-gray-300">-</span>
+                      )}
+                    </td>
                     <td>
                       <StatusBadge statut={entite.statut_conformite} />
                     </td>
                     <td>
                       <Link
                         to={`/entites/${entite.id}`}
-                        className="text-[var(--artci-orange)] hover:underline flex items-center gap-1"
+                        className="text-[var(--artci-orange)] hover:underline flex items-center gap-1 whitespace-nowrap"
                       >
                         <Eye className="w-4 h-4" />
                         <span className="text-sm">Voir</span>
