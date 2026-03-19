@@ -2,9 +2,9 @@ import { cn } from '@/utils/cn';
 
 const FORM_PARTS = [
   { step: 1, label: 'Identification' },
-  { step: 2, label: 'Contact & Localisation' },
-  { step: 3, label: 'Protection des données' },
-  { step: 4, label: 'Traitements' },
+  { step: 2, label: 'Cadre juridique' },
+  { step: 3, label: 'Registre & Traitements' },
+  { step: 4, label: 'Sous-traitance & Transferts' },
   { step: 5, label: 'Sécurité' },
 ];
 
