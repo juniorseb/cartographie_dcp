@@ -22,6 +22,7 @@ class EntiteBase(UUIDMixin, TimestampMixin, db.Model):
     region = db.Column(db.String(100), index=True)
     telephone = db.Column(db.String(20))
     email = db.Column(db.String(255))
+    decret_creation = db.Column(db.String(255), nullable=True)
     origine_saisie = db.Column(
         db.Enum(OrigineSaisieEnum, name='origine_saisie_enum'), nullable=False
     )

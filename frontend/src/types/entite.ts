@@ -8,6 +8,7 @@ export interface EntiteListItem {
   id: string;
   denomination: string;
   numero_cc: string;
+  decret_creation: string | null;
   forme_juridique: string | null;
   secteur_activite: string | null;
   ville: string | null;
@@ -47,6 +48,7 @@ export interface EntitePublicDetail {
   id: string;
   denomination: string;
   numero_cc: string;
+  decret_creation: string | null;
   forme_juridique: string | null;
   secteur_activite: string | null;
   adresse: string | null;

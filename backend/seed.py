@@ -24,10 +24,11 @@ from app.models import (
     RegistreTraitement, FeedbackVerification,
     DemandeRapprochement, Renouvellement, Notification,
 )
+from app.models.documents_joints import DocumentJoint
 from app.models.enums import (
     RoleEnum, OrigineSaisieEnum, StatutWorkflowEnum, StatutConformiteEnum,
     TypeDPOEnum, BaseLegaleEnum, StatutAssignationEnum, TypeMesureEnum,
-    StatutRapprochementEnum, StatutRenouvellementEnum,
+    StatutRapprochementEnum, StatutRenouvellementEnum, TypeDocumentEnum,
 )
 
 NOW = datetime.now(timezone.utc)
@@ -240,10 +241,37 @@ def seed():
                 origine_saisie=OrigineSaisieEnum.saisie_artci,
                 publie_sur_carte=False,
             ),
+            # --- Administrations publiques (avec décret de création) ---
+            EntiteBase(
+                numero_cc='CI-ADM-2024-PUB-001',
+                denomination='Ministère de l\'Économie Numérique',
+                forme_juridique='Administration publique',
+                secteur_activite='Services',
+                adresse='Plateau, Tour C Administrative',
+                ville='Abidjan', region='Abidjan',
+                telephone='+225 27 20 22 00 00',
+                email='contact@numerique.gouv.ci',
+                decret_creation='Décret n°2021-297 du 09 juin 2021',
+                origine_saisie=OrigineSaisieEnum.saisie_artci,
+                publie_sur_carte=True,
+            ),
+            EntiteBase(
+                numero_cc='CI-ADM-2024-PUB-002',
+                denomination='CNPS - Caisse Nationale de Prévoyance Sociale',
+                forme_juridique='Établissement public',
+                secteur_activite='Services',
+                adresse='Avenue du Général de Gaulle, Plateau',
+                ville='Abidjan', region='Abidjan',
+                telephone='+225 27 20 25 45 00',
+                email='contact@cnps.ci',
+                decret_creation='Décret n°2000-487 du 12 juillet 2000',
+                origine_saisie=OrigineSaisieEnum.saisie_artci,
+                publie_sur_carte=True,
+            ),
         ]
         db.session.add_all(entites)
         db.session.flush()
-        e_orange, e_mtn, e_nsia, e_sgci, e_clinique, e_supermarche, e_transport, e_assurance = entites
+        e_orange, e_mtn, e_nsia, e_sgci, e_clinique, e_supermarche, e_transport, e_assurance, e_ministere, e_cnps = entites
         print(f"[OK] {len(entites)} entités créées")
 
         # ── 4. Workflows ─────────────────────────────────────────────
@@ -310,10 +338,121 @@ def seed():
                 statut=StatutWorkflowEnum.brouillon_artci,
                 createdBy=editor.id,
             ),
+            # Ministère : publie
+            EntiteWorkflow(
+                entite_id=e_ministere.id,
+                statut=StatutWorkflowEnum.publie,
+                numero_autorisation_artci='ART-2024-003',
+                date_soumission=NOW - timedelta(days=90),
+                date_validation=NOW - timedelta(days=60),
+                date_publication=NOW - timedelta(days=50),
+                createdBy=admin.id, assignedTo=editor.id,
+            ),
+            # CNPS : publie
+            EntiteWorkflow(
+                entite_id=e_cnps.id,
+                statut=StatutWorkflowEnum.publie,
+                numero_autorisation_artci='ART-2024-004',
+                date_soumission=NOW - timedelta(days=80),
+                date_validation=NOW - timedelta(days=55),
+                date_publication=NOW - timedelta(days=45),
+                createdBy=admin.id, assignedTo=editor.id,
+            ),
         ]
         db.session.add_all(workflows)
         db.session.flush()
-        print("[OK] 8 workflows créés")
+        print(f"[OK] {len(workflows)} workflows créés")
+
+        # ── 4b. Documents joints (autorisations PDF de test) ────────
+        # Créer le dossier uploads et un PDF de test
+        upload_dir = os.path.join(os.path.dirname(__file__), 'uploads', 'autorisations')
+        os.makedirs(upload_dir, exist_ok=True)
+
+        # Générer un PDF minimal pour les tests
+        def create_test_pdf(filename, titre):
+            filepath = os.path.join(upload_dir, filename)
+            if not os.path.exists(filepath):
+                # PDF minimal valide
+                content = f"""%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792]
+   /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 120 >>
+stream
+BT
+/F1 16 Tf
+50 700 Td
+({titre}) Tj
+0 -30 Td
+/F1 12 Tf
+(Document de test - ARTCI DCP Platform) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 6
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+0
+%%EOF"""
+                with open(filepath, 'w') as f:
+                    f.write(content)
+            return filepath
+
+        create_test_pdf('autorisation_orange.pdf', 'Autorisation ART-2024-001 - Orange CI')
+        create_test_pdf('autorisation_nsia.pdf', 'Autorisation ART-2024-002 - NSIA Banque')
+        create_test_pdf('autorisation_ministere.pdf', 'Autorisation ART-2024-003 - Ministere Economie Numerique')
+        create_test_pdf('autorisation_cnps.pdf', 'Autorisation ART-2024-004 - CNPS')
+
+        documents = [
+            DocumentJoint(
+                entite_id=e_orange.id,
+                type_document=TypeDocumentEnum.autorisation,
+                nom_fichier='autorisation_orange.pdf',
+                chemin_fichier='autorisations/autorisation_orange.pdf',
+                taille=1024,
+                mime_type='application/pdf',
+            ),
+            DocumentJoint(
+                entite_id=e_nsia.id,
+                type_document=TypeDocumentEnum.autorisation,
+                nom_fichier='autorisation_nsia.pdf',
+                chemin_fichier='autorisations/autorisation_nsia.pdf',
+                taille=1024,
+                mime_type='application/pdf',
+            ),
+            DocumentJoint(
+                entite_id=e_ministere.id,
+                type_document=TypeDocumentEnum.autorisation,
+                nom_fichier='autorisation_ministere.pdf',
+                chemin_fichier='autorisations/autorisation_ministere.pdf',
+                taille=1024,
+                mime_type='application/pdf',
+            ),
+            DocumentJoint(
+                entite_id=e_cnps.id,
+                type_document=TypeDocumentEnum.autorisation,
+                nom_fichier='autorisation_cnps.pdf',
+                chemin_fichier='autorisations/autorisation_cnps.pdf',
+                taille=1024,
+                mime_type='application/pdf',
+            ),
+        ]
+        db.session.add_all(documents)
+        db.session.flush()
+        print(f"[OK] {len(documents)} documents d'autorisation créés")
 
         # ── 5. Contacts ──────────────────────────────────────────────
         contacts = [
@@ -385,10 +524,18 @@ def seed():
                              statut_conformite=StatutConformiteEnum.demarche_achevee,
                              a_dpo=True, type_dpo=TypeDPOEnum.interne,
                              effectif_entreprise='200-500', volume_donnees_traitees='500 000-1 million'),
+            EntiteConformite(entite_id=e_ministere.id, score_conformite=88,
+                             statut_conformite=StatutConformiteEnum.conforme,
+                             a_dpo=True, type_dpo=TypeDPOEnum.interne,
+                             effectif_entreprise='500-1000', volume_donnees_traitees='1-5 millions'),
+            EntiteConformite(entite_id=e_cnps.id, score_conformite=82,
+                             statut_conformite=StatutConformiteEnum.conforme,
+                             a_dpo=True, type_dpo=TypeDPOEnum.externe,
+                             effectif_entreprise='1000+', volume_donnees_traitees='5-10 millions'),
         ]
         db.session.add_all(conformites)
         db.session.flush()
-        print("[OK] 8 conformités créées")
+        print(f"[OK] {len(conformites)} conformités créées")
 
         # ── 7. Localisations (GPS Côte d'Ivoire) ────────────────────
         localisations = [
@@ -412,10 +559,18 @@ def seed():
                                latitude=6.8276, longitude=-5.2893,
                                adresse_complete='Avenue Houphouët-Boigny, Yamoussoukro',
                                precision_gps='30m', methode_geolocalisation='Adresse'),
+            EntiteLocalisation(entite_id=e_ministere.id,
+                               latitude=5.3195, longitude=-4.0188,
+                               adresse_complete='Tour C Administrative, Plateau, Abidjan',
+                               precision_gps='10m', methode_geolocalisation='GPS'),
+            EntiteLocalisation(entite_id=e_cnps.id,
+                               latitude=5.3160, longitude=-4.0230,
+                               adresse_complete='Avenue du Général de Gaulle, Plateau, Abidjan',
+                               precision_gps='10m', methode_geolocalisation='GPS'),
         ]
         db.session.add_all(localisations)
         db.session.flush()
-        print("[OK] 5 localisations GPS créées")
+        print(f"[OK] {len(localisations)} localisations GPS créées")
 
         # ── 8. DPO ───────────────────────────────────────────────────
         dpos = [

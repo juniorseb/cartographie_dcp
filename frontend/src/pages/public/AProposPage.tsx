@@ -171,7 +171,7 @@ export default function AProposPage() {
                   <ExternalLink className="w-3 h-3" /> Espace Protection des Données
                 </a>
                 <a
-                  href="https://www.artci.ci/images/stories/pdf/loi_2013-450.pdf"
+                  href="https://www.artci.ci/images/stories/pdf/lois/loi_2013_450.pdf"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 text-sm text-[var(--artci-green)] hover:underline"

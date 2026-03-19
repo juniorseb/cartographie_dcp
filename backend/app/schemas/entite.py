@@ -216,6 +216,7 @@ class EntiteCreateInputSchema(Schema):
     # Partie 1 : Identification
     denomination = fields.String(required=True, validate=validate.Length(min=2, max=255))
     numero_cc = fields.String(required=True, validate=validate.Length(min=2, max=50))
+    decret_creation = fields.String(validate=validate.Length(max=255), load_default=None)
     forme_juridique = fields.String(validate=validate.Length(max=100))
     secteur_activite = fields.String(validate=validate.Length(max=100))
     adresse = fields.String(validate=validate.Length(max=500))
@@ -245,6 +246,7 @@ class EntiteCreateInputSchema(Schema):
 class EntiteUpdateInputSchema(Schema):
     """Mise à jour partielle d'une entité (tous champs optionnels)."""
     denomination = fields.String(validate=validate.Length(min=2, max=255))
+    decret_creation = fields.String(validate=validate.Length(max=255))
     forme_juridique = fields.String(validate=validate.Length(max=100))
     secteur_activite = fields.String(validate=validate.Length(max=100))
     adresse = fields.String(validate=validate.Length(max=500))
@@ -272,6 +274,7 @@ class EntiteListOutputSchema(Schema):
     id = fields.String()
     denomination = fields.String()
     numero_cc = fields.String()
+    decret_creation = fields.String()
     forme_juridique = fields.String()
     secteur_activite = fields.String()
     ville = fields.String()
@@ -371,6 +374,7 @@ class EntiteDetailOutputSchema(Schema):
     compte_entreprise_id = fields.String()
     denomination = fields.String()
     numero_cc = fields.String()
+    decret_creation = fields.String()
     forme_juridique = fields.String()
     secteur_activite = fields.String()
     adresse = fields.String()
@@ -408,6 +412,7 @@ class EntitePublicDetailSchema(Schema):
     id = fields.String()
     denomination = fields.String()
     numero_cc = fields.String()
+    decret_creation = fields.String()
     forme_juridique = fields.String()
     secteur_activite = fields.String()
     adresse = fields.String()

@@ -39,7 +39,6 @@ export default function FicheEntitePage() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl mb-1">{entite.denomination}</h1>
-            <p className="text-gray-500">N° CC : {entite.numero_cc}</p>
           </div>
           <StatusBadge statut={entite.statut_conformite} />
         </div>
@@ -54,7 +53,6 @@ export default function FicheEntitePage() {
           </h3>
           <div className="space-y-3">
             <InfoRow label="Dénomination" value={entite.denomination} />
-            <InfoRow label="N° CC" value={entite.numero_cc} />
             <InfoRow label="Forme juridique" value={entite.forme_juridique} />
             <InfoRow label="Secteur d'activité" value={entite.secteur_activite} />
             <InfoRow label="Adresse" value={entite.adresse} />
