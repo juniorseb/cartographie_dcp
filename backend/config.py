@@ -61,13 +61,13 @@ class Config:
     
     # Rate Limiting
     RATELIMIT_ENABLED = os.getenv('RATELIMIT_ENABLED', 'True').lower() == 'true'
-    RATELIMIT_DEFAULT = os.getenv('RATELIMIT_DEFAULT', '100 per hour')
+    RATELIMIT_DEFAULT = os.getenv('RATELIMIT_DEFAULT', '100 per minute')
     
     # Statuts de conformité (NOUVEAUX v2.2)
     STATUTS_CONFORMITE = [
         'Conforme',
-        'Démarche achevée',
-        'Démarche en cours'
+        'Partiellement conforme',
+        'Non conforme'
     ]
     
     # Statuts workflow

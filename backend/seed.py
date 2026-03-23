@@ -40,9 +40,14 @@ def seed():
 
     with app.app_context():
         # ── Vérification doublons ────────────────────────────────────
+        force = '--force' in sys.argv
         if User.query.first():
-            print("La base contient déjà des données. Seed ignoré.")
-            return
+            if not force:
+                print("La base contient déjà des données. Utilisez --force pour réinitialiser.")
+                return
+            print("⚠ Mode --force : réinitialisation de la base...")
+            db.drop_all()
+            db.create_all()
 
         print("=== Seed ARTCI DCP Platform ===\n")
 
@@ -497,7 +502,7 @@ startxref
                              a_dpo=True, type_dpo=TypeDPOEnum.interne,
                              effectif_entreprise='1000+', volume_donnees_traitees='10 millions+'),
             EntiteConformite(entite_id=e_mtn.id, score_conformite=68,
-                             statut_conformite=StatutConformiteEnum.demarche_en_cours,
+                             statut_conformite=StatutConformiteEnum.non_conforme,
                              a_dpo=True, type_dpo=TypeDPOEnum.externe,
                              effectif_entreprise='500-1000', volume_donnees_traitees='5-10 millions'),
             EntiteConformite(entite_id=e_nsia.id, score_conformite=85,
@@ -505,23 +510,23 @@ startxref
                              a_dpo=True, type_dpo=TypeDPOEnum.interne,
                              effectif_entreprise='200-500', volume_donnees_traitees='1-5 millions'),
             EntiteConformite(entite_id=e_sgci.id, score_conformite=55,
-                             statut_conformite=StatutConformiteEnum.demarche_en_cours,
+                             statut_conformite=StatutConformiteEnum.non_conforme,
                              a_dpo=False,
                              effectif_entreprise='200-500', volume_donnees_traitees='1-5 millions'),
             EntiteConformite(entite_id=e_clinique.id, score_conformite=78,
-                             statut_conformite=StatutConformiteEnum.demarche_achevee,
+                             statut_conformite=StatutConformiteEnum.partiellement_conforme,
                              a_dpo=True, type_dpo=TypeDPOEnum.externe,
                              effectif_entreprise='50-200', volume_donnees_traitees='100 000-500 000'),
             EntiteConformite(entite_id=e_supermarche.id, score_conformite=40,
-                             statut_conformite=StatutConformiteEnum.demarche_en_cours,
+                             statut_conformite=StatutConformiteEnum.non_conforme,
                              a_dpo=False,
                              effectif_entreprise='10-50', volume_donnees_traitees='10 000-100 000'),
             EntiteConformite(entite_id=e_transport.id, score_conformite=30,
-                             statut_conformite=StatutConformiteEnum.demarche_en_cours,
+                             statut_conformite=StatutConformiteEnum.non_conforme,
                              a_dpo=False,
                              effectif_entreprise='10-50', volume_donnees_traitees='< 10 000'),
             EntiteConformite(entite_id=e_assurance.id, score_conformite=72,
-                             statut_conformite=StatutConformiteEnum.demarche_achevee,
+                             statut_conformite=StatutConformiteEnum.partiellement_conforme,
                              a_dpo=True, type_dpo=TypeDPOEnum.interne,
                              effectif_entreprise='200-500', volume_donnees_traitees='500 000-1 million'),
             EntiteConformite(entite_id=e_ministere.id, score_conformite=88,

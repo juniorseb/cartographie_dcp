@@ -46,7 +46,7 @@ export default function ListeEntitesPage() {
       </div>
 
       {/* Filtres */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
         <SearchBar
           value={filters.search ?? ''}
           onChange={(v) => updateFilter('search', v)}
@@ -88,6 +88,22 @@ export default function ListeEntitesPage() {
             onChange={(e) => updateFilter('region', e.target.value)}
             className="w-full py-2.5"
           />
+        </div>
+        <div className="form-group mb-0">
+          <select
+            value={filters.volume_donnees ?? ''}
+            onChange={(e) => updateFilter('volume_donnees', e.target.value)}
+            className="w-full py-2.5"
+          >
+            <option value="">Volume de données</option>
+            <option value="< 10 000">{'< 10 000'}</option>
+            <option value="10 000-100 000">10 000 - 100 000</option>
+            <option value="100 000-500 000">100 000 - 500 000</option>
+            <option value="500 000-1 million">500 000 - 1 million</option>
+            <option value="1-5 millions">1 - 5 millions</option>
+            <option value="5-10 millions">5 - 10 millions</option>
+            <option value="10 millions+">10 millions+</option>
+          </select>
         </div>
       </div>
 

@@ -155,6 +155,17 @@ export async function importExcel(file: File): Promise<ImportResult> {
   return res.data.data!;
 }
 
+/** GET /api/admin/import/template — Télécharger le template Excel pré-formaté */
+export async function downloadImportTemplate(): Promise<void> {
+  const res = await apiClient.get('/admin/import/template', { responseType: 'blob' });
+  const url = window.URL.createObjectURL(new Blob([res.data]));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'template_recensement_dcp_artci.xlsx';
+  a.click();
+  window.URL.revokeObjectURL(url);
+}
+
 // ============================================================
 // Logs
 // ============================================================

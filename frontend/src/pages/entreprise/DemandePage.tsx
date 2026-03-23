@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Save, Send, Plus, Trash2 } from 'lucide-react';
 import FormStepper from '@/components/entreprise/FormStepper';
 import Loading from '@/components/common/Loading';
 import * as entrepriseApi from '@/api/entreprise.api';
+import * as adminApi from '@/api/admin.api';
 import { useApi } from '@/hooks/useApi';
 import { ROUTES } from '@/utils/constants';
 import type {
@@ -14,6 +15,10 @@ import type {
 } from '@/types/entreprise';
 
 const DRAFT_KEY = 'demande_draft';
+
+interface DemandePageProps {
+  mode?: 'entreprise' | 'admin';
+}
 
 function getEmptyForm(): DemandeInput {
   return {
@@ -27,9 +32,10 @@ function getEmptyForm(): DemandeInput {
   };
 }
 
-export default function DemandePage() {
+export default function DemandePage({ mode = 'entreprise' }: DemandePageProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const isAdmin = mode === 'admin';
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<DemandeInput>(getEmptyForm);
   const [saving, setSaving] = useState(false);
@@ -40,7 +46,7 @@ export default function DemandePage() {
 
   // Load existing demande if editing
   const { data: existingDossier, isLoading } = useApi(
-    () => id ? entrepriseApi.getMonDossier() : Promise.resolve(null),
+    () => id ? (isAdmin ? adminApi.getEntiteDetail(id) : entrepriseApi.getMonDossier()) : Promise.resolve(null),
     [id]
   );
 
@@ -80,14 +86,87 @@ export default function DemandePage() {
     }
   }, [existingDossier, id]);
 
-  // Auto-save draft every 30s
+  // Auto-save draft every 30s (entreprise mode only)
   useEffect(() => {
-    if (id) return;
+    if (id || isAdmin) return;
     const timer = setInterval(() => {
       localStorage.setItem(DRAFT_KEY, JSON.stringify(formData));
     }, 30000);
     return () => clearInterval(timer);
-  }, [formData, id]);
+  }, [formData, id, isAdmin]);
+
+  // Compteur de champs remplis pour la barre de progression
+  const filledCount = useMemo(() => {
+    let count = 0;
+    // Partie 1 - Identification (~10 champs)
+    if (formData.denomination?.trim()) count++;
+    if (formData.numero_cc?.trim()) count++;
+    if (formData.forme_juridique?.trim()) count++;
+    if (formData.secteur_activite?.trim()) count++;
+    if (formData.adresse?.trim()) count++;
+    if (formData.ville?.trim()) count++;
+    if (formData.region?.trim()) count++;
+    if (formData.telephone?.trim()) count++;
+    if (formData.email?.trim()) count++;
+    if ((formData.responsables_legaux ?? []).length > 0) count++;
+    // Partie 2 - Cadre juridique (~10 champs)
+    const conformites = formData.conformites_administratives ?? [];
+    if (conformites.length > 0) {
+      const c = conformites[0];
+      if (c.connaissance_loi_2013 !== undefined && c.connaissance_loi_2013 !== null) count++;
+      if (c.declaration_artci !== undefined && c.declaration_artci !== null) count++;
+      if (c.autorisation_artci !== undefined && c.autorisation_artci !== null) count++;
+      if (c.numero_declaration) count++;
+      if (c.date_declaration) count++;
+      if (c.numero_autorisation) count++;
+      if (c.date_autorisation) count++;
+    }
+    if ((formData.dpos ?? []).length > 0) count += 3;
+    // Partie 3 - Registre (~10 champs)
+    if ((formData.registre_traitements ?? []).length > 0) count += 3;
+    const cats = formData.categories_donnees ?? [];
+    if (cats.length > 0) count += Math.min(cats.length, 3);
+    if ((formData.finalites ?? []).length > 0) count += 2;
+    // Partie 4 - Sous-traitance (~8 champs)
+    if ((formData.sous_traitants ?? []).length > 0) count += 3;
+    if ((formData.transferts ?? []).length > 0) count += 3;
+    // Partie 5 - Sécurité (~12 champs)
+    const sec = formData.securite ?? {};
+    if (sec.politique_securite !== undefined && sec.politique_securite !== null) count++;
+    if (sec.responsable_securite !== undefined && sec.responsable_securite !== null) count++;
+    if (sec.analyse_risques !== undefined && sec.analyse_risques !== null) count++;
+    if (sec.plan_continuite !== undefined && sec.plan_continuite !== null) count++;
+    if (sec.notification_violations !== undefined && sec.notification_violations !== null) count++;
+    if (sec.formation_personnel !== undefined && sec.formation_personnel !== null) count++;
+    if ((formData.mesures_securite ?? []).length > 0) count += 2;
+    if ((formData.certifications ?? []).length > 0) count++;
+    return Math.min(count, 50);
+  }, [formData]);
+
+  // Validation par étape
+  const [stepErrors, setStepErrors] = useState<string[]>([]);
+
+  function validateStep(step: number): string[] {
+    const errors: string[] = [];
+    if (step === 1) {
+      if (!formData.denomination?.trim()) errors.push('La dénomination est obligatoire.');
+      if (!formData.numero_cc?.trim()) errors.push('Le numéro CC est obligatoire.');
+    }
+    // Les autres étapes n'ont pas de champs strictement requis
+    return errors;
+  }
+
+  function goToStep(step: number) {
+    if (step > currentStep) {
+      const errors = validateStep(currentStep);
+      if (errors.length > 0) {
+        setStepErrors(errors);
+        return;
+      }
+    }
+    setStepErrors([]);
+    setCurrentStep(step);
+  }
 
   function updateField(key: keyof DemandeInput, value: unknown) {
     setFormData((prev) => ({ ...prev, [key]: value }));
@@ -128,11 +207,17 @@ export default function DemandePage() {
     setSuccess('');
     try {
       if (entiteId) {
-        await entrepriseApi.updateDemande(entiteId, formData);
+        if (isAdmin) {
+          await adminApi.updateEntite(entiteId, formData);
+        } else {
+          await entrepriseApi.updateDemande(entiteId, formData);
+        }
       } else {
-        const result = await entrepriseApi.createDemande(formData);
+        const result = isAdmin
+          ? await adminApi.createEntite(formData)
+          : await entrepriseApi.createDemande(formData);
         setEntiteId(result.id);
-        localStorage.removeItem(DRAFT_KEY);
+        if (!isAdmin) localStorage.removeItem(DRAFT_KEY);
       }
       setSuccess('Demande sauvegardée avec succès.');
     } catch {
@@ -150,9 +235,15 @@ export default function DemandePage() {
     setSubmitting(true);
     setError('');
     try {
-      await entrepriseApi.soumettreDemande(entiteId);
-      localStorage.removeItem(DRAFT_KEY);
-      navigate(ROUTES.ENTREPRISE_DASHBOARD, { replace: true });
+      if (isAdmin) {
+        // En mode admin, sauvegarder puis rediriger vers la fiche
+        await adminApi.updateEntite(entiteId, formData);
+        navigate(`/admin/entites/${entiteId}`, { replace: true });
+      } else {
+        await entrepriseApi.soumettreDemande(entiteId);
+        localStorage.removeItem(DRAFT_KEY);
+        navigate(ROUTES.ENTREPRISE_DASHBOARD, { replace: true });
+      }
     } catch {
       setError('Erreur lors de la soumission. Vérifiez que tous les champs requis sont remplis.');
     } finally {
@@ -164,7 +255,11 @@ export default function DemandePage() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <h1 className="text-2xl mb-2">{id ? 'Modifier ma Demande' : 'Nouvelle Demande'}</h1>
+      <h1 className="text-2xl mb-2">
+        {isAdmin
+          ? (id ? 'Modifier le Recensement' : 'Nouveau Recensement (Saisie ARTCI)')
+          : (id ? 'Modifier ma Demande' : 'Nouvelle Demande')}
+      </h1>
       <p className="text-sm text-gray-500 mb-4">
         Questionnaire de recensement et d'évaluation de la conformité à la Loi N°2013-450
       </p>
@@ -172,7 +267,15 @@ export default function DemandePage() {
       {error && <div className="alert alert-danger mb-4">{error}</div>}
       {success && <div className="alert alert-success mb-4">{success}</div>}
 
-      <FormStepper currentStep={currentStep} onStepClick={setCurrentStep} />
+      {stepErrors.length > 0 && (
+        <div className="alert alert-danger mb-4">
+          <ul className="list-disc ml-4 space-y-1">
+            {stepErrors.map((e, i) => <li key={i}>{e}</li>)}
+          </ul>
+        </div>
+      )}
+
+      <FormStepper currentStep={currentStep} onStepClick={goToStep} filledCount={filledCount} totalCount={50} />
 
       <div className="card mt-6">
         {currentStep === 1 && (
@@ -224,12 +327,12 @@ export default function DemandePage() {
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-6">
         <div className="flex gap-2">
           {currentStep > 1 && (
-            <button className="btn btn-outline" onClick={() => setCurrentStep(currentStep - 1)}>
+            <button className="btn btn-outline" onClick={() => goToStep(currentStep - 1)}>
               Précédent
             </button>
           )}
           {currentStep < 5 && (
-            <button className="btn btn-primary" onClick={() => setCurrentStep(currentStep + 1)}>
+            <button className="btn btn-primary" onClick={() => goToStep(currentStep + 1)}>
               Suivant
             </button>
           )}
@@ -250,7 +353,7 @@ export default function DemandePage() {
               disabled={submitting}
             >
               {submitting ? <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> : <Send className="w-4 h-4" />}
-              Soumettre
+              {isAdmin ? 'Enregistrer' : 'Soumettre'}
             </button>
           )}
         </div>

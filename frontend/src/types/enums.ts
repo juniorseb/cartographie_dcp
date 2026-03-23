@@ -18,7 +18,7 @@ export type StatutWorkflow =
   | 'rejete'
   | 'publie';
 
-export type StatutConformite = 'Conforme' | 'Démarche achevée' | 'Démarche en cours';
+export type StatutConformite = 'Conforme' | 'Partiellement conforme' | 'Non conforme' | 'Démarche achevée' | 'Démarche en cours';
 
 export type TypeDPO = 'interne' | 'externe';
 

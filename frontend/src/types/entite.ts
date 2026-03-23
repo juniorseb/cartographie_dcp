@@ -92,4 +92,5 @@ export interface EntiteFilter {
   region?: string;
   forme_juridique?: string;
   statut_conformite?: string;
+  volume_donnees?: string;
 }

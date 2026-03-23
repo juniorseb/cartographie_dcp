@@ -59,13 +59,17 @@ export const ROUTES = {
 /** Labels des statuts de conformité */
 export const STATUT_CONFORMITE_LABELS: Record<StatutConformite, string> = {
   'Conforme': 'Conforme',
-  'Démarche achevée': 'Démarche achevée',
-  'Démarche en cours': 'Démarche en cours',
+  'Partiellement conforme': 'Partiellement conforme',
+  'Non conforme': 'Non conforme',
+  'Démarche achevée': 'Partiellement conforme',
+  'Démarche en cours': 'Non conforme',
 };
 
 /** Classes CSS des badges par statut */
 export const STATUT_CONFORMITE_BADGE: Record<StatutConformite, string> = {
   'Conforme': 'badge badge-conforme',
+  'Partiellement conforme': 'badge badge-achevee',
+  'Non conforme': 'badge badge-encours',
   'Démarche achevée': 'badge badge-achevee',
   'Démarche en cours': 'badge badge-encours',
 };
@@ -73,8 +77,10 @@ export const STATUT_CONFORMITE_BADGE: Record<StatutConformite, string> = {
 /** Couleurs des statuts (pour les graphiques) */
 export const STATUT_COLORS: Record<StatutConformite, string> = {
   'Conforme': '#228B22',
+  'Partiellement conforme': '#FF8C00',
+  'Non conforme': '#DC143C',
   'Démarche achevée': '#FF8C00',
-  'Démarche en cours': '#4A90E2',
+  'Démarche en cours': '#DC143C',
 };
 
 /** Centre de la carte : Abidjan, Côte d'Ivoire */

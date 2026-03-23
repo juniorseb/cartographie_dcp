@@ -143,6 +143,25 @@ export default function EntiteDetailAdminPage() {
               <InfoRow label="Longitude" value={entite.localisation.longitude} />
               <InfoRow label="Adresse complète" value={entite.localisation.adresse_complete} />
             </div>
+            {entite.localisation.latitude && entite.localisation.longitude && (
+              <div className="mt-4">
+                <iframe
+                  title="Localisation"
+                  width="100%"
+                  height="200"
+                  style={{ border: '1px solid #ddd', borderRadius: '8px' }}
+                  src={`https://www.openstreetmap.org/export/embed.html?bbox=${entite.localisation.longitude - 0.01},${entite.localisation.latitude - 0.01},${entite.localisation.longitude + 0.01},${entite.localisation.latitude + 0.01}&layer=mapnik&marker=${entite.localisation.latitude},${entite.localisation.longitude}`}
+                />
+                <a
+                  href={`https://www.google.com/maps?q=${entite.localisation.latitude},${entite.localisation.longitude}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-[var(--artci-green)] hover:underline mt-2 inline-block"
+                >
+                  Ouvrir dans Google Maps
+                </a>
+              </div>
+            )}
           </div>
         )}
 
@@ -153,10 +172,13 @@ export default function EntiteDetailAdminPage() {
               <Shield className="w-5 h-5 text-[var(--artci-green)]" /> Conformité
             </h3>
             <div className="space-y-3">
-              <InfoRow label="Score" value={entite.conformite.score_conformite != null ? `${entite.conformite.score_conformite}%` : '-'} />
+              <InfoRow label="Score" value={entite.conformite.score_conformite != null ? `${entite.conformite.score_conformite}/100` : '-'} />
+              <InfoRow label="Statut" value={entite.conformite.statut_conformite} />
               <InfoRow label="A un DPO" value={entite.conformite.a_dpo} />
               <InfoRow label="Type DPO" value={entite.conformite.type_dpo} />
               <InfoRow label="Effectif" value={entite.conformite.effectif_entreprise} />
+              <InfoRow label="Volume données" value={entite.conformite.volume_donnees_traitees} />
+              <InfoRow label="Délai mise en conformité" value={entite.conformite.delai_mise_en_conformite ? formatDate(entite.conformite.delai_mise_en_conformite) : '-'} />
             </div>
           </div>
         )}

@@ -16,6 +16,7 @@ from app.models.enums import (
     CategorieDonneesEnum, BaseLegaleEnum, TypeMesureEnum
 )
 from sqlalchemy.orm import joinedload
+from app.services.scoring_service import ScoringService
 
 
 class EntiteService:
@@ -79,6 +80,12 @@ class EntiteService:
         # ONE-TO-MANY children
         EntiteService._create_children(entite.id, data)
 
+        db.session.flush()
+
+        # Calcul automatique du score de conformité
+        db.session.refresh(entite)
+        ScoringService.mettre_a_jour_score(entite)
+
         db.session.commit()
         return entite
 
@@ -127,6 +134,12 @@ class EntiteService:
 
         # ONE-TO-MANY : replace strategy
         EntiteService._replace_children(entite, data)
+
+        db.session.flush()
+
+        # Recalcul automatique du score de conformité
+        db.session.refresh(entite)
+        ScoringService.mettre_a_jour_score(entite)
 
         db.session.commit()
         return entite
@@ -253,6 +266,12 @@ class EntiteService:
             from app.models.enums import StatutConformiteEnum
             query = query.join(EntiteConformite).filter(
                 EntiteConformite.statut_conformite == StatutConformiteEnum(filters['statut_conformite'])
+            )
+        if filters.get('volume_donnees'):
+            query = query.join(
+                EntiteConformite, EntiteConformite.entite_id == EntiteBase.id, isouter=True
+            ).filter(
+                EntiteConformite.volume_donnees_traitees == filters['volume_donnees']
             )
         if filters.get('statut_workflow'):
             query = query.join(EntiteWorkflow).filter(

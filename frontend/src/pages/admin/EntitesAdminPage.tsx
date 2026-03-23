@@ -100,6 +100,7 @@ export default function EntitesAdminPage() {
                 <tr>
                   <th>Dénomination</th>
                   <th>N° CC</th>
+                  <th>Forme juridique</th>
                   <th>Secteur</th>
                   <th>Ville</th>
                   <th>Origine</th>
@@ -113,6 +114,7 @@ export default function EntitesAdminPage() {
                   <tr key={entite.id}>
                     <td className="font-semibold">{entite.denomination}</td>
                     <td className="text-sm">{entite.numero_cc}</td>
+                    <td className="text-sm">{entite.forme_juridique ?? '-'}</td>
                     <td className="text-sm">{entite.secteur_activite ?? '-'}</td>
                     <td className="text-sm">{entite.ville ?? '-'}</td>
                     <td className="text-xs">

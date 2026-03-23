@@ -325,6 +325,56 @@ def import_excel():
         return error_response(str(e), 400)
 
 
+@admin_bp.route('/import/template', methods=['GET'])
+@editor_or_above
+def download_import_template():
+    """Télécharger le template Excel pré-formaté (51 colonnes)."""
+    import io
+    import pandas as pd
+
+    columns = [
+        # Partie 1 - Identification (9)
+        'denomination', 'numero_cc', 'forme_juridique', 'secteur_activite',
+        'adresse', 'ville', 'region', 'telephone', 'email',
+        # Contact / Responsable légal (5)
+        'responsable_legal_nom', 'responsable_legal_fonction',
+        'responsable_legal_email', 'responsable_legal_telephone', 'site_web',
+        # Localisation GPS (3)
+        'latitude', 'longitude', 'adresse_complete',
+        # Partie 2 - Cadre juridique (7)
+        'connaissance_loi_2013', 'declaration_artci', 'numero_declaration',
+        'date_declaration', 'autorisation_artci', 'numero_autorisation', 'date_autorisation',
+        # DPO (7)
+        'dpo_nom', 'dpo_prenom', 'dpo_email', 'dpo_telephone',
+        'dpo_type', 'dpo_organisme', 'dpo_date_designation',
+        # Partie 3 - Registre & Traitements (7)
+        'traitement_description', 'traitement_finalite',
+        'traitement_categories_personnes', 'traitement_destinataires',
+        'traitement_transfert_hors_ci',
+        'categories_donnees', 'finalite', 'base_legale',
+        # Partie 4 - Sous-traitance & Transferts (10)
+        'sous_traitant_nom', 'sous_traitant_pays', 'sous_traitant_donnees',
+        'sous_traitant_contrat', 'sous_traitant_clauses', 'sous_traitant_audit',
+        'transfert_pays', 'transfert_organisme', 'transfert_base_juridique', 'transfert_garanties',
+        # Partie 5 - Sécurité (9)
+        'politique_securite', 'responsable_securite', 'analyse_risques',
+        'plan_continuite', 'notification_violations', 'nombre_violations',
+        'formation_personnel', 'frequence_formation', 'dernier_audit',
+    ]
+    df = pd.DataFrame(columns=columns)
+    output = io.BytesIO()
+    df.to_excel(output, index=False, engine='openpyxl')
+    output.seek(0)
+
+    from flask import send_file
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name='template_recensement_dcp_artci.xlsx'
+    )
+
+
 # --- Logs ---
 
 @admin_bp.route('/logs', methods=['GET'])

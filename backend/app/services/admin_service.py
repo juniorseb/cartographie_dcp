@@ -85,6 +85,39 @@ class AdminService:
         # Agents actifs
         stats['agents_actifs'] = User.query.filter_by(is_active=True).count()
 
+        # Alertes (wireframe dashboard)
+        from app.models import DPO, ConformiteAdministrative, SecuriteConformite
+        # Entités sans DPO
+        entites_avec_dpo = db.session.query(DPO.entite_id).distinct()
+        stats['alertes_sans_dpo'] = base_query.filter(
+            ~EntiteBase.id.in_(entites_avec_dpo)
+        ).count()
+        # Entités sans déclaration ARTCI
+        entites_avec_decl = db.session.query(
+            ConformiteAdministrative.entite_id
+        ).filter(ConformiteAdministrative.declaration_artci == True).distinct()
+        stats['alertes_sans_declaration'] = base_query.filter(
+            ~EntiteBase.id.in_(entites_avec_decl)
+        ).count()
+        # Violations non notifiées
+        stats['alertes_violations'] = db.session.query(SecuriteConformite).filter(
+            SecuriteConformite.nombre_violations_12mois > 0,
+            SecuriteConformite.notification_violations == False
+        ).count()
+
+        # Activité récente (5 derniers changements)
+        recent = HistoriqueStatut.query.order_by(
+            HistoriqueStatut.date_changement.desc()
+        ).limit(5).all()
+        stats['activite_recente'] = [{
+            'entite_id': h.entite_id,
+            'entite_denomination': h.entite.denomination if h.entite else '',
+            'ancien_statut': h.ancien_statut.value if h.ancien_statut else None,
+            'nouveau_statut': h.nouveau_statut.value if h.nouveau_statut else None,
+            'modifie_par_nom': f'{h.modifie_par_user.prenom} {h.modifie_par_user.nom}' if h.modifie_par_user else '',
+            'date': h.date_changement.isoformat() if h.date_changement else None,
+        } for h in recent]
+
         return stats
 
     @staticmethod
@@ -216,12 +249,56 @@ class AdminService:
     # --- Import Excel ---
 
     @staticmethod
+    def _safe_str(val):
+        """Convertir une valeur Excel en string nettoyée, None si vide/NaN."""
+        if val is None or (isinstance(val, float) and str(val) == 'nan'):
+            return None
+        s = str(val).strip()
+        return s if s else None
+
+    @staticmethod
+    def _safe_bool(val):
+        """Convertir une valeur Excel en booléen."""
+        if val is None or (isinstance(val, float) and str(val) == 'nan'):
+            return None
+        s = str(val).strip().lower()
+        return s in ('oui', 'true', '1', 'yes', 'vrai')
+
+    @staticmethod
+    def _safe_date(val):
+        """Convertir une valeur Excel en date ISO string."""
+        import pandas as pd
+        if val is None or (isinstance(val, float) and str(val) == 'nan'):
+            return None
+        if isinstance(val, pd.Timestamp):
+            return val.strftime('%Y-%m-%d')
+        try:
+            return str(val).strip()[:10]
+        except Exception:
+            return None
+
+    @staticmethod
+    def _safe_float(val):
+        """Convertir une valeur Excel en float."""
+        if val is None or (isinstance(val, float) and str(val) == 'nan'):
+            return None
+        try:
+            return float(val)
+        except (ValueError, TypeError):
+            return None
+
+    @staticmethod
     def import_excel(file, user_id):
         """
-        Importer des entités depuis un fichier Excel.
+        Importer des entités depuis un fichier Excel (template 51 colonnes).
+        Couvre les 5 parties du questionnaire de recensement DCP.
         Retourne {imported: N, errors: [{row, message}]}.
         """
         import pandas as pd
+        s = AdminService._safe_str
+        b = AdminService._safe_bool
+        d = AdminService._safe_date
+        f = AdminService._safe_float
 
         try:
             df = pd.read_excel(file, engine='openpyxl')
@@ -233,16 +310,17 @@ class AdminService:
 
         for idx, row in df.iterrows():
             try:
+                # --- Partie 1 : Identification (colonnes 1-9) ---
                 data = {
-                    'denomination': str(row.get('denomination', '')).strip(),
-                    'numero_cc': str(row.get('numero_cc', '')).strip(),
-                    'forme_juridique': str(row.get('forme_juridique', '')).strip() or None,
-                    'secteur_activite': str(row.get('secteur_activite', '')).strip() or None,
-                    'adresse': str(row.get('adresse', '')).strip() or None,
-                    'ville': str(row.get('ville', '')).strip() or None,
-                    'region': str(row.get('region', '')).strip() or None,
-                    'telephone': str(row.get('telephone', '')).strip() or None,
-                    'email': str(row.get('email', '')).strip() or None,
+                    'denomination': s(row.get('denomination')) or '',
+                    'numero_cc': s(row.get('numero_cc')) or '',
+                    'forme_juridique': s(row.get('forme_juridique')),
+                    'secteur_activite': s(row.get('secteur_activite')),
+                    'adresse': s(row.get('adresse')),
+                    'ville': s(row.get('ville')),
+                    'region': s(row.get('region')),
+                    'telephone': s(row.get('telephone')),
+                    'email': s(row.get('email')),
                 }
 
                 if not data['denomination'] or not data['numero_cc']:
@@ -253,6 +331,119 @@ class AdminService:
                 if EntiteBase.query.filter_by(numero_cc=data['numero_cc']).first():
                     errors.append({'row': idx + 2, 'message': f'N° CC {data["numero_cc"]} existe déjà.'})
                     continue
+
+                # Contact / Responsable légal (colonnes 10-14)
+                resp_nom = s(row.get('responsable_legal_nom'))
+                if resp_nom:
+                    data['contact'] = {
+                        'responsable_legal_nom': resp_nom,
+                        'responsable_legal_fonction': s(row.get('responsable_legal_fonction')),
+                        'responsable_legal_email': s(row.get('responsable_legal_email')),
+                        'responsable_legal_telephone': s(row.get('responsable_legal_telephone')),
+                        'site_web': s(row.get('site_web')),
+                    }
+
+                # Localisation GPS (colonnes 15-17)
+                lat = f(row.get('latitude'))
+                lon = f(row.get('longitude'))
+                if lat is not None and lon is not None:
+                    data['localisation'] = {
+                        'latitude': lat,
+                        'longitude': lon,
+                        'adresse_complete': s(row.get('adresse_complete')),
+                    }
+
+                # --- Partie 2 : Cadre juridique (colonnes 18-27) ---
+                connaissance = b(row.get('connaissance_loi_2013'))
+                declaration = b(row.get('declaration_artci'))
+                autorisation = b(row.get('autorisation_artci'))
+                if connaissance is not None or declaration is not None or autorisation is not None:
+                    data['conformites_administratives'] = [{
+                        'connaissance_loi_2013': connaissance,
+                        'declaration_artci': declaration,
+                        'numero_declaration': s(row.get('numero_declaration')),
+                        'date_declaration': d(row.get('date_declaration')),
+                        'autorisation_artci': autorisation,
+                        'numero_autorisation': s(row.get('numero_autorisation')),
+                        'date_autorisation': d(row.get('date_autorisation')),
+                    }]
+
+                # DPO (colonnes 28-34)
+                dpo_nom = s(row.get('dpo_nom'))
+                if dpo_nom:
+                    data['dpos'] = [{
+                        'nom': dpo_nom,
+                        'prenom': s(row.get('dpo_prenom')),
+                        'email': s(row.get('dpo_email')),
+                        'telephone': s(row.get('dpo_telephone')),
+                        'type': s(row.get('dpo_type')) or 'interne',
+                        'organisme': s(row.get('dpo_organisme')),
+                        'date_designation': d(row.get('dpo_date_designation')),
+                    }]
+
+                # --- Partie 3 : Registre & Traitements (colonnes 35-39) ---
+                traitement = s(row.get('traitement_description'))
+                if traitement:
+                    data['registre_traitements'] = [{
+                        'description': traitement,
+                        'finalite': s(row.get('traitement_finalite')),
+                        'categories_personnes': s(row.get('traitement_categories_personnes')),
+                        'destinataires': s(row.get('traitement_destinataires')),
+                        'transfert_hors_ci': b(row.get('traitement_transfert_hors_ci')),
+                    }]
+
+                # Catégories de données (colonnes 40-41)
+                categories_str = s(row.get('categories_donnees'))
+                if categories_str:
+                    cats = [c.strip() for c in categories_str.split(',') if c.strip()]
+                    data['categories_donnees'] = [
+                        {'categorie': cat} for cat in cats
+                    ]
+
+                # Finalités (colonne 42)
+                finalite_str = s(row.get('finalite'))
+                base_legale = s(row.get('base_legale'))
+                if finalite_str:
+                    data['finalites'] = [{
+                        'finalite': finalite_str,
+                        'base_legale': base_legale or 'consentement',
+                    }]
+
+                # --- Partie 4 : Sous-traitance & Transferts (colonnes 43-47) ---
+                st_nom = s(row.get('sous_traitant_nom'))
+                if st_nom:
+                    data['sous_traitants'] = [{
+                        'nom_sous_traitant': st_nom,
+                        'pays': s(row.get('sous_traitant_pays')),
+                        'type_donnees_partagees': s(row.get('sous_traitant_donnees')),
+                        'contrat_sous_traitance': b(row.get('sous_traitant_contrat')),
+                        'clauses_protection': b(row.get('sous_traitant_clauses')),
+                        'audit_sous_traitant': b(row.get('sous_traitant_audit')),
+                    }]
+
+                transfert_pays = s(row.get('transfert_pays'))
+                if transfert_pays:
+                    data['transferts'] = [{
+                        'pays_destination': transfert_pays,
+                        'organisme_destinataire': s(row.get('transfert_organisme')),
+                        'base_juridique': s(row.get('transfert_base_juridique')),
+                        'garanties': s(row.get('transfert_garanties')),
+                    }]
+
+                # --- Partie 5 : Sécurité (colonnes 48-51) ---
+                politique = b(row.get('politique_securite'))
+                if politique is not None:
+                    data['securite'] = {
+                        'politique_securite': politique,
+                        'responsable_securite': b(row.get('responsable_securite')),
+                        'analyse_risques': b(row.get('analyse_risques')),
+                        'plan_continuite': b(row.get('plan_continuite')),
+                        'notification_violations': b(row.get('notification_violations')),
+                        'nombre_violations_12mois': int(row.get('nombre_violations', 0) or 0),
+                        'formation_personnel': b(row.get('formation_personnel')),
+                        'frequence_formation': s(row.get('frequence_formation')),
+                        'dernier_audit': d(row.get('dernier_audit')),
+                    }
 
                 EntiteService.create_entite_with_children(
                     data, user_id=user_id, origine='saisie_artci'

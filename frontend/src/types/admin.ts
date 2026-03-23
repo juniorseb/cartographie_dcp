@@ -18,6 +18,17 @@ export interface AdminDashboardStats {
   demandes_en_retard: number;
   agents_actifs: number;
   total_entites: number;
+  alertes_sans_dpo: number;
+  alertes_sans_declaration: number;
+  alertes_violations: number;
+  activite_recente: Array<{
+    entite_id: string;
+    entite_denomination: string;
+    ancien_statut: string | null;
+    nouveau_statut: string | null;
+    modifie_par_nom: string;
+    date: string | null;
+  }>;
 }
 
 export interface AdminStatsFilter {

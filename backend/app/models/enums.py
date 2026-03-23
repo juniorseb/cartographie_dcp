@@ -35,8 +35,11 @@ class StatutWorkflowEnum(enum.Enum):
 
 
 class StatutConformiteEnum(enum.Enum):
-    """Statuts de conformité (nouveaux v2.2)."""
-    conforme = 'Conforme'
+    """Statuts de conformité basés sur le barème du cadrage ARTCI."""
+    conforme = 'Conforme'                           # Score 80-100
+    partiellement_conforme = 'Partiellement conforme'  # Score 50-79
+    non_conforme = 'Non conforme'                    # Score 0-49
+    # Anciens alias gardés pour compatibilité migration
     demarche_achevee = 'Démarche achevée'
     demarche_en_cours = 'Démarche en cours'
 

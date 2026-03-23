@@ -25,6 +25,7 @@ def list_entites():
         'region': request.args.get('region'),
         'forme_juridique': request.args.get('forme_juridique'),
         'statut_conformite': request.args.get('statut_conformite'),
+        'volume_donnees': request.args.get('volume_donnees'),
     }
     # Nettoyer les filtres None
     filters = {k: v for k, v in filters.items() if v}
