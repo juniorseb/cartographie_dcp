@@ -89,3 +89,65 @@ export async function updateProfil(data: ProfilUpdateInput): Promise<ProfilData>
   return res.data.data!;
 }
 
+// ============================================================
+// Mon dossier : sous-onglets
+// ============================================================
+
+export interface DocumentJointItem {
+  id: string;
+  type_document: string;
+  nom_fichier: string;
+  taille?: number;
+  mime_type?: string;
+  uploadedAt: string | null;
+}
+
+export interface JournalEvenementItem {
+  id: string;
+  ancien_statut?: string;
+  nouveau_statut?: string;
+  commentaire?: string;
+  modifie_par_nom?: string;
+  date: string | null;
+}
+
+export type DPODocType =
+  | 'dpo_cv'
+  | 'dpo_casier_judiciaire'
+  | 'dpo_cni'
+  | 'dpo_extrait_naissance';
+
+/** GET /api/entreprise/mes-rapports */
+export async function getMesRapports(): Promise<DocumentJointItem[]> {
+  const res = await apiClient.get<ApiResponse<DocumentJointItem[]>>('/entreprise/mes-rapports');
+  return res.data.data!;
+}
+
+/** GET /api/entreprise/journal-evenements */
+export async function getJournalEvenements(): Promise<JournalEvenementItem[]> {
+  const res = await apiClient.get<ApiResponse<JournalEvenementItem[]>>('/entreprise/journal-evenements');
+  return res.data.data!;
+}
+
+/** GET /api/entreprise/dossier-dpo */
+export async function getDossierDPO(): Promise<DocumentJointItem[]> {
+  const res = await apiClient.get<ApiResponse<DocumentJointItem[]>>('/entreprise/dossier-dpo');
+  return res.data.data!;
+}
+
+/** POST /api/entreprise/dossier-dpo */
+export async function uploadDocumentDPO(
+  file: File,
+  typeDocument: DPODocType
+): Promise<DocumentJointItem> {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('type_document', typeDocument);
+  const res = await apiClient.post<ApiResponse<DocumentJointItem>>(
+    '/entreprise/dossier-dpo',
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } }
+  );
+  return res.data.data!;
+}
+

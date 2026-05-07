@@ -167,3 +167,51 @@ def update_profil():
         return error_response(str(e), 400)
 
 
+# --- Mon dossier : sous-onglets ---
+
+@entreprise_bp.route('/mes-rapports', methods=['GET'])
+@entreprise_auth_required
+def get_mes_rapports():
+    """Liste des rapports d'activite et d'audit deposes."""
+    result = EntrepriseService.get_mes_rapports(g.current_user_id)
+    return success_response(result)
+
+
+@entreprise_bp.route('/journal-evenements', methods=['GET'])
+@entreprise_auth_required
+def get_journal_evenements():
+    """Historique des changements de statut du dossier."""
+    result = EntrepriseService.get_journal_evenements(g.current_user_id)
+    return success_response(result)
+
+
+@entreprise_bp.route('/dossier-dpo', methods=['GET'])
+@entreprise_auth_required
+def get_dossier_dpo():
+    """Liste des 4 documents DPO (CV, casier, CNI, extrait naissance)."""
+    result = EntrepriseService.get_documents_dpo(g.current_user_id)
+    return success_response(result)
+
+
+@entreprise_bp.route('/dossier-dpo', methods=['POST'])
+@entreprise_auth_required
+def upload_document_dpo():
+    """Upload d'un document DPO (remplace le precedent du meme type)."""
+    if 'file' not in request.files:
+        return error_response('Aucun fichier fourni.', 400)
+    file = request.files['file']
+    if not file.filename:
+        return error_response('Nom de fichier vide.', 400)
+    type_document = request.form.get('type_document')
+    if not type_document:
+        return error_response('type_document requis (dpo_cv, dpo_casier_judiciaire, dpo_cni, dpo_extrait_naissance).', 400)
+    try:
+        doc = EntrepriseService.upload_document_dpo(
+            g.current_user_id, file, type_document
+        )
+        return created_response(
+            {'id': doc.id, 'type_document': doc.type_document.value, 'nom_fichier': doc.nom_fichier},
+            'Document deposé.'
+        )
+    except ValueError as e:
+        return error_response(str(e), 400)

@@ -79,7 +79,13 @@ class TypeDocumentEnum(enum.Enum):
     statuts = 'statuts'
     attestation_fiscale = 'attestation_fiscale'
     rapport_activite = 'rapport_activite'
+    rapport_audit = 'rapport_audit'
     autorisation = 'autorisation'
+    # Documents DPO (4 types)
+    dpo_cv = 'dpo_cv'
+    dpo_casier_judiciaire = 'dpo_casier_judiciaire'
+    dpo_cni = 'dpo_cni'
+    dpo_extrait_naissance = 'dpo_extrait_naissance'
     autre = 'autre'
 
 

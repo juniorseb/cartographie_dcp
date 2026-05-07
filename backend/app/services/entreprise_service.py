@@ -262,3 +262,129 @@ class EntrepriseService:
         db.session.commit()
         return CompteEntrepriseOutputSchema().dump(compte)
 
+    # ----- Mon dossier : sous-onglets -----
+
+    DPO_DOC_TYPES = {
+        TypeDocumentEnum.dpo_cv,
+        TypeDocumentEnum.dpo_casier_judiciaire,
+        TypeDocumentEnum.dpo_cni,
+        TypeDocumentEnum.dpo_extrait_naissance,
+    }
+
+    @staticmethod
+    def list_documents(compte_id, types=None):
+        """Liste les documents joints de l'entite, filtres par types optionnels."""
+        entite = EntiteBase.query.filter_by(compte_entreprise_id=compte_id).first()
+        if not entite:
+            return []
+        query = DocumentJoint.query.filter_by(entite_id=entite.id)
+        if types:
+            query = query.filter(DocumentJoint.type_document.in_(types))
+        docs = query.order_by(DocumentJoint.uploadedAt.desc()).all()
+        return [
+            {
+                'id': d.id,
+                'type_document': d.type_document.value,
+                'nom_fichier': d.nom_fichier,
+                'taille': d.taille,
+                'mime_type': d.mime_type,
+                'uploadedAt': d.uploadedAt.isoformat() if d.uploadedAt else None,
+            }
+            for d in docs
+        ]
+
+    @staticmethod
+    def get_mes_rapports(compte_id):
+        """Liste les rapports d'activite et rapports d'audit."""
+        return EntrepriseService.list_documents(
+            compte_id,
+            types=[TypeDocumentEnum.rapport_activite, TypeDocumentEnum.rapport_audit],
+        )
+
+    @staticmethod
+    def get_documents_dpo(compte_id):
+        """Liste les 4 documents DPO."""
+        return EntrepriseService.list_documents(
+            compte_id, types=list(EntrepriseService.DPO_DOC_TYPES)
+        )
+
+    @staticmethod
+    def upload_document_dpo(compte_id, file, type_document):
+        """Upload d'un document DPO (CV, casier, CNI, extrait naissance).
+        Si un document du meme type existe deja, il est remplace."""
+        try:
+            type_enum = TypeDocumentEnum(type_document)
+        except ValueError:
+            raise ValueError('Type de document inconnu.')
+        if type_enum not in EntrepriseService.DPO_DOC_TYPES:
+            raise ValueError('Ce type de document n\'est pas un document DPO.')
+
+        entite = EntiteBase.query.filter_by(compte_entreprise_id=compte_id).first()
+        if not entite:
+            raise ValueError('Aucune entite trouvee.')
+
+        import os
+        from flask import current_app
+        upload_folder = os.path.join(
+            current_app.config.get('UPLOAD_FOLDER', 'uploads'), 'dpo'
+        )
+        os.makedirs(upload_folder, exist_ok=True)
+        filename = f"{entite.id}_{type_document}_{file.filename}"
+        filepath = os.path.join(upload_folder, filename)
+        file.save(filepath)
+
+        # Remplacer le precedent document du meme type si existant
+        existing = DocumentJoint.query.filter_by(
+            entite_id=entite.id, type_document=type_enum
+        ).first()
+        if existing:
+            try:
+                if existing.chemin_fichier and os.path.exists(existing.chemin_fichier):
+                    os.remove(existing.chemin_fichier)
+            except OSError:
+                pass
+            existing.nom_fichier = file.filename
+            existing.chemin_fichier = filepath
+            existing.taille = os.path.getsize(filepath)
+            existing.mime_type = file.content_type
+            doc = existing
+        else:
+            doc = DocumentJoint(
+                entite_id=entite.id,
+                type_document=type_enum,
+                nom_fichier=file.filename,
+                chemin_fichier=filepath,
+                taille=os.path.getsize(filepath),
+                mime_type=file.content_type,
+            )
+            db.session.add(doc)
+        db.session.commit()
+        return doc
+
+    @staticmethod
+    def get_journal_evenements(compte_id):
+        """Historique des changements de statut (journal d'evenements)."""
+        from app.models import HistoriqueStatut
+        entite = EntiteBase.query.filter_by(compte_entreprise_id=compte_id).first()
+        if not entite:
+            return []
+        events = (
+            HistoriqueStatut.query.filter_by(entite_id=entite.id)
+            .order_by(HistoriqueStatut.date_changement.desc())
+            .all()
+        )
+        result = []
+        for e in events:
+            modifie_par_nom = ''
+            if e.modifie_par_user:
+                modifie_par_nom = f"{e.modifie_par_user.prenom} {e.modifie_par_user.nom}".strip()
+            result.append({
+                'id': e.id,
+                'ancien_statut': e.ancien_statut,
+                'nouveau_statut': e.nouveau_statut,
+                'commentaire': e.commentaire,
+                'modifie_par_nom': modifie_par_nom,
+                'date': e.date_changement.isoformat() if e.date_changement else None,
+            })
+        return result
+
