@@ -28,6 +28,9 @@ class EntiteConformite(db.Model):
     effectif_entreprise = db.Column(db.String(50))
     volume_donnees_traitees = db.Column(db.String(100))
     delai_mise_en_conformite = db.Column(db.Date)
+    # Activations des formalites (controlees par l'ARTCI selon le retour donne)
+    formalite_autorisation_active = db.Column(db.Boolean, nullable=False, default=False)
+    formalite_declaration_active = db.Column(db.Boolean, nullable=False, default=False)
 
     # Relationship
     entite = db.relationship('EntiteBase', back_populates='conformite')

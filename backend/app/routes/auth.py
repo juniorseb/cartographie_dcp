@@ -24,7 +24,8 @@ auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
-    """Inscription entreprise + envoi OTP."""
+    """Inscription entreprise (3 sections : DG, DPO, acces).
+    Le compte est cree mais reste inactif jusqu'a validation manuelle ARTCI."""
     schema = RegisterInputSchema()
     try:
         data = schema.load(request.get_json())
@@ -35,7 +36,7 @@ def register():
         compte, _ = AuthService.register_entreprise(data)
         return created_response(
             CompteEntrepriseOutputSchema().dump(compte),
-            'Inscription réussie. Vérifiez votre email pour le code OTP.'
+            "Inscription enregistrée. Votre compte sera activé après vérification par l'ARTCI."
         )
     except ValueError as e:
         return error_response(str(e), 409)

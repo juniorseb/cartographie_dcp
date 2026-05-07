@@ -11,6 +11,7 @@ const navLinks = [
   { to: ROUTES.ENTITES, label: 'Liste' },
   { to: ROUTES.STATISTIQUES, label: 'Statistiques' },
   { to: ROUTES.A_PROPOS, label: 'À Propos' },
+  { to: ROUTES.CONTACT, label: 'Contact' },
 ];
 
 export default function Navbar() {

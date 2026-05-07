@@ -32,6 +32,12 @@ export type TypeDocument =
   | 'statuts'
   | 'attestation_fiscale'
   | 'rapport_activite'
+  | 'rapport_audit'
+  | 'autorisation'
+  | 'dpo_cv'
+  | 'dpo_casier_judiciaire'
+  | 'dpo_cni'
+  | 'dpo_extrait_naissance'
   | 'autre';
 
 export type CategorieDonnees =

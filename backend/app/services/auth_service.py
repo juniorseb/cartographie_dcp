@@ -47,18 +47,49 @@ class AuthService:
             ville=data.get('ville'),
             region=data.get('region'),
             email_verified=False,
-            is_active=True,
+            # Compte cree mais inactif jusqu'a validation manuelle ARTCI
+            is_active=False,
+            inscription_statut='pending',
             password_last_changed=datetime.now(timezone.utc),
-            password_expires_at=calculate_password_expiry()
+            password_expires_at=calculate_password_expiry(),
+            # Section 1 - Representant legal
+            dg_nom=data.get('dg_nom'),
+            dg_prenom=data.get('dg_prenom'),
+            dg_fonction=data.get('dg_fonction'),
+            dg_telephone=data.get('dg_telephone'),
+            dg_email=data.get('dg_email'),
+            # Section 2 - DPO
+            dpo_nom=data.get('dpo_nom'),
+            dpo_prenom=data.get('dpo_prenom'),
+            dpo_telephone=data.get('dpo_telephone'),
+            dpo_email=data.get('dpo_email'),
+            dpo_type=data.get('dpo_type'),
+            dpo_organisme=data.get('dpo_organisme'),
+            # Section 3 - Acces
+            acces_email_referant=data.get('acces_email_referant'),
+            acces_email_dpo=data.get('acces_email_dpo'),
         )
         db.session.add(compte)
         db.session.commit()
 
-        # Générer et envoyer OTP
-        otp = create_otp(compte.id, 'inscription')
-        send_otp_email(compte.email, otp.code, 'inscription')
+        # Notification admin (table notifications)
+        try:
+            from app.models import Notification
+            n = Notification(
+                destinataire_type='admin',
+                destinataire_id='*',
+                type='nouvelle_inscription',
+                titre='Nouvelle inscription a verifier',
+                message=f"{compte.denomination} (CC {compte.numero_cc}) - DG: {compte.dg_email or '-'}",
+                lue=False,
+                entite_id=None,
+            )
+            db.session.add(n)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
 
-        return compte, otp.code
+        return compte, None
 
     @staticmethod
     def verify_otp_code(email, code, otp_type):
@@ -76,6 +107,11 @@ class AuthService:
             raise ValueError('Email ou mot de passe incorrect.')
 
         if not compte.is_active:
+            if getattr(compte, 'inscription_statut', None) == 'pending':
+                raise ValueError("Votre inscription est en cours de vérification par l'ARTCI.")
+            if getattr(compte, 'inscription_statut', None) == 'rejected':
+                raise ValueError("Votre inscription a été rejetée. Motif : " +
+                                 (compte.inscription_motif_rejet or 'non précisé'))
             raise ValueError('Ce compte a été désactivé.')
 
         if not compte.email_verified:

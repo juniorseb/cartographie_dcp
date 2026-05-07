@@ -14,6 +14,7 @@ const ListeEntitesPage = lazy(() => import('@/pages/public/ListeEntitesPage'));
 const StatistiquesPage = lazy(() => import('@/pages/public/StatistiquesPage'));
 const FicheEntitePage = lazy(() => import('@/pages/public/FicheEntitePage'));
 const AProposPage = lazy(() => import('@/pages/public/AProposPage'));
+const ContactPage = lazy(() => import('@/pages/public/ContactPage'));
 
 // Lazy loading des pages auth
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'));
@@ -55,6 +56,7 @@ const AuditsAdminPage = lazy(() => import('@/pages/admin/AuditsAdminPage'));
 const ParametresPage = lazy(() => import('@/pages/admin/ParametresPage'));
 const HistoriqueImportsPage = lazy(() => import('@/pages/admin/HistoriqueImportsPage'));
 const BackupPage = lazy(() => import('@/pages/admin/BackupPage'));
+const InscriptionsPage = lazy(() => import('@/pages/admin/InscriptionsPage'));
 
 export default function App() {
   return (
@@ -72,6 +74,7 @@ export default function App() {
             <Route path="entites/:id" element={<FicheEntitePage />} />
             <Route path="statistiques" element={<StatistiquesPage />} />
             <Route path="a-propos" element={<AProposPage />} />
+            <Route path="contact" element={<ContactPage />} />
           </Route>
 
           {/* Routes auth */}
@@ -139,6 +142,7 @@ export default function App() {
             <Route path="admin/rapports-validation" element={<ValidationRapportsPage />} />
             <Route path="admin/notifications" element={<NotificationsPage />} />
             <Route path="admin/demandes-auto" element={<DemandesAutoPage />} />
+            <Route path="admin/inscriptions" element={<InscriptionsPage />} />
             <Route path="admin/audits" element={<AuditsAdminPage />} />
             <Route path="admin/parametres" element={<ParametresPage />} />
             <Route path="admin/imports-historique" element={<HistoriqueImportsPage />} />

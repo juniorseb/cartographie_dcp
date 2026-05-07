@@ -1,18 +1,22 @@
 """
 Routes publiques pour ARTCI DCP Platform.
-Entités conformes, statistiques, export, téléchargement documents.
-5 endpoints, pas d'authentification requise.
+Entités conformes, statistiques, export, téléchargement documents, contact.
 """
 import os
+import re
 from flask import Blueprint, request, send_file, current_app
 from app.services.public_service import PublicService
-from app.utils.responses import success_response, error_response
+from app.utils.responses import success_response, error_response, created_response
 from app.extensions import db
 from app.models.documents_joints import DocumentJoint
+from app.models.contact_messages import ContactMessage
 from app.models.enums import TypeDocumentEnum
 
 
 public_bp = Blueprint('public', __name__)
+
+
+EMAIL_RE = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
 
 
 @public_bp.route('/entites', methods=['GET'])
@@ -110,3 +114,37 @@ def download_document(document_id):
         as_attachment=True,
         download_name=doc.nom_fichier
     )
+
+
+@public_bp.route('/contact', methods=['POST'])
+def submit_contact():
+    """Reception d'un message du formulaire de contact public."""
+    data = request.get_json()
+    if not data:
+        return error_response('Donnees JSON requises.', 400)
+
+    nom = (data.get('nom') or '').strip()
+    email = (data.get('email') or '').strip()
+    telephone = (data.get('telephone') or '').strip() or None
+    sujet = (data.get('sujet') or '').strip()
+    message = (data.get('message') or '').strip()
+
+    errors = {}
+    if not nom or len(nom) < 2:
+        errors['nom'] = 'Le nom est requis (2 caracteres minimum).'
+    if not email or not EMAIL_RE.match(email):
+        errors['email'] = 'Email invalide.'
+    if not sujet:
+        errors['sujet'] = 'Le sujet est requis.'
+    if not message or len(message) < 10:
+        errors['message'] = 'Le message est requis (10 caracteres minimum).'
+    if errors:
+        return error_response('Donnees invalides.', 400, errors)
+
+    msg = ContactMessage(
+        nom=nom[:200], email=email[:255], telephone=telephone,
+        sujet=sujet[:255], message=message,
+    )
+    db.session.add(msg)
+    db.session.commit()
+    return created_response({'id': msg.id}, 'Message envoye.')

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { RefreshCw, CheckCircle, FileText, FilePlus2, Lock } from 'lucide-react';
 import * as entrepriseApi from '@/api/entreprise.api';
+import { useApi } from '@/hooks/useApi';
 import { cn } from '@/utils/cn';
 
 type Tab = 'renouvellement' | 'autorisation' | 'declaration';
@@ -13,10 +14,9 @@ export default function FormalitesPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Pour la version courante : Autorisation et Déclaration restent grisés
-  // tant que l'ARTCI n'a pas répondu à la demande initiale.
-  const autorisationActive = false;
-  const declarationActive = false;
+  const { data: dossier } = useApi(() => entrepriseApi.getMonDossier(), []);
+  const autorisationActive = dossier?.conformite?.formalite_autorisation_active === true;
+  const declarationActive = dossier?.conformite?.formalite_declaration_active === true;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

@@ -14,7 +14,7 @@ from app.models import (
 from app.models.enums import (
     StatutWorkflowEnum, StatutConformiteEnum,
     StatutAssignationEnum, RoleEnum, OrigineSaisieEnum,
-    StatutRenouvellementEnum
+    StatutRenouvellementEnum, TypeDocumentEnum
 )
 from app.schemas.entite import EntiteListOutputSchema, EntiteDetailOutputSchema
 from app.schemas.user import UserOutputSchema
@@ -149,6 +149,142 @@ class AdminService:
         if not entite:
             raise ValueError('Entité non trouvée.')
         return EntiteService.update_entite_with_children(entite, data)
+
+    # --- Inscriptions (workflow validation acces entreprise) ---
+
+    @staticmethod
+    def list_inscriptions(statut='pending'):
+        """Liste les comptes entreprise dont l'inscription est dans le statut donne."""
+        from app.models.comptes_entreprises import CompteEntreprise
+        query = CompteEntreprise.query.filter_by(inscription_statut=statut)
+        query = query.order_by(CompteEntreprise.createdAt.desc())
+        return [{
+            'id': c.id,
+            'denomination': c.denomination,
+            'numero_cc': c.numero_cc,
+            'email': c.email,
+            'telephone': c.telephone,
+            'ville': c.ville, 'region': c.region,
+            'dg_nom': c.dg_nom, 'dg_prenom': c.dg_prenom,
+            'dg_fonction': c.dg_fonction,
+            'dg_telephone': c.dg_telephone, 'dg_email': c.dg_email,
+            'dpo_nom': c.dpo_nom, 'dpo_prenom': c.dpo_prenom,
+            'dpo_telephone': c.dpo_telephone, 'dpo_email': c.dpo_email,
+            'dpo_type': c.dpo_type, 'dpo_organisme': c.dpo_organisme,
+            'acces_email_referant': c.acces_email_referant,
+            'acces_email_dpo': c.acces_email_dpo,
+            'inscription_statut': c.inscription_statut,
+            'inscription_motif_rejet': c.inscription_motif_rejet,
+            'createdAt': c.createdAt.isoformat() if c.createdAt else None,
+        } for c in query.all()]
+
+    @staticmethod
+    def valider_inscription(compte_id, user_id):
+        """Valide une inscription : active le compte. Notifie DG et DPO par email
+        si l'envoi de mail est configure."""
+        from app.models.comptes_entreprises import CompteEntreprise
+        compte = CompteEntreprise.query.get(compte_id)
+        if not compte:
+            raise ValueError('Compte non trouvé.')
+        if compte.inscription_statut == 'approved':
+            raise ValueError('Inscription déjà validée.')
+        compte.inscription_statut = 'approved'
+        compte.is_active = True
+        compte.email_verified = True  # validation manuelle vaut verification
+        compte.inscription_validee_par = user_id
+        compte.inscription_validee_le = datetime.now(timezone.utc)
+        db.session.commit()
+
+        # Notifier DG + DPO par email
+        try:
+            from app.utils.otp import send_otp_email  # reuse mailer if any
+        except Exception:
+            send_otp_email = None
+        recipients = [r for r in [compte.acces_email_referant, compte.acces_email_dpo] if r]
+        for email in recipients:
+            try:
+                # simple notification; production : utiliser un mailer dedie
+                if send_otp_email:
+                    send_otp_email(email, 'Acces actif', 'inscription')
+            except Exception:
+                pass
+
+        return {
+            'id': compte.id,
+            'inscription_statut': compte.inscription_statut,
+            'is_active': compte.is_active,
+        }
+
+    @staticmethod
+    def rejeter_inscription(compte_id, user_id, motif):
+        """Rejette une inscription avec un motif. Le compte reste inactif."""
+        from app.models.comptes_entreprises import CompteEntreprise
+        compte = CompteEntreprise.query.get(compte_id)
+        if not compte:
+            raise ValueError('Compte non trouvé.')
+        if compte.inscription_statut == 'approved':
+            raise ValueError('Inscription déjà validée, rejet impossible.')
+        compte.inscription_statut = 'rejected'
+        compte.is_active = False
+        compte.inscription_motif_rejet = motif
+        compte.inscription_validee_par = user_id
+        compte.inscription_validee_le = datetime.now(timezone.utc)
+        db.session.commit()
+        return {
+            'id': compte.id,
+            'inscription_statut': compte.inscription_statut,
+            'inscription_motif_rejet': compte.inscription_motif_rejet,
+        }
+
+    @staticmethod
+    def update_formalites_activation(entite_id, autorisation_active, declaration_active):
+        """Active/desactive les onglets Autorisation et Declaration cote entreprise."""
+        entite = EntiteBase.query.get(entite_id)
+        if not entite:
+            raise ValueError('Entité non trouvée.')
+        conformite = EntiteConformite.query.get(entite_id)
+        if not conformite:
+            conformite = EntiteConformite(entite_id=entite_id)
+            db.session.add(conformite)
+        if autorisation_active is not None:
+            conformite.formalite_autorisation_active = bool(autorisation_active)
+        if declaration_active is not None:
+            conformite.formalite_declaration_active = bool(declaration_active)
+        db.session.commit()
+        return {
+            'autorisation_active': conformite.formalite_autorisation_active,
+            'declaration_active': conformite.formalite_declaration_active,
+        }
+
+    @staticmethod
+    def upload_rapport_audit(entite_id, file):
+        """Téléverser un rapport d'audit pour une entité.
+        Le document apparaitra dans Mon dossier > Mes Rapports cote entreprise."""
+        entite = EntiteBase.query.get(entite_id)
+        if not entite:
+            raise ValueError('Entité non trouvée.')
+
+        import os
+        from flask import current_app
+        upload_folder = os.path.join(
+            current_app.config.get('UPLOAD_FOLDER', 'uploads'), 'audits'
+        )
+        os.makedirs(upload_folder, exist_ok=True)
+        filename = f"{entite_id}_{file.filename}"
+        filepath = os.path.join(upload_folder, filename)
+        file.save(filepath)
+
+        doc = DocumentJoint(
+            entite_id=entite_id,
+            type_document=TypeDocumentEnum.rapport_audit,
+            nom_fichier=file.filename,
+            chemin_fichier=filepath,
+            taille=os.path.getsize(filepath),
+            mime_type=file.content_type,
+        )
+        db.session.add(doc)
+        db.session.commit()
+        return doc
 
     @staticmethod
     def get_panier(agent_id):

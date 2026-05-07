@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Save, Send, Plus, Trash2 } from 'lucide-react';
+import { Save, Send, Plus, Trash2, AlertTriangle, Lock } from 'lucide-react';
 import FormStepper from '@/components/entreprise/FormStepper';
 import Loading from '@/components/common/Loading';
 import * as entrepriseApi from '@/api/entreprise.api';
@@ -13,6 +13,25 @@ import type {
   TransfertInternational, MesureSecurite, CertificationSecurite,
   CategorieDonneesItem,
 } from '@/types/entreprise';
+import type { StatutWorkflow } from '@/types/enums';
+
+// Statuts pendant lesquels la modification est INTERDITE
+// (l'ARTCI n'a pas encore repondu / traitement en cours)
+const STATUTS_LECTURE_SEULE: StatutWorkflow[] = [
+  'soumis',
+  'en_verification',
+];
+
+// Statuts ayant deja un statut de conformite affecte par l'ARTCI
+// La modification est possible mais declenchera une realuation
+const STATUTS_AVEC_REEVALUATION: StatutWorkflow[] = [
+  'conforme',
+  'conforme_sous_reserve',
+  'valide',
+  'rejete',
+  'publie',
+  'en_attente_complements',
+];
 
 const DRAFT_KEY = 'demande_draft';
 
@@ -43,6 +62,8 @@ export default function DemandePage({ mode = 'entreprise' }: DemandePageProps) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [entiteId, setEntiteId] = useState<string | null>(id ?? null);
+  const [statutWorkflow, setStatutWorkflow] = useState<StatutWorkflow | null>(null);
+  const [acceptedReevaluation, setAcceptedReevaluation] = useState(false);
 
   // Load existing demande if editing
   const { data: existingDossier, isLoading } = useApi(
@@ -78,6 +99,7 @@ export default function DemandePage({ mode = 'entreprise' }: DemandePageProps) {
         certifications: existingDossier.certifications ?? [],
       });
       setEntiteId(existingDossier.id);
+      setStatutWorkflow(existingDossier.workflow?.statut ?? null);
     } else if (!id) {
       const draft = localStorage.getItem(DRAFT_KEY);
       if (draft) {
@@ -251,6 +273,20 @@ export default function DemandePage({ mode = 'entreprise' }: DemandePageProps) {
     }
   }
 
+  // Mode lecture seule : entreprise + statut soumis/en_verification
+  const isReadOnly = !isAdmin && statutWorkflow !== null
+    && STATUTS_LECTURE_SEULE.includes(statutWorkflow);
+
+  // Statut deja affecte par l'ARTCI : modification declenchera reevaluation
+  const aDejaUnStatutAffecte = !isAdmin && statutWorkflow !== null
+    && STATUTS_AVEC_REEVALUATION.includes(statutWorkflow);
+
+  // Si reevaluation requise et utilisateur n'a pas accepte : formulaire grise
+  const isLockedPendingAcceptation = aDejaUnStatutAffecte && !acceptedReevaluation;
+
+  // Capacite a editer (utilisee dans les inputs disabled)
+  const canEditFields = !isReadOnly && !isLockedPendingAcceptation;
+
   if (isLoading) return <Loading fullPage text="Chargement de la demande..." />;
 
   return (
@@ -258,11 +294,41 @@ export default function DemandePage({ mode = 'entreprise' }: DemandePageProps) {
       <h1 className="text-2xl mb-2">
         {isAdmin
           ? (id ? 'Modifier le Recensement' : 'Nouveau Recensement (Saisie ARTCI)')
-          : (id ? 'Modifier ma Demande' : 'Nouvelle Demande')}
+          : (id ? 'Mon Enregistrement' : 'Nouvel Enregistrement')}
       </h1>
       <p className="text-sm text-gray-500 mb-4">
         Questionnaire de recensement et d'évaluation de la conformité à la Loi N°2013-450
       </p>
+
+      {/* Alerte lecture seule (en attente reponse ARTCI) */}
+      {isReadOnly && (
+        <div className="alert alert-info mb-4 flex items-start gap-3">
+          <Lock className="w-5 h-5 flex-shrink-0 mt-0.5" />
+          <div>
+            <strong>Modification verrouillée.</strong> Votre dossier est actuellement en cours
+            d'examen par l'ARTCI. Vous pourrez le modifier après réponse.
+          </div>
+        </div>
+      )}
+
+      {/* Alerte reevaluation (statut deja affecte) */}
+      {isLockedPendingAcceptation && (
+        <div className="alert alert-warning mb-4 flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <strong>Attention :</strong> Toute modification entraînera une réévaluation de votre
+            statut et un nouveau cycle de validation par l'ARTCI.
+            <div className="mt-2">
+              <button
+                className="btn btn-secondary text-sm py-2 px-3"
+                onClick={() => setAcceptedReevaluation(true)}
+              >
+                J'accepte et je modifie mon dossier
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {error && <div className="alert alert-danger mb-4">{error}</div>}
       {success && <div className="alert alert-success mb-4">{success}</div>}
@@ -277,51 +343,59 @@ export default function DemandePage({ mode = 'entreprise' }: DemandePageProps) {
 
       <FormStepper currentStep={currentStep} onStepClick={goToStep} filledCount={filledCount} totalCount={50} />
 
-      <div className="card mt-6">
-        {currentStep === 1 && (
-          <Partie1Identification
-            formData={formData}
-            updateField={updateField}
-            updateNestedField={updateNestedField}
-            addToList={addToList}
-            removeFromList={removeFromList}
-            updateListItem={updateListItem}
-          />
-        )}
-        {currentStep === 2 && (
-          <Partie2CadreJuridique
-            formData={formData}
-            addToList={addToList}
-            removeFromList={removeFromList}
-            updateListItem={updateListItem}
-          />
-        )}
-        {currentStep === 3 && (
-          <Partie3Registre
-            formData={formData}
-            addToList={addToList}
-            removeFromList={removeFromList}
-            updateListItem={updateListItem}
-          />
-        )}
-        {currentStep === 4 && (
-          <Partie4SousTraitance
-            formData={formData}
-            addToList={addToList}
-            removeFromList={removeFromList}
-            updateListItem={updateListItem}
-          />
-        )}
-        {currentStep === 5 && (
-          <Partie5Securite
-            formData={formData}
-            updateNestedField={updateNestedField}
-            addToList={addToList}
-            removeFromList={removeFromList}
-            updateListItem={updateListItem}
-          />
-        )}
-      </div>
+      {currentStep < 6 && (
+        <div className={`card mt-6 ${!canEditFields ? 'opacity-60 pointer-events-none' : ''}`}>
+          {currentStep === 1 && (
+            <Partie1Identification
+              formData={formData}
+              updateField={updateField}
+              updateNestedField={updateNestedField}
+              addToList={addToList}
+              removeFromList={removeFromList}
+              updateListItem={updateListItem}
+            />
+          )}
+          {currentStep === 2 && (
+            <Partie2CadreJuridique
+              formData={formData}
+              addToList={addToList}
+              removeFromList={removeFromList}
+              updateListItem={updateListItem}
+            />
+          )}
+          {currentStep === 3 && (
+            <Partie3Registre
+              formData={formData}
+              addToList={addToList}
+              removeFromList={removeFromList}
+              updateListItem={updateListItem}
+            />
+          )}
+          {currentStep === 4 && (
+            <Partie4SousTraitance
+              formData={formData}
+              addToList={addToList}
+              removeFromList={removeFromList}
+              updateListItem={updateListItem}
+            />
+          )}
+          {currentStep === 5 && (
+            <Partie5Securite
+              formData={formData}
+              updateNestedField={updateNestedField}
+              addToList={addToList}
+              removeFromList={removeFromList}
+              updateListItem={updateListItem}
+            />
+          )}
+        </div>
+      )}
+
+      {currentStep === 6 && (
+        <div className="card mt-6">
+          <Partie6Recapitulatif formData={formData} filledCount={filledCount} />
+        </div>
+      )}
 
       {/* Navigation + Actions */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-6">
@@ -331,9 +405,9 @@ export default function DemandePage({ mode = 'entreprise' }: DemandePageProps) {
               Précédent
             </button>
           )}
-          {currentStep < 5 && (
+          {currentStep < 6 && (
             <button className="btn btn-primary" onClick={() => goToStep(currentStep + 1)}>
-              Suivant
+              {currentStep === 5 ? 'Voir le récapitulatif' : 'Suivant'}
             </button>
           )}
         </div>
@@ -341,22 +415,125 @@ export default function DemandePage({ mode = 'entreprise' }: DemandePageProps) {
           <button
             className="btn btn-outline flex items-center gap-2"
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || !canEditFields}
           >
             {saving ? <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> : <Save className="w-4 h-4" />}
             Sauvegarder
           </button>
-          {currentStep === 5 && (
+          {currentStep === 6 && (
             <button
               className="btn btn-secondary flex items-center gap-2"
               onClick={handleSubmit}
-              disabled={submitting}
+              disabled={submitting || !canEditFields}
             >
               {submitting ? <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> : <Send className="w-4 h-4" />}
-              {isAdmin ? 'Enregistrer' : 'Soumettre'}
+              {isAdmin ? 'Enregistrer' : 'Soumettre définitivement'}
             </button>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// PARTIE 6 : RECAPITULATIF
+// ============================================================
+function Partie6Recapitulatif({
+  formData,
+  filledCount,
+}: { formData: DemandeInput; filledCount: number }) {
+  const sections: { title: string; rows: { label: string; value: string }[] }[] = [
+    {
+      title: 'Identification',
+      rows: [
+        { label: 'Dénomination', value: formData.denomination ?? '-' },
+        { label: 'N° CC', value: formData.numero_cc ?? '-' },
+        { label: 'Forme juridique', value: formData.forme_juridique ?? '-' },
+        { label: 'Secteur', value: formData.secteur_activite ?? '-' },
+        { label: 'Adresse', value: formData.adresse ?? '-' },
+        { label: 'Ville / Région', value: `${formData.ville ?? '-'} / ${formData.region ?? '-'}` },
+        { label: 'Téléphone', value: formData.telephone ?? '-' },
+        { label: 'Email', value: formData.email ?? '-' },
+      ],
+    },
+    {
+      title: 'Cadre juridique',
+      rows: [
+        { label: 'Responsables légaux', value: String((formData.responsables_legaux ?? []).length) + ' personne(s)' },
+        { label: 'DPO / CPD', value: String((formData.dpos ?? []).length) + ' DPO' },
+        {
+          label: 'Connaissance Loi 2013-450',
+          value: formData.conformites_administratives?.[0]?.connaissance_loi_2013 === true ? 'Oui'
+            : formData.conformites_administratives?.[0]?.connaissance_loi_2013 === false ? 'Non' : '-',
+        },
+        {
+          label: 'Déclaration ARTCI',
+          value: formData.conformites_administratives?.[0]?.declaration_artci === true ? 'Oui'
+            : formData.conformites_administratives?.[0]?.declaration_artci === false ? 'Non' : '-',
+        },
+        {
+          label: 'Autorisation ARTCI',
+          value: formData.conformites_administratives?.[0]?.autorisation_artci === true ? 'Oui'
+            : formData.conformites_administratives?.[0]?.autorisation_artci === false ? 'Non' : '-',
+        },
+      ],
+    },
+    {
+      title: 'Registre & Traitements',
+      rows: [
+        { label: 'Traitements enregistrés', value: String((formData.registre_traitements ?? []).length) },
+        { label: 'Catégories de données', value: String((formData.categories_donnees ?? []).length) },
+        { label: 'Finalités', value: String((formData.finalites ?? []).length) },
+      ],
+    },
+    {
+      title: 'Sous-traitance & Transferts',
+      rows: [
+        { label: 'Sous-traitants', value: String((formData.sous_traitants ?? []).length) },
+        { label: 'Transferts internationaux', value: String((formData.transferts ?? []).length) },
+      ],
+    },
+    {
+      title: 'Sécurité',
+      rows: [
+        { label: 'Politique de sécurité', value: formData.securite?.politique_securite ? 'Oui' : 'Non' },
+        { label: 'Responsable sécurité', value: formData.securite?.responsable_securite ? 'Oui' : 'Non' },
+        { label: 'Analyse des risques', value: formData.securite?.analyse_risques ? 'Oui' : 'Non' },
+        { label: 'Plan de continuité', value: formData.securite?.plan_continuite ? 'Oui' : 'Non' },
+        { label: 'Notification violations', value: formData.securite?.notification_violations ? 'Oui' : 'Non' },
+        { label: 'Formation personnel', value: formData.securite?.formation_personnel ? 'Oui' : 'Non' },
+        { label: 'Mesures', value: String((formData.mesures_securite ?? []).length) },
+        { label: 'Certifications', value: String((formData.certifications ?? []).length) },
+      ],
+    },
+  ];
+
+  return (
+    <div>
+      <h3 className="text-lg font-bold mb-2">Récapitulatif avant envoi</h3>
+      <p className="text-sm text-gray-500 mb-4">
+        Vérifiez l'exactitude de vos informations avant de soumettre votre dossier.
+        Une fois soumis, votre dossier sera examiné par les services de l'ARTCI.
+      </p>
+      <div className="alert alert-info mb-6 text-sm">
+        <strong>Progression :</strong> {filledCount} questions renseignées sur 50.
+      </div>
+
+      <div className="space-y-6">
+        {sections.map((section) => (
+          <div key={section.title}>
+            <h4 className="font-bold text-base mb-2 pb-1 border-b border-gray-200">{section.title}</h4>
+            <div className="space-y-1">
+              {section.rows.map((r) => (
+                <div key={r.label} className="flex flex-col sm:flex-row gap-1">
+                  <span className="text-sm font-semibold text-gray-600 sm:w-56 flex-shrink-0">{r.label}</span>
+                  <span className="text-sm">{r.value || '-'}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

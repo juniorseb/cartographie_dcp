@@ -6,6 +6,7 @@ const FORM_PARTS = [
   { step: 3, label: 'Registre & Traitements' },
   { step: 4, label: 'Sous-traitance & Transferts' },
   { step: 5, label: 'Sécurité' },
+  { step: 6, label: 'Récapitulatif' },
 ];
 
 interface FormStepperProps {

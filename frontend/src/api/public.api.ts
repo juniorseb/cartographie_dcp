@@ -41,3 +41,15 @@ export async function exportEntites(
     { format, ...filters } as Record<string, string>
   );
 }
+
+export interface ContactMessageInput {
+  nom: string;
+  email: string;
+  telephone?: string;
+  sujet: string;
+  message: string;
+}
+
+export async function sendContactMessage(data: ContactMessageInput): Promise<void> {
+  await apiClient.post<ApiResponse<unknown>>('/public/contact', data);
+}

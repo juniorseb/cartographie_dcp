@@ -50,6 +50,22 @@ export interface RegisterInput {
   adresse?: string;
   ville?: string;
   region?: string;
+  // Section 1 — Représentant légal / Référant (DG)
+  dg_nom?: string;
+  dg_prenom?: string;
+  dg_fonction?: string;
+  dg_telephone?: string;
+  dg_email?: string;
+  // Section 2 — DPO
+  dpo_nom?: string;
+  dpo_prenom?: string;
+  dpo_telephone?: string;
+  dpo_email?: string;
+  dpo_type?: 'interne' | 'externe';
+  dpo_organisme?: string;
+  // Section 3 — Accès (référant + DPO)
+  acces_email_referant?: string;
+  acces_email_dpo?: string;
 }
 
 export interface LoginInput {

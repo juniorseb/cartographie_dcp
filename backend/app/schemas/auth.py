@@ -8,7 +8,7 @@ from marshmallow import Schema, fields, validate, validates_schema, ValidationEr
 # --- INPUT ---
 
 class RegisterInputSchema(Schema):
-    """POST /api/auth/register"""
+    """POST /api/auth/register - inscription en 3 sections (DG / DPO / Acces)."""
     email = fields.Email(required=True)
     password = fields.String(required=True, validate=validate.Length(min=8, max=128))
     password_confirm = fields.String(required=True)
@@ -18,6 +18,22 @@ class RegisterInputSchema(Schema):
     adresse = fields.String(validate=validate.Length(max=500))
     ville = fields.String(validate=validate.Length(max=100))
     region = fields.String(validate=validate.Length(max=100))
+    # Section 1 - Representant legal / Referant (DG)
+    dg_nom = fields.String(validate=validate.Length(max=200))
+    dg_prenom = fields.String(validate=validate.Length(max=200))
+    dg_fonction = fields.String(validate=validate.Length(max=200))
+    dg_telephone = fields.String(validate=validate.Length(max=30))
+    dg_email = fields.Email()
+    # Section 2 - DPO
+    dpo_nom = fields.String(validate=validate.Length(max=200))
+    dpo_prenom = fields.String(validate=validate.Length(max=200))
+    dpo_telephone = fields.String(validate=validate.Length(max=30))
+    dpo_email = fields.Email()
+    dpo_type = fields.String(validate=validate.OneOf(['interne', 'externe']))
+    dpo_organisme = fields.String(validate=validate.Length(max=255))
+    # Section 3 - Acces
+    acces_email_referant = fields.Email()
+    acces_email_dpo = fields.Email()
 
     @validates_schema
     def validate_passwords_match(self, data, **kwargs):

@@ -61,6 +61,8 @@ class EntiteConformiteOutputSchema(Schema):
     effectif_entreprise = fields.String()
     volume_donnees_traitees = fields.String()
     delai_mise_en_conformite = fields.Date()
+    formalite_autorisation_active = fields.Boolean()
+    formalite_declaration_active = fields.Boolean()
 
 
 class SecuriteConformiteSchema(Schema):

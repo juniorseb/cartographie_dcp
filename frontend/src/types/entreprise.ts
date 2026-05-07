@@ -246,6 +246,8 @@ export interface ConformiteInfo {
   effectif_entreprise?: string;
   volume_donnees_traitees?: string;
   delai_mise_en_conformite?: string;
+  formalite_autorisation_active?: boolean;
+  formalite_declaration_active?: boolean;
 }
 
 export interface DocumentJoint {

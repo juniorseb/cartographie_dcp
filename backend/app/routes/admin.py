@@ -133,6 +133,84 @@ def update_entite(entite_id):
         return error_response(str(e), 400)
 
 
+# --- Inscriptions a valider (workflow d'acces entreprise) ---
+
+@admin_bp.route('/inscriptions', methods=['GET'])
+@editor_or_above
+def list_inscriptions():
+    """Liste les inscriptions en attente de validation."""
+    statut = request.args.get('statut', 'pending')
+    result = AdminService.list_inscriptions(statut=statut)
+    return success_response(result)
+
+
+@admin_bp.route('/inscriptions/<string:compte_id>/valider', methods=['POST'])
+@admin_or_above
+def valider_inscription(compte_id):
+    """Approuve une inscription : compte active, emails envoyes au DG et au DPO."""
+    try:
+        result = AdminService.valider_inscription(compte_id, g.current_user_id)
+        return success_response(result, 'Inscription validee.')
+    except ValueError as e:
+        return error_response(str(e), 400)
+
+
+@admin_bp.route('/inscriptions/<string:compte_id>/rejeter', methods=['POST'])
+@admin_or_above
+def rejeter_inscription(compte_id):
+    """Rejette une inscription avec un motif."""
+    data = request.get_json() or {}
+    motif = (data.get('motif') or '').strip()
+    if not motif:
+        return error_response('Motif de rejet requis.', 400)
+    try:
+        result = AdminService.rejeter_inscription(compte_id, g.current_user_id, motif)
+        return success_response(result, 'Inscription rejetee.')
+    except ValueError as e:
+        return error_response(str(e), 400)
+
+
+@admin_bp.route('/entites/<string:entite_id>/formalites', methods=['PUT'])
+@admin_or_above
+def update_formalites_activation(entite_id):
+    """Active ou desactive les onglets Autorisation/Declaration d'une entreprise."""
+    data = request.get_json() or {}
+    autorisation = data.get('autorisation_active')
+    declaration = data.get('declaration_active')
+    try:
+        result = AdminService.update_formalites_activation(
+            entite_id, autorisation, declaration
+        )
+        return success_response(result, 'Formalites mises a jour.')
+    except ValueError as e:
+        return error_response(str(e), 400)
+
+
+@admin_bp.route('/entites/<string:entite_id>/rapport-audit', methods=['POST'])
+@editor_or_above
+def upload_rapport_audit(entite_id):
+    """Téléverser un rapport d'audit pour une entité.
+    Le rapport apparaitra automatiquement dans Mon dossier > Mes Rapports
+    de l'entreprise concernee."""
+    if 'file' not in request.files:
+        return error_response('Aucun fichier fourni.', 400)
+    file = request.files['file']
+    if not file.filename:
+        return error_response('Nom de fichier vide.', 400)
+    try:
+        doc = AdminService.upload_rapport_audit(entite_id, file)
+        return success_response(
+            {
+                'id': doc.id,
+                'nom_fichier': doc.nom_fichier,
+                'type_document': doc.type_document.value,
+            },
+            'Rapport d\'audit deposé.',
+        )
+    except ValueError as e:
+        return error_response(str(e), 400)
+
+
 # --- Panier & Assignations ---
 
 @admin_bp.route('/panier', methods=['GET'])

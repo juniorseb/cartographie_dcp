@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, FileText, Shield, Users, MapPin, Edit, Lock, Globe, BookOpen, UserCheck, ClipboardList, Award, FileDown } from 'lucide-react';
+import { ArrowLeft, FileText, Shield, Users, MapPin, Edit, Lock, Globe, BookOpen, UserCheck, ClipboardList, Award, FileDown, Upload, ClipboardCheck, RefreshCw } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import * as adminApi from '@/api/admin.api';
 import Loading from '@/components/common/Loading';
@@ -37,10 +38,39 @@ export default function EntiteDetailAdminPage() {
   const { user } = useAuth();
   const canEdit = user && hasMinRole(user.role, 'editor');
 
-  const { data: entite, isLoading, error } = useApi(
+  const { data: entite, isLoading, error, refetch } = useApi(
     () => adminApi.getEntiteDetail(id!),
     [id]
   );
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const [uploadSuccess, setUploadSuccess] = useState('');
+
+  async function handleUploadAudit(file: File) {
+    if (!id) return;
+    setUploadError('');
+    setUploadSuccess('');
+    setUploading(true);
+    try {
+      await adminApi.uploadRapportAudit(id, file);
+      setUploadSuccess('Rapport d\'audit déposé. Visible côté entreprise dans Mon dossier > Mes Rapports.');
+      refetch();
+    } catch {
+      setUploadError("Erreur lors du téléversement.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleToggleFormalite(field: 'autorisation_active' | 'declaration_active', value: boolean) {
+    if (!id) return;
+    try {
+      await adminApi.updateFormalitesActivation(id, { [field]: value });
+      refetch();
+    } catch {
+      // erreur silencieuse
+    }
+  }
 
   if (isLoading) return <Loading fullPage text="Chargement de l'entité..." />;
 
@@ -382,6 +412,77 @@ export default function EntiteDetailAdminPage() {
                 </div>
               ))}
             </div>
+          </SectionCard>
+        )}
+
+        {/* ── Formalités (activation Autorisation / Déclaration) ── */}
+        {canEdit && hasMinRole(user!.role, 'admin') && (
+          <SectionCard title="Formalités de l'entreprise" icon={RefreshCw} color="text-[var(--artci-orange)]">
+            <p className="text-sm text-gray-500 mb-4">
+              Activez les onglets "Autorisation" et "Déclaration" côté entreprise selon le retour
+              donné à son dossier.
+            </p>
+            <div className="space-y-3">
+              <label className="flex items-center justify-between p-3 border border-gray-200 rounded-lg cursor-pointer">
+                <div>
+                  <div className="text-sm font-semibold">Autorisation</div>
+                  <div className="text-xs text-gray-500">
+                    Transferts de données, traitement de données sensibles, changement de DPO...
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  className="h-5 w-5"
+                  checked={entite.conformite?.formalite_autorisation_active === true}
+                  onChange={(e) => handleToggleFormalite('autorisation_active', e.target.checked)}
+                />
+              </label>
+              <label className="flex items-center justify-between p-3 border border-gray-200 rounded-lg cursor-pointer">
+                <div>
+                  <div className="text-sm font-semibold">Déclaration</div>
+                  <div className="text-xs text-gray-500">
+                    Déclarations à l'ARTCI selon le retour de votre dossier.
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  className="h-5 w-5"
+                  checked={entite.conformite?.formalite_declaration_active === true}
+                  onChange={(e) => handleToggleFormalite('declaration_active', e.target.checked)}
+                />
+              </label>
+            </div>
+          </SectionCard>
+        )}
+
+        {/* ── Rapport d'audit (admin upload) ── */}
+        {canEdit && (
+          <SectionCard title="Rapport d'audit" icon={ClipboardCheck} color="text-[var(--artci-green)]">
+            <p className="text-sm text-gray-500 mb-3">
+              Téléversez un rapport d'audit. Il apparaîtra automatiquement dans
+              "Mon dossier &gt; Mes Rapports" de l'entreprise.
+            </p>
+            {uploadError && <div className="alert alert-danger mb-3 text-sm">{uploadError}</div>}
+            {uploadSuccess && <div className="alert alert-success mb-3 text-sm">{uploadSuccess}</div>}
+            <label className="btn btn-secondary text-sm py-2 px-4 inline-flex items-center gap-2 cursor-pointer">
+              {uploading ? (
+                <div className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />
+              ) : (
+                <Upload className="w-4 h-4" />
+              )}
+              Téléverser un rapport
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx"
+                className="hidden"
+                disabled={uploading}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleUploadAudit(f);
+                  e.target.value = '';
+                }}
+              />
+            </label>
           </SectionCard>
         )}
 

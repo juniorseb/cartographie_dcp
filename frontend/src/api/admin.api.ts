@@ -64,6 +64,88 @@ export async function updateEntite(id: string, data: Partial<DemandeInput>): Pro
 }
 
 // ============================================================
+// Inscriptions a valider
+// ============================================================
+
+export interface InscriptionItem {
+  id: string;
+  denomination: string;
+  numero_cc: string;
+  email: string;
+  telephone?: string;
+  ville?: string;
+  region?: string;
+  dg_nom?: string;
+  dg_prenom?: string;
+  dg_fonction?: string;
+  dg_telephone?: string;
+  dg_email?: string;
+  dpo_nom?: string;
+  dpo_prenom?: string;
+  dpo_telephone?: string;
+  dpo_email?: string;
+  dpo_type?: string;
+  dpo_organisme?: string;
+  acces_email_referant?: string;
+  acces_email_dpo?: string;
+  inscription_statut: 'pending' | 'approved' | 'rejected';
+  inscription_motif_rejet?: string;
+  createdAt: string;
+}
+
+/** GET /api/admin/inscriptions?statut=pending */
+export async function getInscriptions(statut: 'pending' | 'approved' | 'rejected' = 'pending'): Promise<InscriptionItem[]> {
+  const res = await apiClient.get<ApiResponse<InscriptionItem[]>>('/admin/inscriptions', {
+    params: { statut },
+  });
+  return res.data.data!;
+}
+
+/** POST /api/admin/inscriptions/:id/valider */
+export async function validerInscription(compteId: string): Promise<{ id: string; inscription_statut: string; is_active: boolean }> {
+  const res = await apiClient.post<ApiResponse<{ id: string; inscription_statut: string; is_active: boolean }>>(
+    `/admin/inscriptions/${compteId}/valider`
+  );
+  return res.data.data!;
+}
+
+/** POST /api/admin/inscriptions/:id/rejeter */
+export async function rejeterInscription(compteId: string, motif: string): Promise<{ id: string; inscription_statut: string; inscription_motif_rejet: string }> {
+  const res = await apiClient.post<ApiResponse<{ id: string; inscription_statut: string; inscription_motif_rejet: string }>>(
+    `/admin/inscriptions/${compteId}/rejeter`,
+    { motif }
+  );
+  return res.data.data!;
+}
+
+/** PUT /api/admin/entites/:id/formalites */
+export async function updateFormalitesActivation(
+  entiteId: string,
+  data: { autorisation_active?: boolean; declaration_active?: boolean }
+): Promise<{ autorisation_active: boolean; declaration_active: boolean }> {
+  const res = await apiClient.put<ApiResponse<{ autorisation_active: boolean; declaration_active: boolean }>>(
+    `/admin/entites/${entiteId}/formalites`,
+    data
+  );
+  return res.data.data!;
+}
+
+/** POST /api/admin/entites/:id/rapport-audit */
+export async function uploadRapportAudit(
+  entiteId: string,
+  file: File
+): Promise<{ id: string; nom_fichier: string; type_document: string }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await apiClient.post<ApiResponse<{ id: string; nom_fichier: string; type_document: string }>>(
+    `/admin/entites/${entiteId}/rapport-audit`,
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } }
+  );
+  return res.data.data!;
+}
+
+// ============================================================
 // Workflow — Panier / Assignation
 // ============================================================
 

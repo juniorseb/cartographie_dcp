@@ -63,6 +63,9 @@ from app.models.renouvellements import Renouvellement
 # Groupe 8 : Notifications (1 table)
 from app.models.notifications import Notification
 
+# Groupe 9 : Contact (1 table)
+from app.models.contact_messages import ContactMessage
+
 __all__ = [
     # Mixins
     'UUIDMixin', 'TimestampMixin',
@@ -84,5 +87,5 @@ __all__ = [
     'TransfertInternational', 'SecuriteConformite',
     'MesureSecurite', 'CertificationSecurite',
     'HistoriqueStatut', 'Renouvellement',
-    'Notification',
+    'Notification', 'ContactMessage',
 ]

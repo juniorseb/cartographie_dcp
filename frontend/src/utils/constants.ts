@@ -42,6 +42,7 @@ export const ROUTES = {
   ADMIN_RAPPORTS_VALIDATION: '/admin/rapports-validation',
   ADMIN_NOTIFICATIONS: '/admin/notifications',
   ADMIN_DEMANDES_AUTO: '/admin/demandes-auto',
+  ADMIN_INSCRIPTIONS: '/admin/inscriptions',
   ADMIN_AUDITS: '/admin/audits',
   ADMIN_PARAMETRES: '/admin/parametres',
   ADMIN_IMPORTS_HISTORIQUE: '/admin/imports-historique',
