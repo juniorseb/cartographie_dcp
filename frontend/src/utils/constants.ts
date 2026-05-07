@@ -15,12 +15,11 @@ export const ROUTES = {
   RESET_PASSWORD: '/reinitialiser-mot-de-passe',
   // Entreprise
   ENTREPRISE_DASHBOARD: '/entreprise',
-  ENTREPRISE_DEMANDE: '/entreprise/demande',
-  ENTREPRISE_DEMANDE_EDIT: '/entreprise/demande/:id',
+  ENTREPRISE_ENREGISTREMENT: '/entreprise/mon-enregistrement',
+  ENTREPRISE_ENREGISTREMENT_EDIT: '/entreprise/mon-enregistrement/:id',
   ENTREPRISE_DOSSIER: '/entreprise/mon-dossier',
-  ENTREPRISE_FEEDBACKS: '/entreprise/feedbacks',
-  ENTREPRISE_RAPPORTS: '/entreprise/rapports',
-  ENTREPRISE_RENOUVELLEMENT: '/entreprise/renouvellement',
+  ENTREPRISE_NOTIFICATIONS: '/entreprise/notifications',
+  ENTREPRISE_FORMALITES: '/entreprise/formalites',
   ENTREPRISE_PROFIL: '/entreprise/profil',
   ENTREPRISE_CHANGE_PASSWORD: '/entreprise/changer-mot-de-passe',
   // Admin
@@ -39,8 +38,7 @@ export const ROUTES = {
   ADMIN_IMPORT: '/admin/import',
   ADMIN_LOGS: '/admin/logs',
   ADMIN_STATISTIQUES: '/admin/statistiques',
-  ADMIN_RAPPROCHEMENTS: '/admin/rapprochements',
-  ADMIN_RENOUVELLEMENTS: '/admin/renouvellements',
+  ADMIN_FORMALITES: '/admin/formalites',
   ADMIN_RAPPORTS_VALIDATION: '/admin/rapports-validation',
   ADMIN_NOTIFICATIONS: '/admin/notifications',
   ADMIN_DEMANDES_AUTO: '/admin/demandes-auto',
@@ -51,9 +49,9 @@ export const ROUTES = {
   ADMIN_PROFIL: '/admin/profil',
   // Public
   A_PROPOS: '/a-propos',
-  // Entreprise extras
+  CONTACT: '/contact',
+  // Entreprise extras (Journal d'evenements + Audits sont dans Mon Dossier)
   ENTREPRISE_AUDITS: '/entreprise/audits',
-  ENTREPRISE_RAPPROCHEMENT: '/entreprise/rapprochement',
 } as const;
 
 /** Labels des statuts de conformité */

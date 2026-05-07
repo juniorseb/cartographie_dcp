@@ -396,40 +396,7 @@ def get_logs():
     return success_response(result)
 
 
-# --- Rapprochements ---
-
-@admin_bp.route('/rapprochements', methods=['GET'])
-@role_required('super_admin', 'admin', 'editor', 'reader')
-def list_rapprochements():
-    """Liste paginée des demandes de rapprochement."""
-    filters = {
-        'search': request.args.get('search'),
-        'statut': request.args.get('statut'),
-    }
-    filters = {k: v for k, v in filters.items() if v}
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 20, type=int)
-    result = AdminService.list_rapprochements(filters=filters or None, page=page, per_page=per_page)
-    return success_response(result)
-
-
-@admin_bp.route('/rapprochements/<string:rapprochement_id>', methods=['PUT'])
-@admin_or_above
-def traiter_rapprochement(rapprochement_id):
-    """Approuver ou rejeter une demande de rapprochement."""
-    data = request.get_json()
-    if not data or 'action' not in data:
-        return error_response('Action requise (approuver/rejeter).', 400)
-    try:
-        result = AdminService.traiter_rapprochement(
-            rapprochement_id, g.current_user_id, data
-        )
-        return success_response(result, 'Rapprochement traité.')
-    except ValueError as e:
-        return error_response(str(e), 400)
-
-
-# --- Renouvellements ---
+# --- Formalités (Renouvellements + Autorisations + Déclarations) ---
 
 @admin_bp.route('/renouvellements', methods=['GET'])
 @role_required('super_admin', 'admin', 'editor', 'reader')

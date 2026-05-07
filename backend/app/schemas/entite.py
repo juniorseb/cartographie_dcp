@@ -2,7 +2,7 @@
 Schemas Marshmallow pour les entités et toutes les tables enfants.
 Le fichier le plus volumineux : couvre les 17 tables liées à EntiteBase.
 """
-from marshmallow import Schema, fields, validate
+from marshmallow import Schema, fields, validate, EXCLUDE
 from app.schemas.common import EnumField
 from app.models.enums import TypeDocumentEnum
 
@@ -13,6 +13,8 @@ from app.models.enums import TypeDocumentEnum
 
 class EntiteContactSchema(Schema):
     """EntiteContact - input & output."""
+    class Meta:
+        unknown = EXCLUDE
     responsable_legal_nom = fields.String(validate=validate.Length(max=200))
     responsable_legal_fonction = fields.String(validate=validate.Length(max=200))
     responsable_legal_email = fields.Email(load_default=None)
@@ -40,6 +42,8 @@ class EntiteWorkflowOutputSchema(Schema):
 
 class EntiteLocalisationSchema(Schema):
     """EntiteLocalisation - input & output."""
+    class Meta:
+        unknown = EXCLUDE
     latitude = fields.Float()
     longitude = fields.Float()
     precision_gps = fields.String(validate=validate.Length(max=50))
@@ -61,6 +65,8 @@ class EntiteConformiteOutputSchema(Schema):
 
 class SecuriteConformiteSchema(Schema):
     """SecuriteConformite - input & output."""
+    class Meta:
+        unknown = EXCLUDE
     politique_securite = fields.Boolean()
     responsable_securite = fields.Boolean()
     analyse_risques = fields.Boolean()
@@ -77,6 +83,8 @@ class SecuriteConformiteSchema(Schema):
 # ============================================================
 
 class ResponsableLegalSchema(Schema):
+    class Meta:
+        unknown = EXCLUDE
     id = fields.String(dump_only=True)
     nom = fields.String(required=True, validate=validate.Length(min=1, max=200))
     prenom = fields.String(validate=validate.Length(max=200))
@@ -86,6 +94,8 @@ class ResponsableLegalSchema(Schema):
 
 
 class DPOSchema(Schema):
+    class Meta:
+        unknown = EXCLUDE
     id = fields.String(dump_only=True)
     nom = fields.String(required=True, validate=validate.Length(min=1, max=200))
     prenom = fields.String(validate=validate.Length(max=200))
@@ -97,6 +107,8 @@ class DPOSchema(Schema):
 
 
 class ConformiteAdministrativeSchema(Schema):
+    class Meta:
+        unknown = EXCLUDE
     id = fields.String(dump_only=True)
     connaissance_loi_2013 = fields.Boolean()
     declaration_artci = fields.Boolean()
@@ -119,6 +131,8 @@ class DocumentJointOutputSchema(Schema):
 
 
 class RegistreTraitementSchema(Schema):
+    class Meta:
+        unknown = EXCLUDE
     id = fields.String(dump_only=True)
     nom_traitement = fields.String(required=True, validate=validate.Length(min=1, max=255))
     description = fields.String()
@@ -131,6 +145,8 @@ class RegistreTraitementSchema(Schema):
 
 
 class CategorieDonneesSchema(Schema):
+    class Meta:
+        unknown = EXCLUDE
     id = fields.String(dump_only=True)
     registre_traitement_id = fields.String()
     categorie = fields.String(required=True, validate=validate.OneOf([
@@ -142,6 +158,8 @@ class CategorieDonneesSchema(Schema):
 
 
 class FinaliteBaseLegaleSchema(Schema):
+    class Meta:
+        unknown = EXCLUDE
     id = fields.String(dump_only=True)
     finalite = fields.String(required=True, validate=validate.Length(min=1, max=255))
     base_legale = fields.String(required=True, validate=validate.OneOf([
@@ -153,6 +171,8 @@ class FinaliteBaseLegaleSchema(Schema):
 
 
 class SousTraitanceSchema(Schema):
+    class Meta:
+        unknown = EXCLUDE
     id = fields.String(dump_only=True)
     nom_sous_traitant = fields.String(required=True, validate=validate.Length(min=1, max=255))
     pays = fields.String(validate=validate.Length(max=100))
@@ -163,6 +183,8 @@ class SousTraitanceSchema(Schema):
 
 
 class TransfertInternationalSchema(Schema):
+    class Meta:
+        unknown = EXCLUDE
     id = fields.String(dump_only=True)
     pays_destination = fields.String(required=True, validate=validate.Length(min=1, max=100))
     organisme_destinataire = fields.String(validate=validate.Length(max=255))
@@ -172,6 +194,8 @@ class TransfertInternationalSchema(Schema):
 
 
 class MesureSecuriteSchema(Schema):
+    class Meta:
+        unknown = EXCLUDE
     id = fields.String(dump_only=True)
     type_mesure = fields.String(required=True, validate=validate.OneOf([
         'technique', 'organisationnelle', 'physique'
@@ -182,6 +206,8 @@ class MesureSecuriteSchema(Schema):
 
 
 class CertificationSecuriteSchema(Schema):
+    class Meta:
+        unknown = EXCLUDE
     id = fields.String(dump_only=True)
     nom_certification = fields.String(required=True, validate=validate.Length(min=1, max=255))
     organisme_certificateur = fields.String(validate=validate.Length(max=255))
@@ -213,6 +239,8 @@ class RenouvellementInputSchema(Schema):
 
 class EntiteCreateInputSchema(Schema):
     """Formulaire complet de création (50 questions, 5 parties)."""
+    class Meta:
+        unknown = EXCLUDE
     # Partie 1 : Identification
     denomination = fields.String(required=True, validate=validate.Length(min=2, max=255))
     numero_cc = fields.String(required=True, validate=validate.Length(min=2, max=50))
@@ -245,6 +273,8 @@ class EntiteCreateInputSchema(Schema):
 
 class EntiteUpdateInputSchema(Schema):
     """Mise à jour partielle d'une entité (tous champs optionnels)."""
+    class Meta:
+        unknown = EXCLUDE
     denomination = fields.String(validate=validate.Length(min=2, max=255))
     decret_creation = fields.String(validate=validate.Length(max=255))
     forme_juridique = fields.String(validate=validate.Length(max=100))

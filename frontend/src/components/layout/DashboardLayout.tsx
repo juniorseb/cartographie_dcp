@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
-import { Menu, LogOut } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import EntrepriseSidebar from '@/components/entreprise/EntrepriseSidebar';
+import UserMenuDropdown from '@/components/common/UserMenuDropdown';
 import { useAuth } from '@/hooks/useAuth';
 import { ROUTES } from '@/utils/constants';
 import logoArtci from '@/assets/logo_artci.png';
@@ -18,7 +19,6 @@ export default function DashboardLayout() {
 
   return (
     <div className="min-h-screen bg-[var(--artci-gray-light)]">
-      {/* Top bar */}
       <header className="navbar-artci fixed top-0 left-0 right-0 z-50 h-[70px]">
         <div className="h-full px-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -37,30 +37,22 @@ export default function DashboardLayout() {
             </Link>
           </div>
 
-          <div className="flex items-center gap-4">
-            {compte && (
-              <span className="hidden sm:block text-sm font-medium text-gray-700">
-                {compte.denomination}
-              </span>
-            )}
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 text-sm text-gray-600 hover:text-red-600 transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">Déconnexion</span>
-            </button>
-          </div>
+          {compte && (
+            <UserMenuDropdown
+              displayName={compte.denomination}
+              subtitle={compte.email}
+              profilRoute={ROUTES.ENTREPRISE_PROFIL}
+              onLogout={handleLogout}
+            />
+          )}
         </div>
       </header>
 
-      {/* Sidebar */}
       <EntrepriseSidebar
         mobileOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
 
-      {/* Main content */}
       <main className="pt-[70px] lg:pl-64 min-h-screen">
         <div className="p-4 lg:p-6">
           <Outlet />

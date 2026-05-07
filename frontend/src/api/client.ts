@@ -48,8 +48,11 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Si 401 et pas déjà en train de refresh
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Ne pas intercepter les 401 sur les endpoints d'auth (login, register, etc.)
+    const isAuthEndpoint = originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/auth/register');
+
+    // Si 401 et pas déjà en train de refresh (et pas un endpoint d'auth)
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       if (isRefreshing) {
         // Mettre en queue pendant le refresh
         return new Promise((resolve, reject) => {
@@ -63,9 +66,10 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
+      const raw = localStorage.getItem('auth-storage');
+      const parsed = raw ? JSON.parse(raw) : null;
+
       try {
-        const raw = localStorage.getItem('auth-storage');
-        const parsed = raw ? JSON.parse(raw) : null;
         const refreshToken = parsed?.state?.refreshToken;
 
         if (!refreshToken) {
@@ -89,9 +93,10 @@ apiClient.interceptors.response.use(
         return apiClient(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
-        // Effacer l'auth et rediriger
+        // Effacer l'auth et rediriger selon le type d'utilisateur
+        const userType = parsed?.state?.user ? 'artci' : 'entreprise';
         localStorage.removeItem('auth-storage');
-        window.location.href = '/connexion';
+        window.location.href = userType === 'artci' ? '/admin/connexion' : '/connexion';
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

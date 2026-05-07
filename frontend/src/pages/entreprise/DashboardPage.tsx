@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { FileText, FolderOpen, MessageSquare, AlertTriangle } from 'lucide-react';
+import { FileText, FolderOpen, Bell, AlertTriangle } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import * as entrepriseApi from '@/api/entreprise.api';
 import StepperWorkflow from '@/components/entreprise/StepperWorkflow';
@@ -59,14 +59,14 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Feedbacks non lus */}
+      {/* Notifications non lues */}
       {dashboard.feedbacks_non_lus > 0 && (
         <div className="alert alert-warning mb-6 flex items-center gap-3">
           <AlertTriangle className="w-5 h-5 flex-shrink-0" />
           <span>
-            Vous avez <strong>{dashboard.feedbacks_non_lus}</strong> feedback{dashboard.feedbacks_non_lus > 1 ? 's' : ''} non lu{dashboard.feedbacks_non_lus > 1 ? 's' : ''}.
+            Vous avez <strong>{dashboard.feedbacks_non_lus}</strong> notification{dashboard.feedbacks_non_lus > 1 ? 's' : ''} non lue{dashboard.feedbacks_non_lus > 1 ? 's' : ''}.
           </span>
-          <Link to={ROUTES.ENTREPRISE_FEEDBACKS} className="text-[var(--artci-orange)] font-semibold hover:underline ml-auto">
+          <Link to={ROUTES.ENTREPRISE_NOTIFICATIONS} className="text-[var(--artci-orange)] font-semibold hover:underline ml-auto">
             Voir
           </Link>
         </div>
@@ -75,11 +75,11 @@ export default function DashboardPage() {
       {/* Actions rapides */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {!dashboard.has_demande && (
-          <Link to={ROUTES.ENTREPRISE_DEMANDE} className="card hover:shadow-lg transition-shadow no-underline">
+          <Link to={ROUTES.ENTREPRISE_ENREGISTREMENT} className="card hover:shadow-lg transition-shadow no-underline">
             <div className="flex items-center gap-3">
               <FileText className="w-8 h-8 text-[var(--artci-orange)]" />
               <div>
-                <p className="font-bold text-sm text-[var(--artci-black)]">Nouvelle Demande</p>
+                <p className="font-bold text-sm text-[var(--artci-black)]">Nouvel Enregistrement</p>
                 <p className="text-xs text-gray-500">Remplir le formulaire</p>
               </div>
             </div>
@@ -87,11 +87,11 @@ export default function DashboardPage() {
         )}
 
         {dashboard.has_demande && dashboard.can_edit && (
-          <Link to={`/entreprise/demande/${dashboard.entite_id}`} className="card hover:shadow-lg transition-shadow no-underline">
+          <Link to={`/entreprise/mon-enregistrement/${dashboard.entite_id}`} className="card hover:shadow-lg transition-shadow no-underline">
             <div className="flex items-center gap-3">
               <FileText className="w-8 h-8 text-[var(--artci-orange)]" />
               <div>
-                <p className="font-bold text-sm text-[var(--artci-black)]">Modifier ma Demande</p>
+                <p className="font-bold text-sm text-[var(--artci-black)]">Modifier mon Enregistrement</p>
                 <p className="text-xs text-gray-500">Reprendre le brouillon</p>
               </div>
             </div>
@@ -108,11 +108,11 @@ export default function DashboardPage() {
           </div>
         </Link>
 
-        <Link to={ROUTES.ENTREPRISE_FEEDBACKS} className="card hover:shadow-lg transition-shadow no-underline">
+        <Link to={ROUTES.ENTREPRISE_NOTIFICATIONS} className="card hover:shadow-lg transition-shadow no-underline">
           <div className="flex items-center gap-3">
-            <MessageSquare className="w-8 h-8 text-[var(--status-encours)]" />
+            <Bell className="w-8 h-8 text-[var(--status-encours)]" />
             <div>
-              <p className="font-bold text-sm text-[var(--artci-black)]">Feedbacks</p>
+              <p className="font-bold text-sm text-[var(--artci-black)]">Notifications</p>
               <p className="text-xs text-gray-500">Retours de l'ARTCI</p>
             </div>
           </div>

@@ -80,7 +80,6 @@ export default function EntitesAdminPage() {
             <option value="">Toutes origines</option>
             <option value="auto_recensement">Auto-recensement</option>
             <option value="saisie_artci">Saisie ARTCI</option>
-            <option value="rapprochement">Rapprochement</option>
           </select>
         </div>
       </div>

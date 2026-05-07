@@ -26,16 +26,32 @@ class EntrepriseService:
     def get_dashboard(compte_id):
         """
         Dashboard entreprise avec workflow 3 étapes.
+        Retourne la structure attendue par le frontend DashboardData.
         """
+        compte = CompteEntreprise.query.get(compte_id)
         entite = EntiteBase.query.filter_by(compte_entreprise_id=compte_id).first()
+
+        compte_info = {
+            'denomination': compte.denomination if compte else '',
+            'numero_cc': compte.numero_cc if compte else '',
+            'email': compte.email if compte else '',
+        }
 
         if not entite:
             return {
-                'etape_courante': 1,
+                'compte': compte_info,
+                'entite_id': None,
                 'statut_workflow': None,
                 'statut_conformite': None,
-                'peut_soumettre': True,
-                'peut_rapporter': False,
+                'score_conformite': None,
+                'steps': [
+                    {'step': 1, 'label': 'Demande', 'statut': 'active', 'description': 'Remplir et soumettre le formulaire'},
+                    {'step': 2, 'label': 'Vérification', 'statut': 'pending', 'description': 'Examen par l\'ARTCI'},
+                    {'step': 3, 'label': 'Décision', 'statut': 'pending', 'description': 'Validation ou rejet'},
+                ],
+                'has_demande': False,
+                'can_edit': True,
+                'can_submit': True,
                 'feedbacks_non_lus': 0,
             }
 
@@ -48,6 +64,7 @@ class EntrepriseService:
             if conformite and conformite.statut_conformite
             else None
         )
+        score = conformite.score_conformite if conformite else None
 
         # Déterminer l'étape courante
         if statut in ('brouillon', 'soumis'):
@@ -57,20 +74,37 @@ class EntrepriseService:
         else:  # conforme, valide, publie, rejete
             etape = 3
 
-        # Peut rapporter seulement si Conforme
-        peut_rapporter = statut_conf == 'Conforme'
+        # Construire les steps pour le stepper
+        def step_statut(step_num):
+            if step_num < etape:
+                return 'completed'
+            elif step_num == etape:
+                return 'active'
+            return 'pending'
+
+        steps = [
+            {'step': 1, 'label': 'Demande', 'statut': step_statut(1), 'description': 'Remplir et soumettre le formulaire'},
+            {'step': 2, 'label': 'Vérification', 'statut': step_statut(2), 'description': 'Examen par l\'ARTCI'},
+            {'step': 3, 'label': 'Décision', 'statut': step_statut(3), 'description': 'Validation ou rejet'},
+        ]
 
         # Compter les feedbacks
         feedbacks_count = FeedbackVerification.query.filter_by(
             entite_id=entite.id
         ).count()
 
+        can_edit = statut in ('brouillon', 'en_attente_complements', 'rejete')
+
         return {
-            'etape_courante': etape,
+            'compte': compte_info,
+            'entite_id': entite.id,
             'statut_workflow': statut,
             'statut_conformite': statut_conf,
-            'peut_soumettre': statut in ('brouillon',),
-            'peut_rapporter': peut_rapporter,
+            'score_conformite': score,
+            'steps': steps,
+            'has_demande': True,
+            'can_edit': can_edit,
+            'can_submit': statut in ('brouillon',),
             'feedbacks_non_lus': feedbacks_count,
         }
 
@@ -228,70 +262,3 @@ class EntrepriseService:
         db.session.commit()
         return CompteEntrepriseOutputSchema().dump(compte)
 
-    # --- Rapprochements ---
-
-    @staticmethod
-    def get_rapprochements(compte_id):
-        """Liste des demandes de rapprochement du compte."""
-        from app.models import DemandeRapprochement
-        rapprochements = DemandeRapprochement.query.filter_by(
-            compte_entreprise_id=compte_id
-        ).order_by(DemandeRapprochement.createdAt.desc()).all()
-        return [
-            {
-                'id': r.id,
-                'numero_cc': r.numero_cc,
-                'raison': r.raison_demande,
-                'statut': r.statut.value,
-                'createdAt': r.createdAt.isoformat() if r.createdAt else None,
-                'commentaire_admin': r.commentaire_artci,
-            }
-            for r in rapprochements
-        ]
-
-    @staticmethod
-    def create_rapprochement(compte_id, numero_cc, raison, file=None):
-        """Créer une demande de rapprochement."""
-        from app.models import DemandeRapprochement, EntiteBase, CompteEntreprise
-        from app.models.enums import StatutRapprochementEnum
-
-        # Vérifier que l'entité avec ce CC existe
-        entite = EntiteBase.query.filter_by(numero_cc=numero_cc).first()
-        if not entite:
-            raise ValueError(f'Aucune entité trouvée avec le N° CC {numero_cc}.')
-
-        # Récupérer le compte pour l'email
-        compte = CompteEntreprise.query.get(compte_id)
-        if not compte:
-            raise ValueError('Compte entreprise non trouvé.')
-
-        # Sauvegarder le fichier si fourni
-        doc_path = None
-        if file and file.filename:
-            import os
-            upload_dir = os.path.join('uploads', 'rapprochements')
-            os.makedirs(upload_dir, exist_ok=True)
-            filename = f"{compte_id}_{file.filename}"
-            filepath = os.path.join(upload_dir, filename)
-            file.save(filepath)
-            doc_path = filepath
-
-        rapprochement = DemandeRapprochement(
-            entite_id=entite.id,
-            compte_entreprise_id=compte_id,
-            email_demandeur=compte.email,
-            numero_cc=numero_cc,
-            raison_demande=raison,
-            document_preuve_path=doc_path,
-            statut=StatutRapprochementEnum.en_attente,
-        )
-        db.session.add(rapprochement)
-        db.session.commit()
-
-        return {
-            'id': rapprochement.id,
-            'numero_cc': rapprochement.numero_cc,
-            'raison': rapprochement.raison_demande,
-            'statut': rapprochement.statut.value,
-            'createdAt': rapprochement.createdAt.isoformat() if rapprochement.createdAt else None,
-        }

@@ -12,12 +12,12 @@ export default function FeedbacksPage() {
     []
   );
 
-  if (isLoading) return <Loading fullPage text="Chargement des feedbacks..." />;
+  if (isLoading) return <Loading fullPage text="Chargement des notifications..." />;
   if (error) return <ErrorDisplay message={error} onRetry={refetch} />;
   if (!feedbacks || feedbacks.length === 0) {
     return (
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-2xl mb-6">Feedbacks ARTCI</h1>
+        <h1 className="text-2xl mb-6">Notifications</h1>
         <EmptyState />
       </div>
     );
@@ -25,7 +25,7 @@ export default function FeedbacksPage() {
 
   return (
     <div className="max-w-3xl mx-auto">
-      <h1 className="text-2xl mb-6">Feedbacks ARTCI</h1>
+      <h1 className="text-2xl mb-6">Notifications</h1>
 
       <div className="space-y-4">
         {feedbacks.map((fb) => (

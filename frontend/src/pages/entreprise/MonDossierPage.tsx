@@ -33,8 +33,8 @@ export default function MonDossierPage() {
         <div className="card text-center py-10">
           <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
           <p className="text-gray-500 mb-4">Aucun dossier trouvé.</p>
-          <Link to={ROUTES.ENTREPRISE_DEMANDE} className="btn btn-primary">
-            Créer une demande
+          <Link to={ROUTES.ENTREPRISE_ENREGISTREMENT} className="btn btn-primary">
+            Créer un enregistrement
           </Link>
         </div>
       </div>

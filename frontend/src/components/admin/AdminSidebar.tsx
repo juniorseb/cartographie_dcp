@@ -2,8 +2,8 @@ import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Database, Inbox, UserCheck, CheckSquare,
   MessageSquare, Users, Upload, History, X, BarChart3,
-  GitMerge, RefreshCw, FileCheck, Bell, FileText, ClipboardCheck,
-  Settings, Archive, HardDrive, User,
+  RefreshCw, FileCheck, Bell, FileText, ClipboardCheck,
+  Settings, Archive, HardDrive, FilePlus,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { useAuth } from '@/hooks/useAuth';
@@ -39,7 +39,8 @@ const sidebarSections: SidebarSection[] = [
     title: 'Général',
     links: [
       { to: ROUTES.ADMIN_DASHBOARD, label: 'Dashboard', icon: LayoutDashboard, end: true, minRole: 'reader' },
-      { to: ROUTES.ADMIN_ENTITES, label: 'Entités', icon: Database, end: false, minRole: 'reader' },
+      { to: ROUTES.ADMIN_ENTITES, label: 'Entités', icon: Database, end: true, minRole: 'reader' },
+      { to: ROUTES.ADMIN_ENTITE_CREATE, label: 'Nouveau Recensement', icon: FilePlus, end: false, minRole: 'editor' },
       { to: ROUTES.ADMIN_DEMANDES_AUTO, label: 'Auto-Recensement', icon: FileText, end: false, minRole: 'reader' },
       { to: ROUTES.ADMIN_STATISTIQUES, label: 'Statistiques', icon: BarChart3, end: false, minRole: 'reader' },
     ],
@@ -48,7 +49,7 @@ const sidebarSections: SidebarSection[] = [
     title: 'Workflow',
     links: [
       { to: ROUTES.ADMIN_PANIER, label: 'Mon Panier', icon: Inbox, end: false, minRole: 'editor' },
-      { to: ROUTES.ADMIN_FEEDBACKS, label: 'Feedbacks', icon: MessageSquare, end: false, minRole: 'editor' },
+      { to: ROUTES.ADMIN_FEEDBACKS, label: 'Notifications', icon: MessageSquare, end: false, minRole: 'editor' },
       { to: ROUTES.ADMIN_ASSIGNATION, label: 'Assignation', icon: UserCheck, end: false, minRole: 'admin' },
       { to: ROUTES.ADMIN_VALIDATION, label: 'Validation N+1', icon: CheckSquare, end: false, minRole: 'admin' },
     ],
@@ -56,8 +57,7 @@ const sidebarSections: SidebarSection[] = [
   {
     title: 'Gestion',
     links: [
-      { to: ROUTES.ADMIN_RAPPROCHEMENTS, label: 'Rapprochements', icon: GitMerge, end: false, minRole: 'admin' },
-      { to: ROUTES.ADMIN_RENOUVELLEMENTS, label: 'Renouvellements', icon: RefreshCw, end: false, minRole: 'admin' },
+      { to: ROUTES.ADMIN_FORMALITES, label: 'Formalités', icon: RefreshCw, end: false, minRole: 'admin' },
       { to: ROUTES.ADMIN_RAPPORTS_VALIDATION, label: 'Rapports', icon: FileCheck, end: false, minRole: 'admin' },
       { to: ROUTES.ADMIN_AUDITS, label: 'Audits', icon: ClipboardCheck, end: false, minRole: 'admin' },
     ],
@@ -77,7 +77,6 @@ const sidebarSections: SidebarSection[] = [
     links: [
       { to: ROUTES.ADMIN_PARAMETRES, label: 'Paramètres', icon: Settings, end: false, minRole: 'super_admin' },
       { to: ROUTES.ADMIN_BACKUP, label: 'Backup', icon: HardDrive, end: false, minRole: 'super_admin' },
-      { to: ROUTES.ADMIN_PROFIL, label: 'Mon Profil', icon: User, end: false, minRole: 'reader' },
     ],
   },
 ];

@@ -26,13 +26,10 @@ const ResetPasswordPage = lazy(() => import('@/pages/auth/ResetPasswordPage'));
 const DashboardPage = lazy(() => import('@/pages/entreprise/DashboardPage'));
 const DemandePage = lazy(() => import('@/pages/entreprise/DemandePage'));
 const MonDossierPage = lazy(() => import('@/pages/entreprise/MonDossierPage'));
-const FeedbacksPage = lazy(() => import('@/pages/entreprise/FeedbacksPage'));
-const RapportsPage = lazy(() => import('@/pages/entreprise/RapportsPage'));
-const RenouvellementPage = lazy(() => import('@/pages/entreprise/RenouvellementPage'));
+const NotificationsEntreprisePage = lazy(() => import('@/pages/entreprise/FeedbacksPage'));
+const FormalitesPage = lazy(() => import('@/pages/entreprise/RenouvellementPage'));
 const ProfilPage = lazy(() => import('@/pages/entreprise/ProfilPage'));
 const ChangePasswordPage = lazy(() => import('@/pages/auth/ChangePasswordPage'));
-const MesAuditsPage = lazy(() => import('@/pages/entreprise/MesAuditsPage'));
-const RapprochementPage = lazy(() => import('@/pages/entreprise/RapprochementPage'));
 
 // Lazy loading des pages admin
 const AdminLoginPage = lazy(() => import('@/pages/admin/AdminLoginPage'));
@@ -50,8 +47,7 @@ const ImportPage = lazy(() => import('@/pages/admin/ImportPage'));
 const LogsPage = lazy(() => import('@/pages/admin/LogsPage'));
 const StatistiquesAdminPage = lazy(() => import('@/pages/admin/StatistiquesAdminPage'));
 const ProfilAdminPage = lazy(() => import('@/pages/admin/ProfilAdminPage'));
-const RapprochementsAdminPage = lazy(() => import('@/pages/admin/RapprochementsAdminPage'));
-const RenouvellementAdminPage = lazy(() => import('@/pages/admin/RenouvellementAdminPage'));
+const FormalitesAdminPage = lazy(() => import('@/pages/admin/RenouvellementAdminPage'));
 const ValidationRapportsPage = lazy(() => import('@/pages/admin/ValidationRapportsPage'));
 const NotificationsPage = lazy(() => import('@/pages/admin/NotificationsPage'));
 const DemandesAutoPage = lazy(() => import('@/pages/admin/DemandesAutoPage'));
@@ -96,16 +92,18 @@ export default function App() {
             }
           >
             <Route path="entreprise" element={<DashboardPage />} />
-            <Route path="entreprise/demande" element={<DemandePage />} />
-            <Route path="entreprise/demande/:id" element={<DemandePage />} />
+            <Route path="entreprise/mon-enregistrement" element={<DemandePage />} />
+            <Route path="entreprise/mon-enregistrement/:id" element={<DemandePage />} />
             <Route path="entreprise/mon-dossier" element={<MonDossierPage />} />
-            <Route path="entreprise/feedbacks" element={<FeedbacksPage />} />
-            <Route path="entreprise/rapports" element={<RapportsPage />} />
-            <Route path="entreprise/renouvellement" element={<RenouvellementPage />} />
+            <Route path="entreprise/notifications" element={<NotificationsEntreprisePage />} />
+            <Route path="entreprise/formalites" element={<FormalitesPage />} />
             <Route path="entreprise/profil" element={<ProfilPage />} />
             <Route path="entreprise/changer-mot-de-passe" element={<ChangePasswordPage />} />
-            <Route path="entreprise/audits" element={<MesAuditsPage />} />
-            <Route path="entreprise/rapprochement" element={<RapprochementPage />} />
+            {/* Redirections compat anciennes URLs */}
+            <Route path="entreprise/demande" element={<Navigate to="/entreprise/mon-enregistrement" replace />} />
+            <Route path="entreprise/demande/:id" element={<Navigate to="/entreprise/mon-enregistrement" replace />} />
+            <Route path="entreprise/feedbacks" element={<Navigate to="/entreprise/notifications" replace />} />
+            <Route path="entreprise/renouvellement" element={<Navigate to="/entreprise/formalites" replace />} />
           </Route>
 
           {/* Route login admin (standalone) */}
@@ -134,8 +132,10 @@ export default function App() {
             <Route path="admin/logs" element={<LogsPage />} />
             <Route path="admin/statistiques" element={<StatistiquesAdminPage />} />
             <Route path="admin/profil" element={<ProfilAdminPage />} />
-            <Route path="admin/rapprochements" element={<RapprochementsAdminPage />} />
-            <Route path="admin/renouvellements" element={<RenouvellementAdminPage />} />
+            <Route path="admin/formalites" element={<FormalitesAdminPage />} />
+            {/* Redirections compat anciennes URLs admin */}
+            <Route path="admin/rapprochements" element={<Navigate to="/admin" replace />} />
+            <Route path="admin/renouvellements" element={<Navigate to="/admin/formalites" replace />} />
             <Route path="admin/rapports-validation" element={<ValidationRapportsPage />} />
             <Route path="admin/notifications" element={<NotificationsPage />} />
             <Route path="admin/demandes-auto" element={<DemandesAutoPage />} />

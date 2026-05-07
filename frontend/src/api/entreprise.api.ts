@@ -89,31 +89,3 @@ export async function updateProfil(data: ProfilUpdateInput): Promise<ProfilData>
   return res.data.data!;
 }
 
-// ============================================================
-// Rapprochements
-// ============================================================
-
-interface RapprochementEntrepriseItem {
-  id: string;
-  numero_cc: string;
-  raison: string;
-  statut: 'en_attente' | 'approuve' | 'rejete';
-  createdAt: string;
-  commentaire_admin?: string;
-}
-
-/** GET /api/entreprise/rapprochements */
-export async function getRapprochements(): Promise<RapprochementEntrepriseItem[]> {
-  const res = await apiClient.get<ApiResponse<RapprochementEntrepriseItem[]>>('/entreprise/rapprochements');
-  return res.data.data!;
-}
-
-/** POST /api/entreprise/rapprochement */
-export async function createRapprochement(formData: FormData): Promise<RapprochementEntrepriseItem> {
-  const res = await apiClient.post<ApiResponse<RapprochementEntrepriseItem>>(
-    '/entreprise/rapprochement',
-    formData,
-    { headers: { 'Content-Type': 'multipart/form-data' } }
-  );
-  return res.data.data!;
-}

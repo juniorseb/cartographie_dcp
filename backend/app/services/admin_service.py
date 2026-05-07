@@ -9,12 +9,12 @@ from app.models import (
     EntiteBase, EntiteWorkflow, EntiteConformite,
     AssignationDemande, FeedbackVerification,
     HistoriqueStatut, User,
-    DemandeRapprochement, Renouvellement, DocumentJoint, Notification
+    Renouvellement, DocumentJoint, Notification
 )
 from app.models.enums import (
     StatutWorkflowEnum, StatutConformiteEnum,
     StatutAssignationEnum, RoleEnum, OrigineSaisieEnum,
-    StatutRapprochementEnum, StatutRenouvellementEnum
+    StatutRenouvellementEnum
 )
 from app.schemas.entite import EntiteListOutputSchema, EntiteDetailOutputSchema
 from app.schemas.user import UserOutputSchema
@@ -112,8 +112,8 @@ class AdminService:
         stats['activite_recente'] = [{
             'entite_id': h.entite_id,
             'entite_denomination': h.entite.denomination if h.entite else '',
-            'ancien_statut': h.ancien_statut.value if h.ancien_statut else None,
-            'nouveau_statut': h.nouveau_statut.value if h.nouveau_statut else None,
+            'ancien_statut': h.ancien_statut if h.ancien_statut else None,
+            'nouveau_statut': h.nouveau_statut if h.nouveau_statut else None,
             'modifie_par_nom': f'{h.modifie_par_user.prenom} {h.modifie_par_user.nom}' if h.modifie_par_user else '',
             'date': h.date_changement.isoformat() if h.date_changement else None,
         } for h in recent]
@@ -385,6 +385,7 @@ class AdminService:
                 traitement = s(row.get('traitement_description'))
                 if traitement:
                     data['registre_traitements'] = [{
+                        'nom_traitement': traitement,
                         'description': traitement,
                         'finalite': s(row.get('traitement_finalite')),
                         'categories_personnes': s(row.get('traitement_categories_personnes')),
@@ -469,72 +470,7 @@ class AdminService:
 
         return paginate(query, HistoriqueStatutOutputSchema(), page=page, per_page=per_page)
 
-    # --- Rapprochements ---
-
-    @staticmethod
-    def list_rapprochements(filters=None, page=None, per_page=None):
-        """Liste paginée des demandes de rapprochement."""
-        from marshmallow import Schema, fields as ma_fields
-
-        query = DemandeRapprochement.query.order_by(DemandeRapprochement.createdAt.desc())
-        if filters:
-            if filters.get('statut'):
-                query = query.filter(DemandeRapprochement.statut == StatutRapprochementEnum(filters['statut']))
-            if filters.get('search'):
-                search = f"%{filters['search']}%"
-                query = query.filter(
-                    db.or_(
-                        DemandeRapprochement.email_demandeur.ilike(search),
-                        DemandeRapprochement.numero_cc.ilike(search),
-                    )
-                )
-
-        class RapprochementOutputSchema(Schema):
-            id = ma_fields.String()
-            entite_id = ma_fields.String()
-            entreprise_denomination = ma_fields.Method('get_denomination')
-            numero_cc = ma_fields.String()
-            email_demandeur = ma_fields.String()
-            raison_demande = ma_fields.String()
-            statut = ma_fields.Method('get_statut')
-            commentaire_artci = ma_fields.String()
-            traite_par = ma_fields.String()
-            createdAt = ma_fields.DateTime()
-
-            def get_denomination(self, obj):
-                if obj.entite:
-                    return obj.entite.denomination
-                return ''
-
-            def get_statut(self, obj):
-                return obj.statut.value if obj.statut else None
-
-        return paginate(query, RapprochementOutputSchema(), page=page, per_page=per_page)
-
-    @staticmethod
-    def traiter_rapprochement(rapprochement_id, user_id, data):
-        """Approuver ou rejeter une demande de rapprochement."""
-        rapprochement = DemandeRapprochement.query.get(rapprochement_id)
-        if not rapprochement:
-            raise ValueError('Demande de rapprochement non trouvée.')
-        if rapprochement.statut != StatutRapprochementEnum.en_attente:
-            raise ValueError('Cette demande a déjà été traitée.')
-
-        action = data.get('action')
-        if action == 'approuver':
-            rapprochement.statut = StatutRapprochementEnum.approuve
-        elif action == 'rejeter':
-            rapprochement.statut = StatutRapprochementEnum.rejete
-        else:
-            raise ValueError('Action invalide (approuver/rejeter).')
-
-        rapprochement.traite_par = user_id
-        rapprochement.date_traitement = datetime.now(timezone.utc)
-        rapprochement.commentaire_artci = data.get('motif', '')
-        db.session.commit()
-        return {'id': rapprochement.id, 'statut': rapprochement.statut.value}
-
-    # --- Renouvellements ---
+    # --- Formalités (Renouvellements + Autorisations + Déclarations) ---
 
     @staticmethod
     def list_renouvellements(filters=None, page=None, per_page=None):
@@ -607,7 +543,7 @@ class AdminService:
 
         query = DocumentJoint.query.filter(
             DocumentJoint.type_document == 'rapport_activite'
-        ).order_by(DocumentJoint.createdAt.desc())
+        ).order_by(DocumentJoint.uploadedAt.desc())
 
         class RapportOutputSchema(Schema):
             id = ma_fields.String()
@@ -615,9 +551,9 @@ class AdminService:
             entreprise_denomination = ma_fields.Method('get_denomination')
             type_document = ma_fields.String()
             nom_fichier = ma_fields.String()
-            date_soumission = ma_fields.DateTime(attribute='createdAt')
+            date_soumission = ma_fields.DateTime(attribute='uploadedAt')
             statut = ma_fields.Method('get_statut')
-            createdAt = ma_fields.DateTime()
+            createdAt = ma_fields.DateTime(attribute='uploadedAt')
 
             def get_denomination(self, obj):
                 if obj.entite:

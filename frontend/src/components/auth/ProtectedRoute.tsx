@@ -12,11 +12,13 @@ export default function ProtectedRoute({ children, requiredType = 'entreprise' }
   const location = useLocation();
 
   if (!isAuthenticated) {
-    return <Navigate to={ROUTES.LOGIN} state={{ from: location }} replace />;
+    const loginRoute = requiredType === 'artci' ? ROUTES.ADMIN_LOGIN : ROUTES.LOGIN;
+    return <Navigate to={loginRoute} state={{ from: location }} replace />;
   }
 
   if (requiredType && userType !== requiredType) {
-    return <Navigate to="/" replace />;
+    const fallback = userType === 'artci' ? ROUTES.ADMIN_DASHBOARD : userType === 'entreprise' ? ROUTES.ENTREPRISE_DASHBOARD : '/';
+    return <Navigate to={fallback} replace />;
   }
 
   return <>{children}</>;

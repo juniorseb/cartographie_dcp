@@ -128,11 +128,15 @@ class AdminStatsOutputSchema(Schema):
 
 class EntrepriseDashboardOutputSchema(Schema):
     """GET /api/entreprise/dashboard"""
-    etape_courante = fields.Integer()
-    statut_workflow = fields.String()
-    statut_conformite = fields.String()
-    peut_soumettre = fields.Boolean()
-    peut_rapporter = fields.Boolean()
+    compte = fields.Dict()
+    entite_id = fields.String(allow_none=True)
+    statut_workflow = fields.String(allow_none=True)
+    statut_conformite = fields.String(allow_none=True)
+    score_conformite = fields.Float(allow_none=True)
+    steps = fields.List(fields.Dict())
+    has_demande = fields.Boolean()
+    can_edit = fields.Boolean()
+    can_submit = fields.Boolean()
     feedbacks_non_lus = fields.Integer()
 
 

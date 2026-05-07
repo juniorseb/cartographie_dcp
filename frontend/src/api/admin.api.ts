@@ -13,7 +13,6 @@ import type {
   UserCreateInput, UserUpdateInput, UserListItem,
   ImportResult,
   HistoriqueItem, LogsFilter,
-  RapprochementAdminItem, RapprochementFilter, RapprochementDecisionInput,
   RenouvellementAdminItem, RenouvellementFilter, RenouvellementDecisionInput,
   RapportActiviteItem, RapportFilter, RapportDecisionInput,
   NotificationItem, NotificationsFilter,
@@ -177,23 +176,7 @@ export async function getLogs(filters: LogsFilter): Promise<PaginatedData<Histor
 }
 
 // ============================================================
-// Rapprochements
-// ============================================================
-
-/** GET /api/admin/rapprochements */
-export async function getRapprochements(filters: RapprochementFilter): Promise<PaginatedData<RapprochementAdminItem>> {
-  const res = await apiClient.get<ApiResponse<PaginatedData<RapprochementAdminItem>>>('/admin/rapprochements', { params: filters });
-  return res.data.data!;
-}
-
-/** PUT /api/admin/rapprochements/:id */
-export async function traiterRapprochement(id: string, data: RapprochementDecisionInput): Promise<RapprochementAdminItem> {
-  const res = await apiClient.put<ApiResponse<RapprochementAdminItem>>(`/admin/rapprochements/${id}`, data);
-  return res.data.data!;
-}
-
-// ============================================================
-// Renouvellements
+// Formalités (Renouvellements + Autorisations + Déclarations)
 // ============================================================
 
 /** GET /api/admin/renouvellements */

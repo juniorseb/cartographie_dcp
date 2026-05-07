@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import {
-  Bell, FileText, Clock, CheckCircle, RefreshCw, Link2, CheckCheck,
+  Bell, FileText, Clock, CheckCircle, RefreshCw, CheckCheck,
 } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import * as adminApi from '@/api/admin.api';
@@ -15,7 +15,6 @@ const TYPE_ICONS: Record<string, LucideIcon> = {
   echeance: Clock,
   validation: CheckCircle,
   renouvellement: RefreshCw,
-  rapprochement: Link2,
 };
 
 const TYPE_COLORS: Record<string, string> = {
@@ -23,7 +22,6 @@ const TYPE_COLORS: Record<string, string> = {
   echeance: 'text-orange-500',
   validation: 'text-green-500',
   renouvellement: 'text-purple-500',
-  rapprochement: 'text-cyan-600',
 };
 
 export default function NotificationsPage() {
@@ -106,7 +104,6 @@ export default function NotificationsPage() {
             <option value="echeance">Echeance</option>
             <option value="validation">Validation</option>
             <option value="renouvellement">Renouvellement</option>
-            <option value="rapprochement">Rapprochement</option>
           </select>
         </div>
         <div className="form-group mb-0">

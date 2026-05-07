@@ -1,21 +1,17 @@
 import { NavLink } from 'react-router-dom';
 import {
-  LayoutDashboard, FileText, FolderOpen, MessageSquare,
-  Upload, RefreshCw, User, X, ClipboardCheck, Link2,
+  LayoutDashboard, FileText, FolderOpen, Bell,
+  RefreshCw, X,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { ROUTES } from '@/utils/constants';
 
 const sidebarLinks = [
   { to: ROUTES.ENTREPRISE_DASHBOARD, label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: ROUTES.ENTREPRISE_DEMANDE, label: 'Ma Demande', icon: FileText, end: false },
-  { to: ROUTES.ENTREPRISE_DOSSIER, label: 'Mon Dossier', icon: FolderOpen, end: false },
-  { to: ROUTES.ENTREPRISE_FEEDBACKS, label: 'Feedbacks', icon: MessageSquare, end: false },
-  { to: ROUTES.ENTREPRISE_RAPPORTS, label: 'Rapports', icon: Upload, end: false },
-  { to: ROUTES.ENTREPRISE_RENOUVELLEMENT, label: 'Renouvellement', icon: RefreshCw, end: false },
-  { to: ROUTES.ENTREPRISE_AUDITS, label: 'Vérifications', icon: ClipboardCheck, end: false },
-  { to: ROUTES.ENTREPRISE_RAPPROCHEMENT, label: 'Rapprochement', icon: Link2, end: false },
-  { to: ROUTES.ENTREPRISE_PROFIL, label: 'Mon Profil', icon: User, end: false },
+  { to: ROUTES.ENTREPRISE_ENREGISTREMENT, label: 'Mon enregistrement', icon: FileText, end: false },
+  { to: ROUTES.ENTREPRISE_DOSSIER, label: 'Mon dossier', icon: FolderOpen, end: false },
+  { to: ROUTES.ENTREPRISE_NOTIFICATIONS, label: 'Notifications', icon: Bell, end: false },
+  { to: ROUTES.ENTREPRISE_FORMALITES, label: 'Formalités', icon: RefreshCw, end: false },
 ];
 
 interface EntrepriseSidebarProps {
@@ -26,7 +22,6 @@ interface EntrepriseSidebarProps {
 export default function EntrepriseSidebar({ mobileOpen, onClose }: EntrepriseSidebarProps) {
   return (
     <>
-      {/* Mobile overlay */}
       {mobileOpen && (
         <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={onClose} />
       )}

@@ -191,36 +191,7 @@ export interface LogsFilter {
 }
 
 // ============================================================
-// Rapprochements admin
-// ============================================================
-
-export interface RapprochementAdminItem {
-  id: string;
-  entite_id?: string;
-  entreprise_denomination: string;
-  numero_cc?: string;
-  email_demandeur: string;
-  raison_demande?: string;
-  statut: string;
-  commentaire_artci?: string;
-  traite_par?: string;
-  createdAt: string;
-}
-
-export interface RapprochementFilter {
-  search?: string;
-  statut?: string;
-  page?: number;
-  per_page?: number;
-}
-
-export interface RapprochementDecisionInput {
-  action: 'approuver' | 'rejeter';
-  motif?: string;
-}
-
-// ============================================================
-// Renouvellements admin
+// Formalités admin (Renouvellements + Autorisations + Déclarations)
 // ============================================================
 
 export interface RenouvellementAdminItem {

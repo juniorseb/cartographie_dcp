@@ -61,20 +61,22 @@ class EntiteService:
         conformite = EntiteConformite(entite_id=entite.id)
         db.session.add(conformite)
 
-        # Contact (ONE-TO-ONE)
-        if data.get('contact'):
-            contact = EntiteContact(entite_id=entite.id, **data['contact'])
+        # Contact (ONE-TO-ONE) — ignorer si objet vide
+        contact_data = data.get('contact')
+        if contact_data and any(v for v in contact_data.values()):
+            contact = EntiteContact(entite_id=entite.id, **contact_data)
             db.session.add(contact)
 
-        # Localisation (ONE-TO-ONE)
-        if data.get('localisation'):
-            loc_data = data['localisation'].copy()
-            localisation = EntiteLocalisation(entite_id=entite.id, **loc_data)
+        # Localisation (ONE-TO-ONE) — ignorer si objet vide
+        loc_data = data.get('localisation')
+        if loc_data and any(v for v in loc_data.values()):
+            localisation = EntiteLocalisation(entite_id=entite.id, **loc_data.copy())
             db.session.add(localisation)
 
-        # Sécurité conformité (ONE-TO-ONE)
-        if data.get('securite'):
-            securite = SecuriteConformite(entite_id=entite.id, **data['securite'])
+        # Sécurité conformité (ONE-TO-ONE) — ignorer si objet vide
+        sec_data = data.get('securite')
+        if sec_data and any(v for v in sec_data.values()):
+            securite = SecuriteConformite(entite_id=entite.id, **sec_data)
             db.session.add(securite)
 
         # ONE-TO-MANY children
@@ -105,8 +107,8 @@ class EntiteService:
             if field in data:
                 setattr(entite, field, data[field])
 
-        # Contact (upsert)
-        if 'contact' in data:
+        # Contact (upsert) — ignorer si objet vide
+        if 'contact' in data and data['contact'] and any(v for v in data['contact'].values()):
             if entite.contact:
                 for k, v in data['contact'].items():
                     setattr(entite.contact, k, v)
@@ -114,8 +116,8 @@ class EntiteService:
                 contact = EntiteContact(entite_id=entite.id, **data['contact'])
                 db.session.add(contact)
 
-        # Localisation (upsert)
-        if 'localisation' in data:
+        # Localisation (upsert) — ignorer si objet vide
+        if 'localisation' in data and data['localisation'] and any(v for v in data['localisation'].values()):
             if entite.localisation:
                 for k, v in data['localisation'].items():
                     setattr(entite.localisation, k, v)
@@ -123,8 +125,8 @@ class EntiteService:
                 loc = EntiteLocalisation(entite_id=entite.id, **data['localisation'])
                 db.session.add(loc)
 
-        # Sécurité (upsert)
-        if 'securite' in data:
+        # Sécurité (upsert) — ignorer si objet vide
+        if 'securite' in data and data['securite'] and any(v for v in data['securite'].values()):
             if entite.securite:
                 for k, v in data['securite'].items():
                     setattr(entite.securite, k, v)

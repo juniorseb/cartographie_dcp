@@ -167,32 +167,3 @@ def update_profil():
         return error_response(str(e), 400)
 
 
-# --- Rapprochements ---
-
-@entreprise_bp.route('/rapprochements', methods=['GET'])
-@entreprise_auth_required
-def get_rapprochements():
-    """Liste des demandes de rapprochement de l'entreprise."""
-    result = EntrepriseService.get_rapprochements(g.current_user_id)
-    return success_response(result)
-
-
-@entreprise_bp.route('/rapprochement', methods=['POST'])
-@entreprise_auth_required
-def create_rapprochement():
-    """Soumettre une demande de rapprochement."""
-    numero_cc = request.form.get('numero_cc')
-    raison = request.form.get('raison')
-
-    if not numero_cc or not raison:
-        return error_response('Numéro CC et raison sont requis.', 400)
-
-    file = request.files.get('justificatif')
-
-    try:
-        result = EntrepriseService.create_rapprochement(
-            g.current_user_id, numero_cc, raison, file
-        )
-        return created_response(result, 'Demande de rapprochement créée.')
-    except ValueError as e:
-        return error_response(str(e), 400)
