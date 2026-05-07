@@ -64,6 +64,42 @@ export async function updateEntite(id: string, data: Partial<DemandeInput>): Pro
 }
 
 // ============================================================
+// Backup
+// ============================================================
+
+export interface BackupItem {
+  filename: string;
+  taille_octets: number;
+  taille: string;
+  createdAt: string;
+  type: 'manuel' | 'automatique';
+  statut: 'termine' | 'en_cours' | 'echoue';
+}
+
+/** GET /api/admin/backup */
+export async function listBackups(): Promise<BackupItem[]> {
+  const res = await apiClient.get<ApiResponse<BackupItem[]>>('/admin/backup');
+  return res.data.data!;
+}
+
+/** POST /api/admin/backup */
+export async function createBackup(): Promise<{ filename: string; taille: string }> {
+  const res = await apiClient.post<ApiResponse<{ filename: string; taille: string }>>('/admin/backup');
+  return res.data.data!;
+}
+
+/** GET /api/admin/backup/:filename */
+export async function downloadBackup(filename: string): Promise<void> {
+  const res = await apiClient.get(`/admin/backup/${filename}`, { responseType: 'blob' });
+  const url = window.URL.createObjectURL(new Blob([res.data]));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  window.URL.revokeObjectURL(url);
+}
+
+// ============================================================
 // Inscriptions a valider
 // ============================================================
 

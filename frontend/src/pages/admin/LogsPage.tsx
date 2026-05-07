@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { History, ArrowRight } from 'lucide-react';
+import { ClipboardCheck, ArrowRight } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import * as adminApi from '@/api/admin.api';
 import Loading from '@/components/common/Loading';
@@ -49,9 +49,12 @@ export default function LogsPage() {
   return (
     <div>
       <h1 className="text-2xl mb-6 flex items-center gap-3">
-        <History className="w-7 h-7 text-[var(--artci-green)]" />
-        Historique des actions
+        <ClipboardCheck className="w-7 h-7 text-[var(--artci-green)]" />
+        Journal d'audit
       </h1>
+      <p className="text-sm text-gray-500 -mt-4 mb-6">
+        Historique complet des actions et changements de statut sur les dossiers.
+      </p>
 
       <div className="card mb-6">
         <div className="flex flex-col sm:flex-row gap-3">

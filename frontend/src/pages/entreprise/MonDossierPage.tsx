@@ -69,7 +69,7 @@ export default function MonDossierPage() {
   return (
     <div className="max-w-5xl mx-auto">
       <Link to={ROUTES.ENTREPRISE_DASHBOARD} className="flex items-center gap-2 text-[var(--artci-orange)] mb-4 hover:underline text-sm">
-        <ArrowLeft className="w-4 h-4" /> Retour au dashboard
+        <ArrowLeft className="w-4 h-4" /> Retour au tableau de bord
       </Link>
 
       {/* En-tête */}

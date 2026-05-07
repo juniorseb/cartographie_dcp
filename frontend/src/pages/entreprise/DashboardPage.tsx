@@ -14,7 +14,7 @@ export default function DashboardPage() {
     []
   );
 
-  if (isLoading) return <Loading fullPage text="Chargement du dashboard..." />;
+  if (isLoading) return <Loading fullPage text="Chargement du tableau de bord..." />;
   if (error) return <ErrorDisplay message={error} onRetry={refetch} />;
   if (!dashboard) return null;
 

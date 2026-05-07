@@ -133,6 +133,43 @@ def update_entite(entite_id):
         return error_response(str(e), 400)
 
 
+# --- Backup (sauvegarde DB en JSON) ---
+
+@admin_bp.route('/backup', methods=['GET'])
+@role_required('super_admin')
+def list_backups():
+    """Liste les fichiers de backup disponibles."""
+    result = AdminService.list_backups()
+    return success_response(result)
+
+
+@admin_bp.route('/backup', methods=['POST'])
+@role_required('super_admin')
+def create_backup():
+    """Cree un backup manuel de la base (dump JSON)."""
+    try:
+        result = AdminService.create_backup(g.current_user_id)
+        return created_response(result, 'Backup cree.')
+    except Exception as e:
+        return error_response(f'Erreur lors de la creation du backup : {e}', 500)
+
+
+@admin_bp.route('/backup/<string:filename>', methods=['GET'])
+@role_required('super_admin')
+def download_backup(filename):
+    """Telecharge un fichier de backup."""
+    import os
+    from flask import send_file, current_app
+    upload_folder = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'uploads'), 'backups')
+    # Securite : empecher le path traversal
+    if '..' in filename or '/' in filename or '\\' in filename:
+        return error_response('Nom de fichier invalide.', 400)
+    file_path = os.path.join(upload_folder, filename)
+    if not os.path.exists(file_path):
+        return error_response('Backup introuvable.', 404)
+    return send_file(file_path, as_attachment=True, download_name=filename)
+
+
 # --- Inscriptions a valider (workflow d'acces entreprise) ---
 
 @admin_bp.route('/inscriptions', methods=['GET'])

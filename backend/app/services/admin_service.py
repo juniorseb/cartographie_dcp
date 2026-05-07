@@ -150,6 +150,122 @@ class AdminService:
             raise ValueError('Entité non trouvée.')
         return EntiteService.update_entite_with_children(entite, data)
 
+    # --- Backup ---
+
+    @staticmethod
+    def _backup_dir():
+        import os
+        from flask import current_app
+        d = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'uploads'), 'backups')
+        os.makedirs(d, exist_ok=True)
+        return d
+
+    @staticmethod
+    def list_backups():
+        """Liste les fichiers de backup."""
+        import os
+        d = AdminService._backup_dir()
+        items = []
+        for f in sorted(os.listdir(d), reverse=True):
+            path = os.path.join(d, f)
+            if not os.path.isfile(path):
+                continue
+            stat = os.stat(path)
+            items.append({
+                'filename': f,
+                'taille_octets': stat.st_size,
+                'taille': AdminService._humansize(stat.st_size),
+                'createdAt': datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
+                'type': 'manuel',
+                'statut': 'termine',
+            })
+        return items
+
+    @staticmethod
+    def _humansize(n):
+        for unit in ['o', 'Ko', 'Mo', 'Go']:
+            if n < 1024:
+                return f"{n:.1f} {unit}"
+            n /= 1024
+        return f"{n:.1f} To"
+
+    @staticmethod
+    def create_backup(user_id):
+        """Cree un dump JSON des principales tables."""
+        import os, json
+        from datetime import datetime as dt
+        from app.models import (
+            EntiteBase, EntiteWorkflow, EntiteConformite, EntiteContact,
+            EntiteLocalisation, ResponsableLegal, DPO, ConformiteAdministrative,
+            RegistreTraitement, CategorieDonnees, FinaliteBaseLegale, SousTraitance,
+            TransfertInternational, SecuriteConformite, MesureSecurite, CertificationSecurite,
+            HistoriqueStatut, Renouvellement, Notification, DocumentJoint,
+        )
+        from app.models.comptes_entreprises import CompteEntreprise
+        from app.models import User
+
+        d = AdminService._backup_dir()
+        timestamp = dt.utcnow().strftime('%Y%m%d_%H%M%S')
+        filename = f'backup_{timestamp}.json'
+        filepath = os.path.join(d, filename)
+
+        def _row_to_dict(row, exclude=()):
+            out = {}
+            for col in row.__table__.columns:
+                if col.name in exclude:
+                    continue
+                v = getattr(row, col.name)
+                if isinstance(v, (dt,)):
+                    out[col.name] = v.isoformat()
+                elif hasattr(v, 'value'):  # enum
+                    out[col.name] = v.value
+                else:
+                    out[col.name] = v
+            return out
+
+        data = {}
+        models = [
+            ('comptes_entreprises', CompteEntreprise, ('password_hash',)),
+            ('users', User, ('password_hash',)),
+            ('entites_base', EntiteBase, ()),
+            ('entites_contact', EntiteContact, ()),
+            ('entites_workflow', EntiteWorkflow, ()),
+            ('entites_localisation', EntiteLocalisation, ()),
+            ('entites_conformite', EntiteConformite, ()),
+            ('responsables_legaux', ResponsableLegal, ()),
+            ('dpo', DPO, ()),
+            ('conformite_administrative', ConformiteAdministrative, ()),
+            ('registre_traitements', RegistreTraitement, ()),
+            ('categories_donnees', CategorieDonnees, ()),
+            ('finalites_bases_legales', FinaliteBaseLegale, ()),
+            ('sous_traitance', SousTraitance, ()),
+            ('transferts_internationaux', TransfertInternational, ()),
+            ('securite_conformite', SecuriteConformite, ()),
+            ('mesures_securite', MesureSecurite, ()),
+            ('certifications_securite', CertificationSecurite, ()),
+            ('historique_statuts', HistoriqueStatut, ()),
+            ('renouvellements', Renouvellement, ()),
+            ('notifications', Notification, ()),
+            ('documents_joints', DocumentJoint, ()),
+        ]
+        for name, model, exclude in models:
+            try:
+                data[name] = [_row_to_dict(r, exclude) for r in model.query.all()]
+            except Exception:
+                data[name] = []
+
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump({'created_at': dt.utcnow().isoformat(),
+                       'created_by': user_id,
+                       'tables': data}, f, ensure_ascii=False, default=str, indent=2)
+
+        size = os.path.getsize(filepath)
+        return {
+            'filename': filename,
+            'taille_octets': size,
+            'taille': AdminService._humansize(size),
+        }
+
     # --- Inscriptions (workflow validation acces entreprise) ---
 
     @staticmethod
@@ -674,18 +790,35 @@ class AdminService:
 
     @staticmethod
     def list_rapports(filters=None, page=None, per_page=None):
-        """Liste paginée des rapports d'activité soumis."""
+        """Liste paginée des rapports d'activité et d'audit déposés."""
         from marshmallow import Schema, fields as ma_fields
+        from app.models import EntiteBase as _EB
 
+        # Inclure rapports d'activite ET rapports d'audit
         query = DocumentJoint.query.filter(
-            DocumentJoint.type_document == 'rapport_activite'
-        ).order_by(DocumentJoint.uploadedAt.desc())
+            DocumentJoint.type_document.in_([
+                TypeDocumentEnum.rapport_activite,
+                TypeDocumentEnum.rapport_audit,
+            ])
+        )
+
+        if filters:
+            if filters.get('search'):
+                search = f"%{filters['search']}%"
+                query = query.join(_EB, DocumentJoint.entite_id == _EB.id).filter(
+                    db.or_(
+                        DocumentJoint.nom_fichier.ilike(search),
+                        _EB.denomination.ilike(search),
+                    )
+                )
+
+        query = query.order_by(DocumentJoint.uploadedAt.desc())
 
         class RapportOutputSchema(Schema):
             id = ma_fields.String()
             entite_id = ma_fields.String()
             entreprise_denomination = ma_fields.Method('get_denomination')
-            type_document = ma_fields.String()
+            type_document = ma_fields.Method('get_type_document')
             nom_fichier = ma_fields.String()
             date_soumission = ma_fields.DateTime(attribute='uploadedAt')
             statut = ma_fields.Method('get_statut')
@@ -696,8 +829,13 @@ class AdminService:
                     return obj.entite.denomination
                 return ''
 
+            def get_type_document(self, obj):
+                return obj.type_document.value if obj.type_document else None
+
             def get_statut(self, obj):
-                return getattr(obj, 'statut_validation', 'en_attente') or 'en_attente'
+                # Pas de table de validation des rapports : on considere "en_attente"
+                # tant qu'un mecanisme de validation n'est pas implemente.
+                return 'en_attente'
 
         return paginate(query, RapportOutputSchema(), page=page, per_page=per_page)
 

@@ -83,12 +83,29 @@ class HistoriqueStatutOutputSchema(Schema):
     """Historique des changements de statut."""
     id = fields.String()
     entite_id = fields.String()
+    entite_denomination = fields.Method('get_entite_denomination')
     ancien_statut = fields.String()
     nouveau_statut = fields.String()
     date_changement = fields.DateTime()
+    createdAt = fields.DateTime(attribute='createdAt')
     modifie_par = fields.String()
+    modifie_par_nom = fields.Method('get_modifie_par_nom')
     commentaire = fields.String()
-    modifie_par_user = fields.Nested('UserSummarySchema', dump_default=None)
+
+    def get_entite_denomination(self, obj):
+        try:
+            return obj.entite.denomination if obj.entite else None
+        except Exception:
+            return None
+
+    def get_modifie_par_nom(self, obj):
+        try:
+            u = obj.modifie_par_user
+            if u:
+                return f"{u.prenom or ''} {u.nom or ''}".strip()
+        except Exception:
+            pass
+        return None
 
 
 # --- STATS ---

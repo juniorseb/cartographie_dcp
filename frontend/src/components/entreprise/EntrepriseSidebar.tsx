@@ -7,7 +7,7 @@ import { cn } from '@/utils/cn';
 import { ROUTES } from '@/utils/constants';
 
 const sidebarLinks = [
-  { to: ROUTES.ENTREPRISE_DASHBOARD, label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: ROUTES.ENTREPRISE_DASHBOARD, label: 'Tableau de bord', icon: LayoutDashboard, end: true },
   { to: ROUTES.ENTREPRISE_ENREGISTREMENT, label: 'Mon enregistrement', icon: FileText, end: false },
   { to: ROUTES.ENTREPRISE_DOSSIER, label: 'Mon dossier', icon: FolderOpen, end: false },
   { to: ROUTES.ENTREPRISE_NOTIFICATIONS, label: 'Notifications', icon: Bell, end: false },

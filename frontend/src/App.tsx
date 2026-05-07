@@ -52,7 +52,6 @@ const FormalitesAdminPage = lazy(() => import('@/pages/admin/RenouvellementAdmin
 const ValidationRapportsPage = lazy(() => import('@/pages/admin/ValidationRapportsPage'));
 const NotificationsPage = lazy(() => import('@/pages/admin/NotificationsPage'));
 const DemandesAutoPage = lazy(() => import('@/pages/admin/DemandesAutoPage'));
-const AuditsAdminPage = lazy(() => import('@/pages/admin/AuditsAdminPage'));
 const ParametresPage = lazy(() => import('@/pages/admin/ParametresPage'));
 const HistoriqueImportsPage = lazy(() => import('@/pages/admin/HistoriqueImportsPage'));
 const BackupPage = lazy(() => import('@/pages/admin/BackupPage'));
@@ -143,7 +142,8 @@ export default function App() {
             <Route path="admin/notifications" element={<NotificationsPage />} />
             <Route path="admin/demandes-auto" element={<DemandesAutoPage />} />
             <Route path="admin/inscriptions" element={<InscriptionsPage />} />
-            <Route path="admin/audits" element={<AuditsAdminPage />} />
+            {/* Audits = redirection vers Logs (fusion en Journal d'audit) */}
+            <Route path="admin/audits" element={<Navigate to="/admin/logs" replace />} />
             <Route path="admin/parametres" element={<ParametresPage />} />
             <Route path="admin/imports-historique" element={<HistoriqueImportsPage />} />
             <Route path="admin/backup" element={<BackupPage />} />

@@ -32,7 +32,7 @@ export default function AdminDashboardPage() {
     []
   );
 
-  if (isLoading) return <Loading fullPage text="Chargement du dashboard..." />;
+  if (isLoading) return <Loading fullPage text="Chargement du tableau de bord..." />;
   if (error) return <ErrorDisplay message={error} onRetry={refetch} />;
   if (!stats) return null;
 
