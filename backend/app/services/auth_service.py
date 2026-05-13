@@ -105,9 +105,18 @@ class AuthService:
     def login_entreprise(email, password):
         """
         Connexion entreprise.
+        Le Representant legal ET le Demandeur peuvent tous deux se connecter
+        avec leur email respectif (spec §2.5 reunion 07/05).
         Retourne dict avec tokens JWT et info password_expired.
         """
-        compte = CompteEntreprise.query.filter_by(email=email).first()
+        from sqlalchemy import or_
+        compte = CompteEntreprise.query.filter(
+            or_(
+                CompteEntreprise.email == email,
+                CompteEntreprise.dg_email == email,
+                CompteEntreprise.dpo_email == email,
+            )
+        ).first()
         if not compte:
             raise ValueError('Email ou mot de passe incorrect.')
 

@@ -146,12 +146,24 @@ export async function validerInscription(compteId: string): Promise<{ id: string
 }
 
 /** POST /api/admin/inscriptions/:id/rejeter */
-export async function rejeterInscription(compteId: string, motif: string): Promise<{ id: string; inscription_statut: string; inscription_motif_rejet: string }> {
+export async function rejeterInscription(
+  compteId: string,
+  motif: string,
+  motifCode?: string,
+): Promise<{ id: string; inscription_statut: string; inscription_motif_rejet: string }> {
   const res = await apiClient.post<ApiResponse<{ id: string; inscription_statut: string; inscription_motif_rejet: string }>>(
     `/admin/inscriptions/${compteId}/rejeter`,
-    { motif }
+    { motif, motif_code: motifCode },
   );
   return res.data.data!;
+}
+
+/** GET /api/admin/inscriptions/motifs-rejet */
+export async function getMotifsRejetInscription(): Promise<{ code: string; label: string }[]> {
+  const res = await apiClient.get<ApiResponse<{ motifs: { code: string; label: string }[] }>>(
+    '/admin/inscriptions/motifs-rejet'
+  );
+  return res.data.data!.motifs;
 }
 
 /** PUT /api/admin/entites/:id/formalites */

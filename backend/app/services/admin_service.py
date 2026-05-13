@@ -360,21 +360,63 @@ class AdminService:
             'password_envoyer': True,
         }
 
+    # Motifs prédéfinis (spec §2.5 reunion 07/05)
+    MOTIFS_REJET_INSCRIPTION = {
+        'entreprise_inexistante': "L'entreprise déclarée n'existe pas dans nos registres.",
+        'rl_non_authentique': "Le responsable légal n'est pas celui qu'il prétend être.",
+        'demandeur_non_mandate': "Le demandeur n'a jamais été mandaté par le responsable légal.",
+        'documents_invalides': "Les documents administratifs fournis (RCCM, DFE) sont invalides ou illisibles.",
+        'autre': "Autre motif (à préciser).",
+    }
+
     @staticmethod
-    def rejeter_inscription(compte_id, user_id, motif):
-        """Rejette une inscription avec un motif. Le compte reste inactif."""
+    def rejeter_inscription(compte_id, user_id, motif, motif_code=None):
+        """Rejette une inscription avec un motif. Le compte reste inactif.
+        Envoie un email de rejet au RL et au Demandeur avec motif explicite."""
         from app.models.comptes_entreprises import CompteEntreprise
+        from app.utils.email_sender import send_credentials_email  # noqa: F401  (placeholder)
+
         compte = CompteEntreprise.query.get(compte_id)
         if not compte:
             raise ValueError('Compte non trouvé.')
         if compte.inscription_statut == 'approved':
             raise ValueError('Inscription déjà validée, rejet impossible.')
+
+        # Si motif_code fourni, prefixer avec le motif standardisé
+        motif_final = motif
+        if motif_code and motif_code in AdminService.MOTIFS_REJET_INSCRIPTION:
+            motif_standard = AdminService.MOTIFS_REJET_INSCRIPTION[motif_code]
+            motif_final = f"[{motif_code}] {motif_standard} {motif}".strip()
+
         compte.inscription_statut = 'rejected'
         compte.is_active = False
-        compte.inscription_motif_rejet = motif
+        compte.inscription_motif_rejet = motif_final
         compte.inscription_validee_par = user_id
         compte.inscription_validee_le = datetime.now(timezone.utc)
         db.session.commit()
+
+        # Envoyer un email de rejet au RL et au Demandeur (best-effort)
+        try:
+            from app.utils.email_sender import _send
+            recipients = [
+                e for e in [compte.dg_email, compte.dpo_email] if e
+            ]
+            for email in recipients:
+                _send(
+                    subject="ARTCI DCP - Inscription refusée",
+                    recipients=[email],
+                    body=(
+                        f"Bonjour,\n\n"
+                        f"Votre demande d'inscription pour l'entreprise « {compte.denomination} » "
+                        f"a été refusée par les services de l'ARTCI.\n\n"
+                        f"Motif : {motif_final}\n\n"
+                        f"Pour toute clarification, vous pouvez nous contacter à courrier@artci.ci.\n\n"
+                        f"Cordialement,\nL'équipe ARTCI."
+                    ),
+                )
+        except Exception:
+            pass
+
         return {
             'id': compte.id,
             'inscription_statut': compte.inscription_statut,

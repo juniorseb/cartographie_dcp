@@ -195,16 +195,31 @@ def valider_inscription(compte_id):
 @admin_bp.route('/inscriptions/<string:compte_id>/rejeter', methods=['POST'])
 @admin_or_above
 def rejeter_inscription(compte_id):
-    """Rejette une inscription avec un motif."""
+    """Rejette une inscription avec un motif (predefini + texte libre)."""
     data = request.get_json() or {}
     motif = (data.get('motif') or '').strip()
-    if not motif:
+    motif_code = (data.get('motif_code') or '').strip() or None
+    if not motif and not motif_code:
         return error_response('Motif de rejet requis.', 400)
     try:
-        result = AdminService.rejeter_inscription(compte_id, g.current_user_id, motif)
+        result = AdminService.rejeter_inscription(
+            compte_id, g.current_user_id, motif, motif_code=motif_code
+        )
         return success_response(result, 'Inscription rejetee.')
     except ValueError as e:
         return error_response(str(e), 400)
+
+
+@admin_bp.route('/inscriptions/motifs-rejet', methods=['GET'])
+@admin_or_above
+def get_motifs_rejet():
+    """Liste des motifs prédéfinis de rejet d'inscription."""
+    return success_response({
+        'motifs': [
+            {'code': k, 'label': v}
+            for k, v in AdminService.MOTIFS_REJET_INSCRIPTION.items()
+        ]
+    })
 
 
 @admin_bp.route('/entites/<string:entite_id>/formalites', methods=['PUT'])

@@ -75,6 +75,7 @@ function InscriptionCard({ item, onChanged }: { item: InscriptionItem; onChanged
   const [acting, setActing] = useState<'valider' | 'rejeter' | null>(null);
   const [rejectMode, setRejectMode] = useState(false);
   const [motif, setMotif] = useState('');
+  const [motifCode, setMotifCode] = useState('');
   const [error, setError] = useState('');
 
   async function handleValider() {
@@ -91,14 +92,14 @@ function InscriptionCard({ item, onChanged }: { item: InscriptionItem; onChanged
   }
 
   async function handleRejeter() {
-    if (!motif.trim()) {
-      setError('Le motif est requis.');
+    if (!motifCode && !motif.trim()) {
+      setError('Sélectionnez un motif prédéfini ou saisissez un motif libre.');
       return;
     }
     setError('');
     setActing('rejeter');
     try {
-      await adminApi.rejeterInscription(item.id, motif.trim());
+      await adminApi.rejeterInscription(item.id, motif.trim() || ' ', motifCode || undefined);
       onChanged();
     } catch {
       setError('Erreur lors du rejet.');
@@ -142,14 +143,13 @@ function InscriptionCard({ item, onChanged }: { item: InscriptionItem; onChanged
             </div>
           </div>
 
-          {/* Section 2 - DPO */}
+          {/* Section 2 - Demandeur (mappage des champs dpo_*) */}
           <div>
             <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
-              <Building2 className="w-4 h-4 text-[var(--artci-green)]" /> DPO
+              <Building2 className="w-4 h-4 text-[var(--artci-green)]" /> Demandeur
             </h4>
             <div className="text-sm text-gray-700 space-y-1">
               <div><strong>{item.dpo_prenom} {item.dpo_nom}</strong></div>
-              <div className="text-xs text-gray-500">{item.dpo_type}{item.dpo_organisme ? ` — ${item.dpo_organisme}` : ''}</div>
               <div>{item.dpo_email ?? '-'}</div>
               {item.dpo_telephone && <div className="text-xs">{item.dpo_telephone}</div>}
             </div>
@@ -161,8 +161,8 @@ function InscriptionCard({ item, onChanged }: { item: InscriptionItem; onChanged
               <Lock className="w-4 h-4 text-[var(--artci-orange)]" /> Emails d'accès
             </h4>
             <div className="text-sm text-gray-700 space-y-1">
-              <div><span className="text-xs text-gray-500">Référant:</span> {item.acces_email_referant ?? '-'}</div>
-              <div><span className="text-xs text-gray-500">DPO:</span> {item.acces_email_dpo ?? '-'}</div>
+              <div><span className="text-xs text-gray-500">Représentant légal :</span> {item.acces_email_referant ?? item.dg_email ?? '-'}</div>
+              <div><span className="text-xs text-gray-500">Demandeur :</span> {item.acces_email_dpo ?? item.dpo_email ?? '-'}</div>
             </div>
           </div>
 
@@ -198,8 +198,22 @@ function InscriptionCard({ item, onChanged }: { item: InscriptionItem; onChanged
                 </div>
               ) : (
                 <div>
+                  <label className="text-xs font-semibold block mb-1">Motif prédéfini</label>
+                  <select
+                    value={motifCode}
+                    onChange={(e) => setMotifCode(e.target.value)}
+                    className="w-full mb-2 text-sm"
+                  >
+                    <option value="">— Sélectionner un motif —</option>
+                    <option value="entreprise_inexistante">L'entreprise déclarée n'existe pas</option>
+                    <option value="rl_non_authentique">Le responsable légal n'est pas celui qu'il prétend être</option>
+                    <option value="demandeur_non_mandate">Le demandeur n'a jamais été mandaté par le RL</option>
+                    <option value="documents_invalides">Documents administratifs (RCCM, DFE) invalides</option>
+                    <option value="autre">Autre motif</option>
+                  </select>
+                  <label className="text-xs font-semibold block mb-1">Précisions (optionnel)</label>
                   <textarea
-                    placeholder="Motif du rejet (visible par l'entreprise)"
+                    placeholder="Détails additionnels visibles par le demandeur et le RL..."
                     rows={3}
                     value={motif}
                     onChange={(e) => setMotif(e.target.value)}
@@ -214,7 +228,7 @@ function InscriptionCard({ item, onChanged }: { item: InscriptionItem; onChanged
                       Confirmer le rejet
                     </button>
                     <button
-                      onClick={() => { setRejectMode(false); setMotif(''); setError(''); }}
+                      onClick={() => { setRejectMode(false); setMotif(''); setMotifCode(''); setError(''); }}
                       className="btn btn-outline text-sm py-2 px-4"
                     >
                       Annuler
