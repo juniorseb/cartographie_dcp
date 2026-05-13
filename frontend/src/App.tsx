@@ -43,6 +43,7 @@ const EntiteDetailAdminPage = lazy(() => import('@/pages/admin/EntiteDetailAdmin
 const EntiteCreatePage = lazy(() => import('@/pages/admin/EntiteCreatePage'));
 const PanierPage = lazy(() => import('@/pages/admin/PanierPage'));
 const TraiterDossierPage = lazy(() => import('@/pages/admin/TraiterDossierPage'));
+const SuiviAgentsPage = lazy(() => import('@/pages/admin/SuiviAgentsPage'));
 const AssignationPage = lazy(() => import('@/pages/admin/AssignationPage'));
 const ValidationN1Page = lazy(() => import('@/pages/admin/ValidationN1Page'));
 const FeedbackAdminPage = lazy(() => import('@/pages/admin/FeedbackAdminPage'));
@@ -133,6 +134,7 @@ export default function App() {
             <Route path="admin/entites/:id" element={<EntiteDetailAdminPage />} />
             <Route path="admin/panier" element={<PanierPage />} />
             <Route path="admin/traiter/:entiteId" element={<TraiterDossierPage />} />
+            <Route path="admin/suivi-agents" element={<SuiviAgentsPage />} />
             <Route path="admin/assignation" element={<AssignationPage />} />
             <Route path="admin/validation" element={<ValidationN1Page />} />
             <Route path="admin/feedbacks" element={<FeedbackAdminPage />} />

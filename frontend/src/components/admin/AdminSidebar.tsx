@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Database, Inbox, UserCheck, CheckSquare,
   MessageSquare, Users, Upload, X, BarChart3,
   RefreshCw, FileCheck, Bell, ClipboardCheck,
-  Settings, Archive, HardDrive, FilePlus, UserPlus,
+  Settings, Archive, HardDrive, FilePlus, UserPlus, Activity,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { useAuth } from '@/hooks/useAuth';
@@ -51,11 +51,13 @@ const sidebarSections: SidebarSection[] = [
   {
     title: 'Workflow',
     links: [
-      { to: ROUTES.ADMIN_INSCRIPTIONS, label: 'Inscriptions à valider', icon: UserPlus, end: false, minRole: 'editor' },
+      // Spec §5.3 : "Inscriptions à valider" reserve Admin / Super Admin
+      { to: ROUTES.ADMIN_INSCRIPTIONS, label: 'Inscriptions à valider', icon: UserPlus, end: false, minRole: 'admin' },
       { to: ROUTES.ADMIN_PANIER, label: 'Mon Panier', icon: Inbox, end: false, minRole: 'editor' },
       { to: ROUTES.ADMIN_FEEDBACKS, label: 'Notifications', icon: MessageSquare, end: false, minRole: 'editor' },
       { to: ROUTES.ADMIN_ASSIGNATION, label: 'Assignation', icon: UserCheck, end: false, minRole: 'admin' },
       { to: ROUTES.ADMIN_VALIDATION, label: 'Validation N+1', icon: CheckSquare, end: false, minRole: 'admin' },
+      { to: ROUTES.ADMIN_SUIVI_AGENTS, label: 'Suivi des agents', icon: Activity, end: false, minRole: 'admin' },
     ],
   },
   {

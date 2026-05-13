@@ -179,6 +179,45 @@ export async function updateFormalitesActivation(
 }
 
 // ============================================================
+// Suivi d'activite des agents (spec §5.1, §5.2)
+// ============================================================
+
+export interface AgentActivity {
+  agent_id: string;
+  nom: string;
+  prenom: string;
+  email: string;
+  role: string;
+  is_active: boolean;
+  last_login: string | null;
+  nb_dossiers_affectes: number;
+  nb_traites: number;
+  nb_en_cours: number;
+  nb_en_retard: number;
+  nb_traitements_total: number;
+  nb_traitements_valides: number;
+  taux_traitement: number;
+}
+
+/** GET /api/admin/agents/activity */
+export async function getAgentsActivity(): Promise<AgentActivity[]> {
+  const res = await apiClient.get<ApiResponse<AgentActivity[]>>('/admin/agents/activity');
+  return res.data.data!;
+}
+
+/** POST /api/admin/entites/:id/retour-formulaire (Super Admin uniquement) */
+export async function retourFormulaireEntreprise(
+  entiteId: string,
+  motif: string,
+): Promise<{ entite_id: string; statut: string }> {
+  const res = await apiClient.post<ApiResponse<{ entite_id: string; statut: string }>>(
+    `/admin/entites/${entiteId}/retour-formulaire`,
+    { motif }
+  );
+  return res.data.data!;
+}
+
+// ============================================================
 // Workflow Traiter (spec §6 reunion 07/05)
 // ============================================================
 

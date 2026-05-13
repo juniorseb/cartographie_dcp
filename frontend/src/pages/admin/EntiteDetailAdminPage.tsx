@@ -37,6 +37,24 @@ export default function EntiteDetailAdminPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const canEdit = user && hasMinRole(user.role, 'editor');
+  const isSuperAdmin = user?.role === 'super_admin';
+  const [showRetour, setShowRetour] = useState(false);
+  const [motifRetour, setMotifRetour] = useState('');
+
+  async function handleRetourFormulaire() {
+    if (!id) return;
+    if (!motifRetour.trim()) { window.alert('Motif requis.'); return; }
+    if (!window.confirm("Retourner le formulaire à l'entreprise pour révision ?")) return;
+    try {
+      await adminApi.retourFormulaireEntreprise(id, motifRetour.trim());
+      setShowRetour(false);
+      setMotifRetour('');
+      refetch();
+      window.alert('Formulaire retourné à l\'entreprise.');
+    } catch {
+      window.alert('Erreur lors du retour.');
+    }
+  }
 
   const { data: entite, isLoading, error, refetch } = useApi(
     () => adminApi.getEntiteDetail(id!),
@@ -142,8 +160,41 @@ export default function EntiteDetailAdminPage() {
               <Edit className="w-4 h-4" /> Modifier
             </Link>
           )}
+          {isSuperAdmin && (
+            <button
+              onClick={() => setShowRetour(!showRetour)}
+              className="btn btn-outline text-sm py-2 px-4 flex items-center gap-2"
+              title="Retourner le formulaire à l'entreprise (Super Admin uniquement)"
+            >
+              ↩ Retourner à l'entreprise
+            </button>
+          )}
         </div>
       </div>
+
+      {showRetour && isSuperAdmin && (
+        <div className="card mb-4 border-l-4 border-orange-500">
+          <h3 className="text-lg font-bold mb-2">Retourner le formulaire à l'entreprise</h3>
+          <p className="text-sm text-gray-600 mb-3">
+            Action réservée au Super Admin. L'entreprise pourra modifier son dossier après ce retour.
+          </p>
+          <textarea
+            rows={3}
+            value={motifRetour}
+            onChange={(e) => setMotifRetour(e.target.value)}
+            placeholder="Motif du retour (visible par l'entreprise)..."
+            className="w-full mb-2"
+          />
+          <div className="flex gap-2 justify-end">
+            <button onClick={() => setShowRetour(false)} className="btn btn-outline text-sm">
+              Annuler
+            </button>
+            <button onClick={handleRetourFormulaire} className="btn btn-primary text-sm">
+              Confirmer le retour
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* En-tête */}
       <div className="card mb-6">

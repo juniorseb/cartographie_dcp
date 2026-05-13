@@ -266,6 +266,47 @@ class AdminService:
             'taille': AdminService._humansize(size),
         }
 
+    # --- Suivi d'activite des agents (spec §5.1, §5.2 reunion 07/05) ---
+
+    @staticmethod
+    def get_agents_activity():
+        """Tableau de performance pour chaque agent (admin/editeur/lecteur).
+        Pour chaque agent : nb dossiers assignes, traites, en cours, en retard."""
+        from app.models import TraitementDossier
+        agents = User.query.filter(User.role.in_([
+            RoleEnum.editor, RoleEnum.admin, RoleEnum.super_admin
+        ])).all()
+        result = []
+        for agent in agents:
+            assignations = AssignationDemande.query.filter_by(agent_id=agent.id).all()
+            nb_total = len(assignations)
+            nb_en_cours = sum(1 for a in assignations if a.statut == StatutAssignationEnum.en_cours)
+            nb_traites = sum(1 for a in assignations if a.statut == StatutAssignationEnum.valide)
+            nb_en_retard = sum(1 for a in assignations if a.statut == StatutAssignationEnum.en_retard)
+            traitements = TraitementDossier.query.filter_by(traitant_id=agent.id).all()
+            nb_traitements = len(traitements)
+            nb_traitements_valides = sum(1 for t in traitements if t.statut == 'valide')
+            taux = round((nb_traites / nb_total) * 100) if nb_total else 0
+            result.append({
+                'agent_id': agent.id,
+                'nom': agent.nom,
+                'prenom': agent.prenom,
+                'email': agent.email,
+                'role': agent.role.value,
+                'is_active': agent.is_active,
+                'last_login': agent.last_login.isoformat() if agent.last_login else None,
+                'nb_dossiers_affectes': nb_total,
+                'nb_traites': nb_traites,
+                'nb_en_cours': nb_en_cours,
+                'nb_en_retard': nb_en_retard,
+                'nb_traitements_total': nb_traitements,
+                'nb_traitements_valides': nb_traitements_valides,
+                'taux_traitement': taux,
+            })
+        # Tri : decroissant par taux
+        result.sort(key=lambda x: x['taux_traitement'], reverse=True)
+        return result
+
     # --- Inscriptions (workflow validation acces entreprise) ---
 
     @staticmethod
@@ -506,11 +547,32 @@ class AdminService:
         return doc
 
     @staticmethod
-    def get_panier(agent_id):
-        """Récupérer le panier de demandes assignées à un agent."""
-        assignations = AssignationDemande.query.filter_by(
-            agent_id=agent_id
-        ).order_by(AssignationDemande.echeance.asc()).all()
+    def get_panier(agent_id, role=None):
+        """Récupérer le panier de l'agent (spec §5).
+        - Editeur : seulement les entités assignées + créées par lui (pas brouillons).
+        - Admin / Super Admin : toutes les assignations + nouveaux enregistrements.
+        """
+        from sqlalchemy import or_
+        # Assignations directes de l'agent
+        query = AssignationDemande.query.filter(
+            AssignationDemande.agent_id == agent_id
+        )
+        # On exclut les brouillons (spec §5.3 : "Les entités au statut Brouillon ne doivent pas
+        # apparaître dans sa liste — au minimum, seules les entités au statut Soumis doivent être visibles.")
+        query = query.join(EntiteBase, AssignationDemande.entite_id == EntiteBase.id).join(
+            EntiteWorkflow, EntiteBase.id == EntiteWorkflow.entite_id
+        ).filter(
+            or_(
+                EntiteWorkflow.statut == StatutWorkflowEnum.soumis,
+                EntiteWorkflow.statut == StatutWorkflowEnum.en_verification,
+                EntiteWorkflow.statut == StatutWorkflowEnum.en_attente_complements,
+                EntiteWorkflow.statut == StatutWorkflowEnum.conforme,
+                EntiteWorkflow.statut == StatutWorkflowEnum.conforme_sous_reserve,
+                EntiteWorkflow.statut == StatutWorkflowEnum.valide,
+                EntiteWorkflow.statut == StatutWorkflowEnum.publie,
+            )
+        )
+        assignations = query.order_by(AssignationDemande.echeance.asc()).all()
         return AssignationOutputSchema(many=True).dump(assignations)
 
     @staticmethod

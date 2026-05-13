@@ -6,6 +6,8 @@ import * as adminApi from '@/api/admin.api';
 import Loading from '@/components/common/Loading';
 import ErrorDisplay from '@/components/common/ErrorDisplay';
 import EmptyState from '@/components/common/EmptyState';
+import { useAuth } from '@/hooks/useAuth';
+import { hasMinRole } from '@/components/admin/AdminSidebar';
 import { formatDate } from '@/utils/format';
 
 const STATUT_BADGE_MAP: Record<string, string> = {
@@ -16,6 +18,8 @@ const STATUT_BADGE_MAP: Record<string, string> = {
 };
 
 export default function PanierPage() {
+  const { user } = useAuth();
+  const canTraiter = user && hasMinRole(user.role, 'editor');
   const { data: panier, isLoading, error, refetch } = useApi(
     () => adminApi.getPanier(),
     []
@@ -70,14 +74,16 @@ export default function PanierPage() {
                   >
                     <Eye className="w-4 h-4" /> Voir
                   </Link>
-                  {/* Spec §6 : nouveau workflow Traiter avec page dediee */}
-                  <Link
-                    to={`/admin/traiter/${item.entite_id}`}
-                    className="btn btn-secondary text-sm py-2 px-3 flex items-center gap-1 no-underline"
-                  >
-                    <FileSearch className="w-4 h-4" /> Traiter
-                  </Link>
-                  {item.statut === 'en_cours' && (
+                  {/* Spec §6 : nouveau workflow Traiter avec page dediee. Editeur+ uniquement. */}
+                  {canTraiter && (
+                    <Link
+                      to={`/admin/traiter/${item.entite_id}`}
+                      className="btn btn-secondary text-sm py-2 px-3 flex items-center gap-1 no-underline"
+                    >
+                      <FileSearch className="w-4 h-4" /> Traiter
+                    </Link>
+                  )}
+                  {canTraiter && item.statut === 'en_cours' && (
                     <button
                       className="btn btn-outline text-sm py-2 px-3 flex items-center gap-1"
                       onClick={() => handleTraiter(item.id)}

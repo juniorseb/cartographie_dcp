@@ -242,12 +242,64 @@ def download_backup(filename):
     return send_file(file_path, as_attachment=True, download_name=filename)
 
 
+# --- Suivi d'activite des agents (spec §5.1, §5.2) ---
+
+@admin_bp.route('/agents/activity', methods=['GET'])
+@admin_or_above
+def get_agents_activity():
+    """Tableau de performance des agents (Admin / Super Admin uniquement)."""
+    result = AdminService.get_agents_activity()
+    return success_response(result)
+
+
+# --- Retour formulaire entreprise (spec §5.1 - reserve Super Admin) ---
+
+@admin_bp.route('/entites/<string:entite_id>/retour-formulaire', methods=['POST'])
+@role_required('super_admin')
+def retour_formulaire_entreprise(entite_id):
+    """Le Super Admin retourne le formulaire a l'entreprise pour correction.
+    Spec §5.1 : action reservee au Super Admin uniquement."""
+    from app.models import EntiteBase, EntiteWorkflow, Notification
+    from app.models.enums import StatutWorkflowEnum
+    data = request.get_json() or {}
+    motif = (data.get('motif') or '').strip()
+    if not motif:
+        return error_response('Motif de retour requis.', 400)
+
+    entite = EntiteBase.query.get(entite_id)
+    if not entite:
+        return error_response('Entité non trouvée.', 404)
+
+    wf = EntiteWorkflow.query.get(entite_id)
+    if wf:
+        wf.statut = StatutWorkflowEnum.en_attente_complements
+        wf.motif_rejet = motif
+
+    # Notifier l'entreprise
+    if entite.compte_entreprise_id:
+        n = Notification(
+            destinataire_type='entreprise',
+            destinataire_id=entite.compte_entreprise_id,
+            type='retour_formulaire',
+            titre="Votre dossier vous a été retourné",
+            message=f"L'ARTCI vous demande de réviser votre dossier. Motif : {motif}",
+            entite_id=entite.id,
+            lue=False,
+        )
+        from app.extensions import db
+        db.session.add(n)
+    from app.extensions import db
+    db.session.commit()
+    return success_response({'entite_id': entite_id, 'statut': wf.statut.value if wf else None},
+                            'Formulaire retourné à l\'entreprise.')
+
+
 # --- Inscriptions a valider (workflow d'acces entreprise) ---
 
 @admin_bp.route('/inscriptions', methods=['GET'])
-@editor_or_above
+@admin_or_above
 def list_inscriptions():
-    """Liste les inscriptions en attente de validation."""
+    """Liste les inscriptions en attente de validation (admin+ uniquement)."""
     statut = request.args.get('statut', 'pending')
     result = AdminService.list_inscriptions(statut=statut)
     return success_response(result)

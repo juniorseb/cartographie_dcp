@@ -35,6 +35,7 @@ export const ROUTES = {
   ADMIN_PANIER: '/admin/panier',
   ADMIN_TRAITER: '/admin/traiter/:entiteId',
   ADMIN_ASSIGNATION: '/admin/assignation',
+  ADMIN_SUIVI_AGENTS: '/admin/suivi-agents',
   ADMIN_VALIDATION: '/admin/validation',
   ADMIN_FEEDBACKS: '/admin/feedbacks',
   ADMIN_USERS: '/admin/utilisateurs',
