@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Inbox, CheckCircle, Eye, Clock } from 'lucide-react';
+import { Inbox, CheckCircle, Eye, Clock, FileSearch } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import * as adminApi from '@/api/admin.api';
 import Loading from '@/components/common/Loading';
@@ -63,25 +63,33 @@ export default function PanierPage() {
                     )}
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <Link
                     to={`/admin/entites/${item.entite_id}`}
                     className="btn btn-outline text-sm py-2 px-3 flex items-center gap-1 no-underline"
                   >
                     <Eye className="w-4 h-4" /> Voir
                   </Link>
+                  {/* Spec §6 : nouveau workflow Traiter avec page dediee */}
+                  <Link
+                    to={`/admin/traiter/${item.entite_id}`}
+                    className="btn btn-secondary text-sm py-2 px-3 flex items-center gap-1 no-underline"
+                  >
+                    <FileSearch className="w-4 h-4" /> Traiter
+                  </Link>
                   {item.statut === 'en_cours' && (
                     <button
-                      className="btn btn-secondary text-sm py-2 px-3 flex items-center gap-1"
+                      className="btn btn-outline text-sm py-2 px-3 flex items-center gap-1"
                       onClick={() => handleTraiter(item.id)}
                       disabled={processing === item.id}
+                      title="Marquer comme traité (assignation)"
                     >
                       {processing === item.id ? (
                         <div className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />
                       ) : (
                         <CheckCircle className="w-4 h-4" />
                       )}
-                      Traiter
+                      Marquer traité
                     </button>
                   )}
                 </div>

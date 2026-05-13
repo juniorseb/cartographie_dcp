@@ -133,6 +133,78 @@ def update_entite(entite_id):
         return error_response(str(e), 400)
 
 
+# --- Workflow Traiter (spec §6 reunion 07/05) ---
+
+@admin_bp.route('/entites/<string:entite_id>/traiter', methods=['POST'])
+@editor_or_above
+def commencer_traiter(entite_id):
+    """Demarre le traitement d'un dossier (cree ou recupere le TraitementDossier)."""
+    from app.services.traitement_service import TraitementService
+    try:
+        traitement = TraitementService.get_or_create_traitement(entite_id, g.current_user_id)
+        return success_response(TraitementService.serialize(traitement))
+    except ValueError as e:
+        return error_response(str(e), 400)
+
+
+@admin_bp.route('/traitements/<string:traitement_id>', methods=['GET'])
+@editor_or_above
+def get_traitement(traitement_id):
+    """Recuperer un traitement en cours."""
+    from app.services.traitement_service import TraitementService
+    from app.models import TraitementDossier
+    traitement = TraitementDossier.query.get(traitement_id)
+    if not traitement:
+        return error_response('Traitement non trouve.', 404)
+    return success_response(TraitementService.serialize(traitement))
+
+
+@admin_bp.route('/traitements/<string:traitement_id>', methods=['PUT'])
+@editor_or_above
+def update_traitement(traitement_id):
+    """Mettre a jour les commentaires et le scoring manuel."""
+    from app.services.traitement_service import TraitementService
+    data = request.get_json() or {}
+    try:
+        traitement = TraitementService.update_traitement(traitement_id, g.current_user_id, data)
+        return success_response(TraitementService.serialize(traitement), 'Traitement mis a jour.')
+    except ValueError as e:
+        return error_response(str(e), 400)
+
+
+@admin_bp.route('/traitements/<string:traitement_id>/soumettre', methods=['POST'])
+@editor_or_above
+def soumettre_traitement(traitement_id):
+    """Soumettre le traitement pour validation N+1."""
+    from app.services.traitement_service import TraitementService
+    try:
+        traitement = TraitementService.soumettre_pour_validation(traitement_id, g.current_user_id)
+        return success_response(TraitementService.serialize(traitement), 'Traitement soumis pour validation.')
+    except ValueError as e:
+        return error_response(str(e), 400)
+
+
+@admin_bp.route('/traitements/<string:traitement_id>/valider', methods=['POST'])
+@admin_or_above
+def valider_traitement(traitement_id):
+    """Approuver ou retourner un traitement (validation N+1)."""
+    from app.services.traitement_service import TraitementService
+    data = request.get_json() or {}
+    decision = data.get('decision')
+    motif = data.get('motif')
+    if decision not in ('approuve', 'retourne'):
+        return error_response('Decision invalide (approuve ou retourne).', 400)
+    if decision == 'retourne' and not motif:
+        return error_response('Motif requis pour retourner le dossier.', 400)
+    try:
+        traitement = TraitementService.valider_traitement(
+            traitement_id, g.current_user_id, decision, motif
+        )
+        return success_response(TraitementService.serialize(traitement), 'Decision enregistree.')
+    except ValueError as e:
+        return error_response(str(e), 400)
+
+
 # --- Backup (sauvegarde DB en JSON) ---
 
 @admin_bp.route('/backup', methods=['GET'])

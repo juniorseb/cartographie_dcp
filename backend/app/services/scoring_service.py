@@ -87,11 +87,17 @@ class ScoringService:
 
     @staticmethod
     def classifier(score):
-        """Déterminer le statut de conformité selon le barème du cadrage."""
-        if score >= 80:
+        """
+        Déterminer le statut de conformité selon les seuils OFFICIELS
+        (réunion 07/05/2026 §6 et §8.9) :
+          - 100      : Conforme
+          - [70, 99] : Démarche en cours
+          - [0, 70[  : Non conforme
+        """
+        if score >= 100:
             return StatutConformiteEnum.conforme
-        elif score >= 50:
-            return StatutConformiteEnum.partiellement_conforme
+        elif score >= 70:
+            return StatutConformiteEnum.demarche_en_cours
         else:
             return StatutConformiteEnum.non_conforme
 

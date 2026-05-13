@@ -33,6 +33,7 @@ export const ROUTES = {
   ADMIN_ENTITE_CREATE: '/admin/entites/nouveau',
   ADMIN_ENTITE_DETAIL: '/admin/entites/:id',
   ADMIN_PANIER: '/admin/panier',
+  ADMIN_TRAITER: '/admin/traiter/:entiteId',
   ADMIN_ASSIGNATION: '/admin/assignation',
   ADMIN_VALIDATION: '/admin/validation',
   ADMIN_FEEDBACKS: '/admin/feedbacks',

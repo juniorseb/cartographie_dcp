@@ -69,6 +69,9 @@ from app.models.contact_messages import ContactMessage
 # Groupe 10 : Formulaire DCP officiel (1 table)
 from app.models.formulaire_dcp import FormulaireDCP
 
+# Groupe 11 : Workflow Traiter (1 table)
+from app.models.traitement_dossier import TraitementDossier
+
 __all__ = [
     # Mixins
     'UUIDMixin', 'TimestampMixin',
@@ -90,5 +93,5 @@ __all__ = [
     'TransfertInternational', 'SecuriteConformite',
     'MesureSecurite', 'CertificationSecurite',
     'HistoriqueStatut', 'Renouvellement',
-    'Notification', 'ContactMessage', 'FormulaireDCP',
+    'Notification', 'ContactMessage', 'FormulaireDCP', 'TraitementDossier',
 ]

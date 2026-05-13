@@ -178,6 +178,72 @@ export async function updateFormalitesActivation(
   return res.data.data!;
 }
 
+// ============================================================
+// Workflow Traiter (spec §6 reunion 07/05)
+// ============================================================
+
+export interface Traitement {
+  id: string;
+  entite_id: string;
+  entite_denomination: string | null;
+  entite_numero_cc: string | null;
+  reponses_formulaire: Record<string, unknown>;
+  commentaires_par_rubrique: Record<string, string>;
+  score_automatique: number | null;
+  score_manuel: number | null;
+  niveau_conformite: string | null;
+  recommandations: string | null;
+  statut: 'en_cours' | 'soumis_validation' | 'valide' | 'retourne_entreprise';
+  decision_validation: 'approuve' | 'retourne' | null;
+  motif_retour: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+/** POST /api/admin/entites/:id/traiter (recupere ou cree le traitement) */
+export async function commencerTraiter(entiteId: string): Promise<Traitement> {
+  const res = await apiClient.post<ApiResponse<Traitement>>(`/admin/entites/${entiteId}/traiter`);
+  return res.data.data!;
+}
+
+/** GET /api/admin/traitements/:id */
+export async function getTraitement(traitementId: string): Promise<Traitement> {
+  const res = await apiClient.get<ApiResponse<Traitement>>(`/admin/traitements/${traitementId}`);
+  return res.data.data!;
+}
+
+/** PUT /api/admin/traitements/:id */
+export async function updateTraitement(
+  traitementId: string,
+  data: {
+    commentaires_par_rubrique?: Record<string, string>;
+    score_manuel?: number;
+    recommandations?: string;
+  },
+): Promise<Traitement> {
+  const res = await apiClient.put<ApiResponse<Traitement>>(`/admin/traitements/${traitementId}`, data);
+  return res.data.data!;
+}
+
+/** POST /api/admin/traitements/:id/soumettre */
+export async function soumettreTraitement(traitementId: string): Promise<Traitement> {
+  const res = await apiClient.post<ApiResponse<Traitement>>(`/admin/traitements/${traitementId}/soumettre`);
+  return res.data.data!;
+}
+
+/** POST /api/admin/traitements/:id/valider */
+export async function validerTraitement(
+  traitementId: string,
+  decision: 'approuve' | 'retourne',
+  motif?: string,
+): Promise<Traitement> {
+  const res = await apiClient.post<ApiResponse<Traitement>>(
+    `/admin/traitements/${traitementId}/valider`,
+    { decision, motif }
+  );
+  return res.data.data!;
+}
+
 /** POST /api/admin/entites/:id/publier */
 export async function publierEntite(entiteId: string): Promise<{ id: string; publie_sur_carte: boolean }> {
   const res = await apiClient.post<ApiResponse<{ id: string; publie_sur_carte: boolean }>>(
