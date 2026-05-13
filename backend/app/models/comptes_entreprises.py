@@ -20,6 +20,8 @@ class CompteEntreprise(UUIDMixin, TimestampMixin, db.Model):
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     password_last_changed = db.Column(db.DateTime(timezone=True))
     password_expires_at = db.Column(db.DateTime(timezone=True))
+    # Mot de passe genere par l'admin a la validation - doit etre change a la 1ere connexion
+    password_must_change = db.Column(db.Boolean, nullable=False, default=False)
 
     # Inscription en 3 sections : etat de validation par l'ARTCI
     # pending : en attente de verification, approved : valide (acces actif),

@@ -223,6 +223,29 @@ def update_formalites_activation(entite_id):
         return error_response(str(e), 400)
 
 
+@admin_bp.route('/entites/<string:entite_id>/publier', methods=['POST'])
+@admin_or_above
+def publier_entite(entite_id):
+    """Publier une entite sur la cartographie publique. Seules les entites
+    "Conforme" ou "Demarche en cours" peuvent etre publiees."""
+    try:
+        result = AdminService.publier_entite(entite_id)
+        return success_response(result, 'Entite publiee.')
+    except ValueError as e:
+        return error_response(str(e), 400)
+
+
+@admin_bp.route('/entites/<string:entite_id>/depublier', methods=['POST'])
+@admin_or_above
+def depublier_entite(entite_id):
+    """Depublier une entite de la cartographie publique."""
+    try:
+        result = AdminService.depublier_entite(entite_id)
+        return success_response(result, 'Entite depubliee.')
+    except ValueError as e:
+        return error_response(str(e), 400)
+
+
 @admin_bp.route('/entites/<string:entite_id>/rapport-audit', methods=['POST'])
 @editor_or_above
 def upload_rapport_audit(entite_id):
@@ -436,6 +459,26 @@ def import_excel():
     try:
         result = AdminService.import_excel(file, g.current_user_id)
         return success_response(result, f'{result["imported"]} entités importées.')
+    except ValueError as e:
+        return error_response(str(e), 400)
+
+
+@admin_bp.route('/import/boloforms', methods=['POST'])
+@admin_or_above
+def import_boloforms():
+    """Importer les reponses du formulaire BoloForms / Google Forms (CSV 171 colonnes)."""
+    from app.services.import_boloforms_service import import_boloforms_csv
+    if 'file' not in request.files:
+        return error_response('Aucun fichier fourni.', 400)
+    file = request.files['file']
+    if not file.filename:
+        return error_response('Nom de fichier vide.', 400)
+    if not file.filename.lower().endswith('.csv'):
+        return error_response('Format non supporte. Utilisez un fichier .csv exporte depuis BoloForms / Google Forms.', 400)
+    try:
+        result = import_boloforms_csv(file.stream, g.current_user_id)
+        msg = f'{result["imported"]} entites importees, {result["skipped"]} ignorees.'
+        return success_response(result, msg)
     except ValueError as e:
         return error_response(str(e), 400)
 

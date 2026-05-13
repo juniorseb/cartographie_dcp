@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, FileText, Shield, Users, MapPin, Edit, Lock, Globe, BookOpen, UserCheck, ClipboardList, Award, FileDown, Upload, ClipboardCheck, RefreshCw } from 'lucide-react';
+import { ArrowLeft, FileText, Shield, Users, MapPin, Edit, Lock, Globe, BookOpen, UserCheck, ClipboardList, Award, FileDown, Upload, ClipboardCheck, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import * as adminApi from '@/api/admin.api';
 import Loading from '@/components/common/Loading';
@@ -72,6 +72,28 @@ export default function EntiteDetailAdminPage() {
     }
   }
 
+  async function handlePublier() {
+    if (!id) return;
+    try {
+      await adminApi.publierEntite(id);
+      refetch();
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { error?: string } } };
+      window.alert(err?.response?.data?.error ?? 'Erreur lors de la publication.');
+    }
+  }
+
+  async function handleDepublier() {
+    if (!id) return;
+    if (!window.confirm('Retirer cette entité de la cartographie publique ?')) return;
+    try {
+      await adminApi.depublierEntite(id);
+      refetch();
+    } catch {
+      window.alert('Erreur lors de la dépublication.');
+    }
+  }
+
   if (isLoading) return <Loading fullPage text="Chargement de l'entité..." />;
 
   if (error || !entite) {
@@ -87,18 +109,40 @@ export default function EntiteDetailAdminPage() {
 
   return (
     <div className="max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <Link to={ROUTES.ADMIN_ENTITES} className="flex items-center gap-2 text-[var(--artci-green)] hover:underline text-sm">
           <ArrowLeft className="w-4 h-4" /> Retour à la liste
         </Link>
-        {canEdit && (
-          <Link
-            to={`/admin/entites/${entite.id}`}
-            className="btn btn-outline text-sm py-2 px-4 flex items-center gap-2 no-underline"
-          >
-            <Edit className="w-4 h-4" /> Modifier
-          </Link>
-        )}
+        <div className="flex items-center gap-2 flex-wrap">
+          {canEdit && hasMinRole(user!.role, 'admin') && (
+            <>
+              {entite.publie_sur_carte ? (
+                <button
+                  onClick={handleDepublier}
+                  className="btn btn-outline text-sm py-2 px-4 flex items-center gap-2"
+                >
+                  <EyeOff className="w-4 h-4" /> Dépublier
+                </button>
+              ) : (
+                <button
+                  onClick={handlePublier}
+                  className="btn btn-secondary text-sm py-2 px-4 flex items-center gap-2"
+                  title="Publier sur la cartographie publique"
+                >
+                  <Eye className="w-4 h-4" /> Publier
+                </button>
+              )}
+            </>
+          )}
+          {canEdit && (
+            <Link
+              to={`/admin/entites/${entite.id}`}
+              className="btn btn-outline text-sm py-2 px-4 flex items-center gap-2 no-underline"
+            >
+              <Edit className="w-4 h-4" /> Modifier
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* En-tête */}

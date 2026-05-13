@@ -66,6 +66,9 @@ from app.models.notifications import Notification
 # Groupe 9 : Contact (1 table)
 from app.models.contact_messages import ContactMessage
 
+# Groupe 10 : Formulaire DCP officiel (1 table)
+from app.models.formulaire_dcp import FormulaireDCP
+
 __all__ = [
     # Mixins
     'UUIDMixin', 'TimestampMixin',
@@ -87,5 +90,5 @@ __all__ = [
     'TransfertInternational', 'SecuriteConformite',
     'MesureSecurite', 'CertificationSecurite',
     'HistoriqueStatut', 'Renouvellement',
-    'Notification', 'ContactMessage',
+    'Notification', 'ContactMessage', 'FormulaireDCP',
 ]

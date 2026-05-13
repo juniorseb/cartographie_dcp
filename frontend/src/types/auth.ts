@@ -36,36 +36,32 @@ export interface LoginResponse {
   token_type: string;
   expires_in: number;
   password_expired?: boolean;
+  password_must_change?: boolean;
   compte?: CompteEntreprise;
   user?: User;
 }
 
 export interface RegisterInput {
-  email: string;
-  password: string;
-  password_confirm: string;
+  // Section 1 — Entreprise
   denomination: string;
   numero_cc: string;
   telephone?: string;
   adresse?: string;
   ville?: string;
   region?: string;
-  // Section 1 — Représentant légal / Référant (DG)
-  dg_nom?: string;
-  dg_prenom?: string;
+  // Section 2 — Représentant légal (email = identifiant)
+  dg_nom: string;
+  dg_prenom: string;
   dg_fonction?: string;
   dg_telephone?: string;
-  dg_email?: string;
-  // Section 2 — DPO
-  dpo_nom?: string;
-  dpo_prenom?: string;
+  dg_email: string;
+  // Section 3 — DPO (email = identifiant)
+  dpo_nom: string;
+  dpo_prenom: string;
   dpo_telephone?: string;
-  dpo_email?: string;
+  dpo_email: string;
   dpo_type?: 'interne' | 'externe';
   dpo_organisme?: string;
-  // Section 3 — Accès (référant + DPO)
-  acces_email_referant?: string;
-  acces_email_dpo?: string;
 }
 
 export interface LoginInput {

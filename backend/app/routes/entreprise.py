@@ -167,6 +167,101 @@ def update_profil():
         return error_response(str(e), 400)
 
 
+# --- Formulaire DCP officiel (questionnaire de recensement) ---
+
+@entreprise_bp.route('/formulaire-dcp', methods=['GET'])
+@entreprise_auth_required
+def get_formulaire_dcp():
+    """Recuperer les reponses au formulaire officiel DCP de l'entreprise."""
+    from app.models import EntiteBase, FormulaireDCP
+    entite = EntiteBase.query.filter_by(compte_entreprise_id=g.current_user_id).first()
+    if not entite:
+        return success_response({'reponses': {}, 'entite_id': None})
+    form = FormulaireDCP.query.get(entite.id)
+    return success_response({
+        'entite_id': entite.id,
+        'reponses': form.reponses if form else {},
+    })
+
+
+@entreprise_bp.route('/formulaire-dcp', methods=['PUT'])
+@entreprise_auth_required
+def save_formulaire_dcp():
+    """Sauvegarder (upsert) les reponses au formulaire officiel DCP."""
+    from app.extensions import db
+    from app.models import EntiteBase, FormulaireDCP, EntiteWorkflow
+    from app.models.enums import OrigineSaisieEnum, StatutWorkflowEnum
+    from app.models.comptes_entreprises import CompteEntreprise
+
+    data = request.get_json() or {}
+    reponses = data.get('reponses', {})
+    if not isinstance(reponses, dict):
+        return error_response('Les reponses doivent etre un objet.', 400)
+
+    entite = EntiteBase.query.filter_by(compte_entreprise_id=g.current_user_id).first()
+    if not entite:
+        compte = CompteEntreprise.query.get(g.current_user_id)
+        denomination = (
+            (reponses.get('identification') or {}).get('denomination')
+            or (compte.denomination if compte else 'Entreprise')
+        )
+        numero_cc = (
+            (reponses.get('identification') or {}).get('numero_cc')
+            or (compte.numero_cc if compte else None)
+        )
+        if not numero_cc:
+            return error_response('Le numero CC est requis.', 400)
+        entite = EntiteBase(
+            compte_entreprise_id=g.current_user_id,
+            denomination=denomination[:255],
+            numero_cc=numero_cc[:50],
+            origine_saisie=OrigineSaisieEnum.auto_recensement,
+            publie_sur_carte=False,
+        )
+        db.session.add(entite)
+        db.session.flush()
+        wf = EntiteWorkflow(
+            entite_id=entite.id,
+            statut=StatutWorkflowEnum.brouillon,
+            createdBy=None,
+        )
+        db.session.add(wf)
+
+    form = FormulaireDCP.query.get(entite.id)
+    if not form:
+        form = FormulaireDCP(entite_id=entite.id, reponses=reponses)
+        db.session.add(form)
+    else:
+        form.reponses = reponses
+    db.session.commit()
+    return success_response({
+        'entite_id': entite.id,
+        'reponses': form.reponses,
+    }, 'Formulaire sauvegarde.')
+
+
+@entreprise_bp.route('/formulaire-dcp/soumettre', methods=['POST'])
+@entreprise_auth_required
+def soumettre_formulaire_dcp():
+    """Soumettre definitivement le formulaire DCP a l'ARTCI."""
+    from app.extensions import db
+    from app.models import EntiteBase, EntiteWorkflow
+    from app.models.enums import StatutWorkflowEnum
+    from datetime import datetime, timezone
+    entite = EntiteBase.query.filter_by(compte_entreprise_id=g.current_user_id).first()
+    if not entite:
+        return error_response('Aucun dossier a soumettre.', 404)
+    workflow = EntiteWorkflow.query.get(entite.id)
+    if not workflow:
+        return error_response('Workflow introuvable.', 404)
+    if workflow.statut not in (StatutWorkflowEnum.brouillon, StatutWorkflowEnum.en_attente_complements):
+        return error_response('Le dossier ne peut etre soumis dans son etat actuel.', 400)
+    workflow.statut = StatutWorkflowEnum.soumis
+    workflow.date_soumission = datetime.now(timezone.utc)
+    db.session.commit()
+    return success_response({'statut': workflow.statut.value}, 'Dossier soumis a l\'ARTCI.')
+
+
 # --- Mon dossier : sous-onglets ---
 
 @entreprise_bp.route('/mes-rapports', methods=['GET'])

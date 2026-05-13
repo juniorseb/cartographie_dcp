@@ -166,6 +166,22 @@ export async function updateFormalitesActivation(
   return res.data.data!;
 }
 
+/** POST /api/admin/entites/:id/publier */
+export async function publierEntite(entiteId: string): Promise<{ id: string; publie_sur_carte: boolean }> {
+  const res = await apiClient.post<ApiResponse<{ id: string; publie_sur_carte: boolean }>>(
+    `/admin/entites/${entiteId}/publier`
+  );
+  return res.data.data!;
+}
+
+/** POST /api/admin/entites/:id/depublier */
+export async function depublierEntite(entiteId: string): Promise<{ id: string; publie_sur_carte: boolean }> {
+  const res = await apiClient.post<ApiResponse<{ id: string; publie_sur_carte: boolean }>>(
+    `/admin/entites/${entiteId}/depublier`
+  );
+  return res.data.data!;
+}
+
 /** POST /api/admin/entites/:id/rapport-audit */
 export async function uploadRapportAudit(
   entiteId: string,
@@ -269,6 +285,18 @@ export async function importExcel(file: File): Promise<ImportResult> {
   const res = await apiClient.post<ApiResponse<ImportResult>>('/admin/import', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
+  return res.data.data!;
+}
+
+/** POST /api/admin/import/boloforms - Import du CSV BoloForms / Google Forms (171 cols) */
+export async function importBoloforms(file: File): Promise<ImportResult & { skipped: number }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await apiClient.post<ApiResponse<ImportResult & { skipped: number }>>(
+    '/admin/import/boloforms',
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } },
+  );
   return res.data.data!;
 }
 

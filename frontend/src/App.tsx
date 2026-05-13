@@ -25,10 +25,13 @@ const ResetPasswordPage = lazy(() => import('@/pages/auth/ResetPasswordPage'));
 
 // Lazy loading des pages entreprise
 const DashboardPage = lazy(() => import('@/pages/entreprise/DashboardPage'));
-const DemandePage = lazy(() => import('@/pages/entreprise/DemandePage'));
+const MonEnregistrementPage = lazy(() => import('@/pages/entreprise/MonEnregistrementPage'));
 const MonDossierPage = lazy(() => import('@/pages/entreprise/MonDossierPage'));
 const NotificationsEntreprisePage = lazy(() => import('@/pages/entreprise/FeedbacksPage'));
-const FormalitesPage = lazy(() => import('@/pages/entreprise/RenouvellementPage'));
+const DeclarationCorrespondantPage = lazy(() => import('@/pages/entreprise/formalites/DeclarationCorrespondantPage'));
+const DeclarationTraitementPage = lazy(() => import('@/pages/entreprise/formalites/DeclarationTraitementPage'));
+const AutorisationTraitementPage = lazy(() => import('@/pages/entreprise/formalites/AutorisationTraitementPage'));
+const AutorisationTransfertsPage = lazy(() => import('@/pages/entreprise/formalites/AutorisationTransfertsPage'));
 const ProfilPage = lazy(() => import('@/pages/entreprise/ProfilPage'));
 const ChangePasswordPage = lazy(() => import('@/pages/auth/ChangePasswordPage'));
 
@@ -94,11 +97,15 @@ export default function App() {
             }
           >
             <Route path="entreprise" element={<DashboardPage />} />
-            <Route path="entreprise/mon-enregistrement" element={<DemandePage />} />
-            <Route path="entreprise/mon-enregistrement/:id" element={<DemandePage />} />
+            <Route path="entreprise/mon-enregistrement" element={<MonEnregistrementPage />} />
+            <Route path="entreprise/mon-enregistrement/:id" element={<MonEnregistrementPage />} />
             <Route path="entreprise/mon-dossier" element={<MonDossierPage />} />
             <Route path="entreprise/notifications" element={<NotificationsEntreprisePage />} />
-            <Route path="entreprise/formalites" element={<FormalitesPage />} />
+            <Route path="entreprise/formalites" element={<Navigate to="/entreprise/formalites/declaration/correspondant" replace />} />
+            <Route path="entreprise/formalites/declaration/correspondant" element={<DeclarationCorrespondantPage />} />
+            <Route path="entreprise/formalites/declaration/traitement" element={<DeclarationTraitementPage />} />
+            <Route path="entreprise/formalites/autorisation/traitement" element={<AutorisationTraitementPage />} />
+            <Route path="entreprise/formalites/autorisation/transferts" element={<AutorisationTransfertsPage />} />
             <Route path="entreprise/profil" element={<ProfilPage />} />
             <Route path="entreprise/changer-mot-de-passe" element={<ChangePasswordPage />} />
             {/* Redirections compat anciennes URLs */}

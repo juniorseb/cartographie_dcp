@@ -67,11 +67,11 @@ export default function ContactPage() {
               <div className="flex items-start gap-3">
                 <MapPin className="w-4 h-4 text-[var(--artci-orange)] flex-shrink-0 mt-0.5" />
                 <div>
-                  <div className="font-semibold">Siège</div>
+                  <div className="font-semibold">Siège social</div>
                   <div className="text-gray-500">
-                    Marcory Zone 4<br />
-                    Rue du Lycée Technique<br />
-                    Abidjan, Côte d'Ivoire
+                    Abidjan - Marcory Anoumanbo<br />
+                    18 BP 2203 Abidjan 18<br />
+                    Côte d'Ivoire
                   </div>
                 </div>
               </div>
@@ -79,15 +79,19 @@ export default function ContactPage() {
                 <Phone className="w-4 h-4 text-[var(--artci-orange)] flex-shrink-0 mt-0.5" />
                 <div>
                   <div className="font-semibold">Téléphone</div>
-                  <div className="text-gray-500">+225 27 22 18 18 18</div>
+                  <div className="text-gray-500">
+                    +225 27 20 34 43 73<br />
+                    +225 27 20 34 43 74
+                  </div>
+                  <div className="text-xs text-gray-400 mt-1">Fax : +225 27 20 34 43 75</div>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <Mail className="w-4 h-4 text-[var(--artci-orange)] flex-shrink-0 mt-0.5" />
                 <div>
                   <div className="font-semibold">Email</div>
-                  <a href="mailto:contact@artci.ci" className="text-[var(--artci-orange)] hover:underline">
-                    contact@artci.ci
+                  <a href="mailto:courrier@artci.ci" className="text-[var(--artci-orange)] hover:underline">
+                    courrier@artci.ci
                   </a>
                 </div>
               </div>

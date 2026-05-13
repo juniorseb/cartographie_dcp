@@ -8,40 +8,29 @@ from marshmallow import Schema, fields, validate, validates_schema, ValidationEr
 # --- INPUT ---
 
 class RegisterInputSchema(Schema):
-    """POST /api/auth/register - inscription en 3 sections (DG / DPO / Acces)."""
-    email = fields.Email(required=True)
-    password = fields.String(required=True, validate=validate.Length(min=8, max=128))
-    password_confirm = fields.String(required=True)
+    """POST /api/auth/register - inscription en 3 sections (Entreprise / Representant legal / DPO).
+    Pas de mot de passe a l'inscription : il est genere et envoye par email
+    a la validation par l'ARTCI."""
+    # Section 1 - Entreprise
     denomination = fields.String(required=True, validate=validate.Length(min=2, max=255))
     numero_cc = fields.String(required=True, validate=validate.Length(min=2, max=50))
     telephone = fields.String(validate=validate.Length(max=20))
     adresse = fields.String(validate=validate.Length(max=500))
     ville = fields.String(validate=validate.Length(max=100))
     region = fields.String(validate=validate.Length(max=100))
-    # Section 1 - Representant legal / Referant (DG)
-    dg_nom = fields.String(validate=validate.Length(max=200))
-    dg_prenom = fields.String(validate=validate.Length(max=200))
+    # Section 2 - Representant legal / Referant (DG) - email = acces login
+    dg_nom = fields.String(required=True, validate=validate.Length(min=2, max=200))
+    dg_prenom = fields.String(required=True, validate=validate.Length(min=2, max=200))
     dg_fonction = fields.String(validate=validate.Length(max=200))
     dg_telephone = fields.String(validate=validate.Length(max=30))
-    dg_email = fields.Email()
-    # Section 2 - DPO
-    dpo_nom = fields.String(validate=validate.Length(max=200))
-    dpo_prenom = fields.String(validate=validate.Length(max=200))
+    dg_email = fields.Email(required=True)
+    # Section 3 - DPO - email = acces login
+    dpo_nom = fields.String(required=True, validate=validate.Length(min=2, max=200))
+    dpo_prenom = fields.String(required=True, validate=validate.Length(min=2, max=200))
     dpo_telephone = fields.String(validate=validate.Length(max=30))
-    dpo_email = fields.Email()
+    dpo_email = fields.Email(required=True)
     dpo_type = fields.String(validate=validate.OneOf(['interne', 'externe']))
     dpo_organisme = fields.String(validate=validate.Length(max=255))
-    # Section 3 - Acces
-    acces_email_referant = fields.Email()
-    acces_email_dpo = fields.Email()
-
-    @validates_schema
-    def validate_passwords_match(self, data, **kwargs):
-        if data.get('password') != data.get('password_confirm'):
-            raise ValidationError(
-                'Les mots de passe ne correspondent pas.',
-                field_name='password_confirm'
-            )
 
 
 class VerifyOTPInputSchema(Schema):
@@ -125,3 +114,4 @@ class LoginResponseSchema(Schema):
     token_type = fields.String(dump_default='Bearer')
     expires_in = fields.Integer()
     password_expired = fields.Boolean()
+    password_must_change = fields.Boolean()

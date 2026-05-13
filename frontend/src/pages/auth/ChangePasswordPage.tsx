@@ -1,12 +1,16 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { KeyRound } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { KeyRound, AlertTriangle } from 'lucide-react';
 import PasswordInput from '@/components/auth/PasswordInput';
 import * as authApi from '@/api/auth.api';
 import { ROUTES } from '@/utils/constants';
 
 export default function ChangePasswordPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const state = location.state as { forced?: boolean; reason?: string } | null;
+  const forced = !!state?.forced;
+  const reason = state?.reason;
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -61,8 +65,23 @@ export default function ChangePasswordPage() {
           Changer le mot de passe
         </h2>
         <p className="text-sm text-gray-500 text-center mb-6">
-          Votre mot de passe a expiré ou vous souhaitez le modifier.
+          {reason === 'must_change'
+            ? "Première connexion : vous devez changer le mot de passe initial reçu par email."
+            : reason === 'expired'
+              ? "Votre mot de passe a expiré, veuillez le renouveler."
+              : "Votre mot de passe a expiré ou vous souhaitez le modifier."}
         </p>
+
+        {forced && (
+          <div className="alert alert-warning mb-4 flex items-start gap-2 text-sm">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+            <div>
+              {reason === 'must_change'
+                ? "Pour des raisons de sécurité, vous devez définir votre propre mot de passe avant d'accéder à la plateforme."
+                : "Vous devez renouveler votre mot de passe avant de continuer."}
+            </div>
+          </div>
+        )}
 
         {error && <div className="alert alert-danger mb-4">{error}</div>}
 

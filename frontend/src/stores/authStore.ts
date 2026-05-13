@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { CompteEntreprise, User } from '@/types/auth';
+import type { CompteEntreprise, User, LoginResponse } from '@/types/auth';
 import * as authApi from '@/api/auth.api';
 
 interface AuthState {
@@ -11,7 +11,7 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
 
-  login: (email: string, password: string, loginType: 'entreprise' | 'artci') => Promise<void>;
+  login: (email: string, password: string, loginType: 'entreprise' | 'artci') => Promise<LoginResponse>;
   logout: () => Promise<void>;
   setTokens: (accessToken: string, refreshToken: string) => void;
   clearAuth: () => void;
@@ -39,6 +39,7 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: true,
             isLoading: false,
           });
+          return result;
         } catch {
           set({ isLoading: false });
           throw new Error('Échec de la connexion');

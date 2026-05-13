@@ -42,11 +42,23 @@ class PublicService:
         )
 
         # Apply statut filter
+        # Spec : seules les entites "Conforme" et "Demarche en cours" sont publiables
+        # (les "Non conforme" ne sont pas publiees)
+        publiables = [
+            StatutConformiteEnum.conforme,
+            StatutConformiteEnum.demarche_en_cours,
+            StatutConformiteEnum.partiellement_conforme,
+        ]
         if statut_filter:
-            query = query.filter(EntiteConformite.statut_conformite.in_(statut_filter))
+            # On ne garde que les statuts demandes ET publiables
+            statuts_to_apply = [s for s in statut_filter if s in publiables]
+            if statuts_to_apply:
+                query = query.filter(EntiteConformite.statut_conformite.in_(statuts_to_apply))
+            else:
+                query = query.filter(EntiteConformite.statut_conformite.in_(publiables))
         else:
-            # Default: only Conforme
-            query = query.filter(EntiteConformite.statut_conformite == StatutConformiteEnum.conforme)
+            # Defaut : Conforme + Demarche en cours + Partiellement conforme
+            query = query.filter(EntiteConformite.statut_conformite.in_(publiables))
 
         query = query.order_by(EntiteBase.denomination.asc())
 

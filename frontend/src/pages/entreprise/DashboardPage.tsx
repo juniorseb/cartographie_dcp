@@ -1,12 +1,15 @@
 import { Link } from 'react-router-dom';
-import { FileText, FolderOpen, Bell, AlertTriangle } from 'lucide-react';
+import { FileText, FolderOpen, Bell, AlertTriangle, Clock, CheckCircle, Lock } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import * as entrepriseApi from '@/api/entreprise.api';
 import StepperWorkflow from '@/components/entreprise/StepperWorkflow';
 import Loading from '@/components/common/Loading';
 import ErrorDisplay from '@/components/common/ErrorDisplay';
-import StatusBadge from '@/components/common/StatusBadge';
 import { ROUTES } from '@/utils/constants';
+
+// Statuts pendant lesquels le dossier est en cours d'examen ARTCI
+const STATUTS_EN_VERIFICATION = ['soumis', 'en_verification', 'en_attente_complements'];
+const STATUTS_TERMINES = ['conforme', 'conforme_sous_reserve', 'valide', 'publie'];
 
 export default function DashboardPage() {
   const { data: dashboard, isLoading, error, refetch } = useApi(
@@ -17,6 +20,11 @@ export default function DashboardPage() {
   if (isLoading) return <Loading fullPage text="Chargement du tableau de bord..." />;
   if (error) return <ErrorDisplay message={error} onRetry={refetch} />;
   if (!dashboard) return null;
+
+  const statut = dashboard.statut_workflow ?? '';
+  const enVerification = STATUTS_EN_VERIFICATION.includes(statut);
+  const termine = STATUTS_TERMINES.includes(statut);
+  const enregistrementDesactive = enVerification || termine;
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -34,27 +42,16 @@ export default function DashboardPage() {
         <StepperWorkflow steps={dashboard.steps} />
       </div>
 
-      {/* Statut actuel */}
-      {dashboard.statut_conformite && (
-        <div className="card mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-sm font-semibold text-gray-600">Statut de conformité :</span>{' '}
-              <StatusBadge statut={dashboard.statut_conformite} />
-            </div>
-            {dashboard.score_conformite != null && (
-              <div className="text-right">
-                <span className="text-sm font-semibold text-gray-600">Score :</span>
-                <div className="progress w-32 mt-1">
-                  <div
-                    className="progress-bar"
-                    style={{ width: `${dashboard.score_conformite}%` }}
-                  >
-                    {dashboard.score_conformite}%
-                  </div>
-                </div>
-              </div>
-            )}
+      {/* Message si dossier en cours de vérification */}
+      {enVerification && (
+        <div className="alert alert-info mb-6 flex items-start gap-3">
+          <Clock className="w-5 h-5 flex-shrink-0 mt-0.5" />
+          <div>
+            <strong>Votre dossier est en cours de vérification par les équipes de l'ARTCI.</strong>
+            <p className="text-sm mt-1">
+              Vous serez notifié(e) dès qu'une réponse sera disponible.
+              Pendant cette période, votre formulaire est en lecture seule.
+            </p>
           </div>
         </div>
       )}
@@ -87,7 +84,7 @@ export default function DashboardPage() {
         )}
 
         {dashboard.has_demande && dashboard.can_edit && (
-          <Link to={`/entreprise/mon-enregistrement/${dashboard.entite_id}`} className="card hover:shadow-lg transition-shadow no-underline">
+          <Link to={ROUTES.ENTREPRISE_ENREGISTREMENT} className="card hover:shadow-lg transition-shadow no-underline">
             <div className="flex items-center gap-3">
               <FileText className="w-8 h-8 text-[var(--artci-orange)]" />
               <div>
@@ -96,6 +93,24 @@ export default function DashboardPage() {
               </div>
             </div>
           </Link>
+        )}
+
+        {dashboard.has_demande && enregistrementDesactive && (
+          <div className="card opacity-60">
+            <div className="flex items-center gap-3">
+              {termine ? (
+                <CheckCircle className="w-8 h-8 text-[var(--artci-green)]" />
+              ) : (
+                <Lock className="w-8 h-8 text-gray-400" />
+              )}
+              <div>
+                <p className="font-bold text-sm text-[var(--artci-black)]">Mon Enregistrement</p>
+                <p className="text-xs text-gray-500">
+                  {termine ? 'Dossier traité' : 'Verrouillé pendant la vérification'}
+                </p>
+              </div>
+            </div>
+          </div>
         )}
 
         <Link to={ROUTES.ENTREPRISE_DOSSIER} className="card hover:shadow-lg transition-shadow no-underline">

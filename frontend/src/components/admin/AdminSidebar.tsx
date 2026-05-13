@@ -53,7 +53,7 @@ const sidebarSections: SidebarSection[] = [
     links: [
       { to: ROUTES.ADMIN_INSCRIPTIONS, label: 'Inscriptions à valider', icon: UserPlus, end: false, minRole: 'editor' },
       { to: ROUTES.ADMIN_PANIER, label: 'Mon Panier', icon: Inbox, end: false, minRole: 'editor' },
-      { to: ROUTES.ADMIN_FEEDBACKS, label: 'Feedbacks', icon: MessageSquare, end: false, minRole: 'editor' },
+      { to: ROUTES.ADMIN_FEEDBACKS, label: 'Notifications', icon: MessageSquare, end: false, minRole: 'editor' },
       { to: ROUTES.ADMIN_ASSIGNATION, label: 'Assignation', icon: UserCheck, end: false, minRole: 'admin' },
       { to: ROUTES.ADMIN_VALIDATION, label: 'Validation N+1', icon: CheckSquare, end: false, minRole: 'admin' },
     ],

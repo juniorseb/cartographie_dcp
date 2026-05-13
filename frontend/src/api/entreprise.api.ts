@@ -20,10 +20,18 @@ export async function getDashboard(): Promise<DashboardData> {
   return res.data.data!;
 }
 
-/** GET /api/entreprise/mon-dossier */
-export async function getMonDossier(): Promise<DossierComplet> {
-  const res = await apiClient.get<ApiResponse<DossierComplet>>('/entreprise/mon-dossier');
-  return res.data.data!;
+/** GET /api/entreprise/mon-dossier
+ * Retourne null si l'entreprise n'a pas encore cree de dossier (404).
+ */
+export async function getMonDossier(): Promise<DossierComplet | null> {
+  try {
+    const res = await apiClient.get<ApiResponse<DossierComplet>>('/entreprise/mon-dossier');
+    return res.data.data ?? null;
+  } catch (e: unknown) {
+    const err = e as { response?: { status?: number } };
+    if (err?.response?.status === 404) return null;
+    throw e;
+  }
 }
 
 /** POST /api/entreprise/demande */
@@ -86,6 +94,33 @@ export async function getProfil(): Promise<ProfilData> {
 /** PUT /api/entreprise/profil */
 export async function updateProfil(data: ProfilUpdateInput): Promise<ProfilData> {
   const res = await apiClient.put<ApiResponse<ProfilData>>('/entreprise/profil', data);
+  return res.data.data!;
+}
+
+// ============================================================
+// Formulaire DCP officiel (questionnaire de recensement)
+// ============================================================
+
+export interface FormulaireDCPResponse {
+  entite_id: string | null;
+  reponses: Record<string, unknown>;
+}
+
+/** GET /api/entreprise/formulaire-dcp */
+export async function getFormulaireDCP(): Promise<FormulaireDCPResponse> {
+  const res = await apiClient.get<ApiResponse<FormulaireDCPResponse>>('/entreprise/formulaire-dcp');
+  return res.data.data!;
+}
+
+/** PUT /api/entreprise/formulaire-dcp */
+export async function saveFormulaireDCP(reponses: Record<string, unknown>): Promise<FormulaireDCPResponse> {
+  const res = await apiClient.put<ApiResponse<FormulaireDCPResponse>>('/entreprise/formulaire-dcp', { reponses });
+  return res.data.data!;
+}
+
+/** POST /api/entreprise/formulaire-dcp/soumettre */
+export async function soumettreFormulaireDCP(): Promise<{ statut: string }> {
+  const res = await apiClient.post<ApiResponse<{ statut: string }>>('/entreprise/formulaire-dcp/soumettre');
   return res.data.data!;
 }
 

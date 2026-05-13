@@ -20,6 +20,10 @@ export const ROUTES = {
   ENTREPRISE_DOSSIER: '/entreprise/mon-dossier',
   ENTREPRISE_NOTIFICATIONS: '/entreprise/notifications',
   ENTREPRISE_FORMALITES: '/entreprise/formalites',
+  ENTREPRISE_DECLARATION_CORRESPONDANT: '/entreprise/formalites/declaration/correspondant',
+  ENTREPRISE_DECLARATION_TRAITEMENT: '/entreprise/formalites/declaration/traitement',
+  ENTREPRISE_AUTORISATION_TRAITEMENT: '/entreprise/formalites/autorisation/traitement',
+  ENTREPRISE_AUTORISATION_TRANSFERTS: '/entreprise/formalites/autorisation/transferts',
   ENTREPRISE_PROFIL: '/entreprise/profil',
   ENTREPRISE_CHANGE_PASSWORD: '/entreprise/changer-mot-de-passe',
   // Admin

@@ -9,11 +9,9 @@ import * as entrepriseApi from '@/api/entreprise.api';
 import Loading from '@/components/common/Loading';
 import ErrorDisplay from '@/components/common/ErrorDisplay';
 import EmptyState from '@/components/common/EmptyState';
-import StatusBadge from '@/components/common/StatusBadge';
 import { ROUTES } from '@/utils/constants';
 import { formatDate, formatDateTime } from '@/utils/format';
 import { cn } from '@/utils/cn';
-import type { StatutConformite } from '@/types/enums';
 import type { DossierComplet } from '@/types/entreprise';
 import type { DPODocType, DocumentJointItem } from '@/api/entreprise.api';
 
@@ -72,16 +70,13 @@ export default function MonDossierPage() {
         <ArrowLeft className="w-4 h-4" /> Retour au tableau de bord
       </Link>
 
-      {/* En-tête */}
+      {/* En-tête (le score et le statut de conformité ne sont JAMAIS affiches cote entreprise) */}
       <div className="card mb-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl mb-1">{dossier.denomination}</h1>
             <p className="text-gray-500 text-sm">N° CC : {dossier.numero_cc}</p>
           </div>
-          {dossier.conformite?.statut_conformite && (
-            <StatusBadge statut={dossier.conformite.statut_conformite as StatutConformite} />
-          )}
         </div>
       </div>
 

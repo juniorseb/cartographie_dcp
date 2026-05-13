@@ -1,5 +1,32 @@
 import { useState } from 'react';
-import { BookOpen, HelpCircle, Phone, Mail, MapPin, ExternalLink, ChevronDown } from 'lucide-react';
+import { BookOpen, HelpCircle, Phone, Mail, MapPin, ExternalLink, ChevronDown, Scale } from 'lucide-react';
+
+const DEFINITIONS = [
+  {
+    titre: 'Données à caractère personnel',
+    contenu: `Toute information de quelque nature qu'elle soit et indépendamment de son support, y compris le son et l'image relative à une personne physique identifiée ou identifiable directement ou indirectement, par référence à un numéro d'identification ou à un ou plusieurs éléments spécifiques, propres à son identité physique, physiologique, génétique, psychique, culturelle, sociale ou économique.`,
+  },
+  {
+    titre: 'Responsable du traitement',
+    contenu: `La personne physique ou morale, publique ou privée, tout autre organisme ou association qui, seul ou conjointement avec d'autres, prend la décision de collecter et de traiter des données à caractère personnel et en détermine les finalités.`,
+  },
+  {
+    titre: 'Traitement des données à caractère personnel',
+    contenu: `Toute opération ou ensemble d'opérations effectuées ou non à l'aide de procédés automatisés ou non, et appliquées à des données, telles que la collecte, l'exploitation, l'enregistrement, l'organisation, la conservation, l'adaptation, la modification, l'extraction, la sauvegarde, la copie, la consultation, l'utilisation, la communication par transmission, la diffusion ou toute autre forme de mise à disposition, le rapprochement ou l'interconnexion, ainsi que le verrouillage, le cryptage, l'effacement ou la destruction de données à caractère personnel.`,
+  },
+  {
+    titre: "Champ d'application",
+    contenu: `Sont soumis aux dispositions de la présente loi :
+• Toute collecte, tout traitement, toute transmission, tout stockage et toute utilisation des données à caractère personnel par une personne physique, l'État, les collectivités locales, les personnes morales de droit public ou de droit privé ;
+• Tout traitement automatisé ou non de données contenues ou appelées à figurer dans un fichier ;
+• Tout traitement de données mis en œuvre sur le territoire national ;
+• Tout traitement de données concernant la sécurité publique, la défense, la recherche et la poursuite d'infractions pénales ou la sûreté de l'État, sous réserve des dérogations définies par des dispositions spécifiques fixées par d'autres textes de loi en vigueur.`,
+  },
+  {
+    titre: 'DPO (Délégué à la Protection des Données)',
+    contenu: `Le DPO (Data Protection Officer) — anciennement appelé CPD (Correspondant à la Protection des Données) — est la personne désignée par le responsable du traitement pour veiller au respect de la réglementation en matière de protection des données personnelles. Il peut être interne (salarié) ou externe (prestataire). Sa désignation peut être obligatoire selon la nature et le volume des traitements effectués. Le DPO doit être habilité par l'ARTCI conformément à l'Arrêté N° 511/MPTIC/CAB.`,
+  },
+];
 
 const FAQ_ITEMS = [
   {
@@ -30,6 +57,7 @@ const FAQ_ITEMS = [
 
 export default function AProposPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [openDef, setOpenDef] = useState<number | null>(null);
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -50,6 +78,43 @@ export default function AProposPage() {
             L'ARTCI veille au respect des droits fondamentaux des personnes physiques en matière de traitement
             des données personnelles et accompagne les responsables de traitement dans leur mise en conformité.
           </p>
+        </div>
+      </section>
+
+      {/* Définitions clés (Loi N°2013-450) */}
+      <section className="mb-10">
+        <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+          <Scale className="w-6 h-6 text-[var(--artci-orange)]" />
+          Définitions clés (Loi N°2013-450)
+        </h2>
+        <div className="card">
+          <p className="text-sm text-gray-500 mb-4">
+            Définitions issues de la Loi n°2013-450 du 19 juin 2013 relative à la protection
+            des données à caractère personnel en Côte d'Ivoire.
+          </p>
+          <div className="space-y-2">
+            {DEFINITIONS.map((def, i) => {
+              const isOpen = openDef === i;
+              return (
+                <div key={i} className="border border-gray-200 rounded">
+                  <button
+                    onClick={() => setOpenDef(isOpen ? null : i)}
+                    className="w-full flex items-center justify-between p-3 hover:bg-gray-50 text-left"
+                  >
+                    <span className="font-semibold text-sm text-[var(--artci-black)]">{def.titre}</span>
+                    <ChevronDown
+                      className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+                  {isOpen && (
+                    <div className="p-3 border-t border-gray-200 bg-gray-50">
+                      <p className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">{def.contenu}</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </section>
 

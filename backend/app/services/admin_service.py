@@ -296,32 +296,60 @@ class AdminService:
 
     @staticmethod
     def valider_inscription(compte_id, user_id):
-        """Valide une inscription : active le compte. Notifie DG et DPO par email
-        si l'envoi de mail est configure."""
+        """Valide une inscription :
+        1) genere un mot de passe par defaut
+        2) active le compte avec password_must_change=True
+        3) envoie les acces (email + mot de passe) au DG ET au DPO par email."""
         from app.models.comptes_entreprises import CompteEntreprise
+        from app.utils.password import hash_password, calculate_password_expiry
+        import secrets, string
+        from app.utils.email_sender import send_credentials_email
+
         compte = CompteEntreprise.query.get(compte_id)
         if not compte:
             raise ValueError('Compte non trouvé.')
         if compte.inscription_statut == 'approved':
             raise ValueError('Inscription déjà validée.')
+
+        # Generer un mot de passe robuste de 12 caracteres
+        alphabet = string.ascii_letters + string.digits + '!@#$%&*'
+        # Garantir au moins 1 majuscule + 1 minuscule + 1 chiffre + 1 special
+        while True:
+            password = ''.join(secrets.choice(alphabet) for _ in range(12))
+            if (any(c.islower() for c in password)
+                    and any(c.isupper() for c in password)
+                    and any(c.isdigit() for c in password)
+                    and any(c in '!@#$%&*' for c in password)):
+                break
+
+        compte.password_hash = hash_password(password)
+        compte.password_last_changed = datetime.now(timezone.utc)
+        compte.password_expires_at = calculate_password_expiry()
+        compte.password_must_change = True
         compte.inscription_statut = 'approved'
         compte.is_active = True
-        compte.email_verified = True  # validation manuelle vaut verification
+        compte.email_verified = True
         compte.inscription_validee_par = user_id
         compte.inscription_validee_le = datetime.now(timezone.utc)
         db.session.commit()
 
-        # Notifier DG + DPO par email
-        try:
-            from app.utils.otp import send_otp_email  # reuse mailer if any
-        except Exception:
-            send_otp_email = None
-        recipients = [r for r in [compte.acces_email_referant, compte.acces_email_dpo] if r]
-        for email in recipients:
+        # Envoyer les credentials au DG et au DPO
+        recipients = []
+        if compte.dg_email:
+            recipients.append((compte.dg_email, f"{compte.dg_prenom or ''} {compte.dg_nom or ''}".strip(), 'Représentant légal'))
+        if compte.dpo_email and compte.dpo_email != compte.dg_email:
+            recipients.append((compte.dpo_email, f"{compte.dpo_prenom or ''} {compte.dpo_nom or ''}".strip(), 'DPO'))
+
+        for email, fullname, role in recipients:
             try:
-                # simple notification; production : utiliser un mailer dedie
-                if send_otp_email:
-                    send_otp_email(email, 'Acces actif', 'inscription')
+                send_credentials_email(
+                    to=email,
+                    nom_complet=fullname,
+                    role=role,
+                    denomination=compte.denomination,
+                    login_email=email,
+                    password=password,
+                )
             except Exception:
                 pass
 
@@ -329,6 +357,7 @@ class AdminService:
             'id': compte.id,
             'inscription_statut': compte.inscription_statut,
             'is_active': compte.is_active,
+            'password_envoyer': True,
         }
 
     @staticmethod
@@ -371,6 +400,38 @@ class AdminService:
             'autorisation_active': conformite.formalite_autorisation_active,
             'declaration_active': conformite.formalite_declaration_active,
         }
+
+    @staticmethod
+    def publier_entite(entite_id):
+        """Publier une entite sur la cartographie publique.
+        Seules les entites Conforme ou Demarche en cours sont eligibles."""
+        entite = EntiteBase.query.get(entite_id)
+        if not entite:
+            raise ValueError('Entite non trouvee.')
+        conformite = EntiteConformite.query.get(entite_id)
+        statut = conformite.statut_conformite if conformite else None
+        if statut not in (
+            StatutConformiteEnum.conforme,
+            StatutConformiteEnum.demarche_en_cours,
+            StatutConformiteEnum.partiellement_conforme,
+        ):
+            raise ValueError(
+                "Seules les entites au statut 'Conforme' ou 'Demarche en cours' "
+                'peuvent etre publiees.'
+            )
+        entite.publie_sur_carte = True
+        db.session.commit()
+        return {'id': entite.id, 'publie_sur_carte': True}
+
+    @staticmethod
+    def depublier_entite(entite_id):
+        """Retirer une entite de la cartographie publique."""
+        entite = EntiteBase.query.get(entite_id)
+        if not entite:
+            raise ValueError('Entite non trouvee.')
+        entite.publie_sur_carte = False
+        db.session.commit()
+        return {'id': entite.id, 'publie_sur_carte': False}
 
     @staticmethod
     def upload_rapport_audit(entite_id, file):

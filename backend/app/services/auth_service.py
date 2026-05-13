@@ -21,25 +21,29 @@ class AuthService:
     @staticmethod
     def register_entreprise(data):
         """
-        Inscrire une nouvelle entreprise.
-        1. Vérifier unicité email et numero_cc
-        2. Valider force du mot de passe
-        3. Créer le compte
-        4. Générer et envoyer OTP
+        Inscrire une nouvelle entreprise (3 sections : Entreprise, DG, DPO).
+        Pas de mot de passe a l'inscription : le compte est cree inactif,
+        l'ARTCI valide manuellement, puis genere et envoie un mot de passe
+        par defaut au DG et au DPO (qui le changeront a la 1ere connexion).
         """
-        if CompteEntreprise.query.filter_by(email=data['email']).first():
-            raise ValueError('Un compte existe déjà avec cet email.')
+        # Email principal du compte = email du DG (referant)
+        dg_email = data['dg_email']
+        dpo_email = data['dpo_email']
+
+        if CompteEntreprise.query.filter_by(email=dg_email).first():
+            raise ValueError('Un compte existe deja avec cet email DG.')
 
         if CompteEntreprise.query.filter_by(numero_cc=data['numero_cc']).first():
-            raise ValueError('Un compte existe déjà avec ce numéro CC.')
+            raise ValueError('Un compte existe deja avec ce numero CC.')
 
-        is_valid, errors = validate_password_strength(data['password'])
-        if not is_valid:
-            raise ValueError(' '.join(errors))
+        # Mot de passe placeholder (jamais utilisable car compte inactif)
+        # Sera remplace par un mot de passe genere a la validation
+        import secrets
+        placeholder_password = secrets.token_urlsafe(32)
 
         compte = CompteEntreprise(
-            email=data['email'],
-            password_hash=hash_password(data['password']),
+            email=dg_email,
+            password_hash=hash_password(placeholder_password),
             denomination=data['denomination'],
             numero_cc=data['numero_cc'],
             telephone=data.get('telephone'),
@@ -47,44 +51,45 @@ class AuthService:
             ville=data.get('ville'),
             region=data.get('region'),
             email_verified=False,
-            # Compte cree mais inactif jusqu'a validation manuelle ARTCI
             is_active=False,
             inscription_statut='pending',
-            password_last_changed=datetime.now(timezone.utc),
-            password_expires_at=calculate_password_expiry(),
-            # Section 1 - Representant legal
-            dg_nom=data.get('dg_nom'),
-            dg_prenom=data.get('dg_prenom'),
+            # DG
+            dg_nom=data['dg_nom'],
+            dg_prenom=data['dg_prenom'],
             dg_fonction=data.get('dg_fonction'),
             dg_telephone=data.get('dg_telephone'),
-            dg_email=data.get('dg_email'),
-            # Section 2 - DPO
-            dpo_nom=data.get('dpo_nom'),
-            dpo_prenom=data.get('dpo_prenom'),
+            dg_email=dg_email,
+            # DPO
+            dpo_nom=data['dpo_nom'],
+            dpo_prenom=data['dpo_prenom'],
             dpo_telephone=data.get('dpo_telephone'),
-            dpo_email=data.get('dpo_email'),
+            dpo_email=dpo_email,
             dpo_type=data.get('dpo_type'),
             dpo_organisme=data.get('dpo_organisme'),
-            # Section 3 - Acces
-            acces_email_referant=data.get('acces_email_referant'),
-            acces_email_dpo=data.get('acces_email_dpo'),
+            # Pas d'acces_email_* : le DG et le DPO se connectent avec leur email respectif
+            acces_email_referant=dg_email,
+            acces_email_dpo=dpo_email,
         )
         db.session.add(compte)
         db.session.commit()
 
-        # Notification admin (table notifications)
+        # Notifier tous les admins+ via la table notifications (un par admin)
         try:
-            from app.models import Notification
-            n = Notification(
-                destinataire_type='admin',
-                destinataire_id='*',
-                type='nouvelle_inscription',
-                titre='Nouvelle inscription a verifier',
-                message=f"{compte.denomination} (CC {compte.numero_cc}) - DG: {compte.dg_email or '-'}",
-                lue=False,
-                entite_id=None,
-            )
-            db.session.add(n)
+            from app.models import Notification, User
+            from app.models.enums import RoleEnum
+            admins = User.query.filter(
+                User.role.in_([RoleEnum.admin, RoleEnum.super_admin, RoleEnum.editor])
+            ).all()
+            for u in admins:
+                n = Notification(
+                    destinataire_type='artci',
+                    destinataire_id=u.id,
+                    type='nouvelle_inscription',
+                    titre='Nouvelle inscription a verifier',
+                    message=f"{compte.denomination} (CC {compte.numero_cc}) - DG: {compte.dg_email}",
+                    lue=False,
+                )
+                db.session.add(n)
             db.session.commit()
         except Exception:
             db.session.rollback()
@@ -144,6 +149,8 @@ class AuthService:
             'token_type': 'Bearer',
             'expires_in': int(current_app.config['JWT_ACCESS_TOKEN_EXPIRES'].total_seconds()),
             'password_expired': password_expired,
+            # True si mot de passe genere par l'admin (premiere connexion)
+            'password_must_change': bool(getattr(compte, 'password_must_change', False)),
             'compte': compte
         }
 
@@ -241,6 +248,7 @@ class AuthService:
         compte.password_hash = hash_password(new_password)
         compte.password_last_changed = datetime.now(timezone.utc)
         compte.password_expires_at = calculate_password_expiry()
+        compte.password_must_change = False
         db.session.commit()
 
     @staticmethod
@@ -263,4 +271,5 @@ class AuthService:
         compte.password_hash = hash_password(new_password)
         compte.password_last_changed = datetime.now(timezone.utc)
         compte.password_expires_at = calculate_password_expiry()
+        compte.password_must_change = False
         db.session.commit()
