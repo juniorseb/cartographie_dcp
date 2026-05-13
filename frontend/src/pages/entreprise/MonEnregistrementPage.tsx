@@ -28,6 +28,8 @@ import {
   type BaseJuridiqueTransfert,
   type GarantieTransfert,
   type CategorieDonneesDetail,
+  type ActiviteTraitementDCP,
+  type MesureTechnique, type MesureOrganisationnelle,
 } from '@/types/formulaire-dcp';
 
 // Statuts pour lesquels le formulaire est en LECTURE SEULE
@@ -294,46 +296,160 @@ export default function MonEnregistrementPage() {
           onChange={(v) => updatePart('cadre_juridique', { connaissance_artci: v })}
         />
 
+        {/* Q5 reformulee : "Avez-vous un DPO habilite par l'ARTCI ?" */}
         <RadioGroup
-          legend="Avez-vous désigné un Correspondant à la Protection des Données (DPO/CPD) conformément à la loi ?"
+          legend="Avez-vous un DPO habilité par l'ARTCI ?"
+          inline
           options={[
-            { value: 'oui_designe', label: 'Oui, désigné' },
-            { value: 'non_pas_encore', label: 'Non, pas encore désigné' },
-            { value: 'en_cours', label: 'En cours de désignation' },
+            { value: 'oui', label: 'Oui' },
+            { value: 'non', label: 'Non' },
           ]}
-          value={cj.dpo_designation}
-          onChange={(v) => updatePart('cadre_juridique', { dpo_designation: v })}
+          value={cj.dpo_habilite}
+          onChange={(v) => {
+            // Reset complet de la cascade quand on change de Oui/Non
+            updatePart('cadre_juridique', {
+              dpo_habilite: v,
+              ...(v === 'non'
+                ? {
+                    dpo_type: undefined, dpo_externe_type: undefined,
+                    dpo_physique: undefined, dpo_morale: undefined,
+                    dpo_courrier_habilitation_uploaded: undefined,
+                  }
+                : {}),
+            });
+          }}
         />
 
-        {cj.dpo_designation === 'oui_designe' && (
+        {cj.dpo_habilite === 'oui' && (
           <fieldset className="border border-gray-200 p-4 mb-4">
-            <legend className="text-xs font-bold text-gray-700 px-2">Si oui</legend>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <TextField label="Nom et prénom(s)"
-                value={cj.dpo?.nom_prenom}
-                onChange={(v) => updatePart('cadre_juridique', { dpo: { ...cj.dpo, nom_prenom: v } })} />
-              <TextField label="Email professionnel" type="email"
-                value={cj.dpo?.email}
-                onChange={(v) => updatePart('cadre_juridique', { dpo: { ...cj.dpo, email: v } })} />
-              <TextField label="Téléphone" type="tel"
-                value={cj.dpo?.telephone}
-                onChange={(v) => updatePart('cadre_juridique', { dpo: { ...cj.dpo, telephone: v } })} />
-              <TextField label="Date de désignation" type="date"
-                value={cj.dpo?.date_designation}
-                onChange={(v) => updatePart('cadre_juridique', { dpo: { ...cj.dpo, date_designation: v } })} />
-            </div>
+            <legend className="text-xs font-bold text-gray-700 px-2">Détails du DPO</legend>
+
+            {/* 1. Sous-question obligatoire avant tout : interne ou externe */}
             <RadioGroup
-              legend="Le CPD est-il :"
+              legend="Le DPO est-il interne ou externe ?"
+              required
               inline
               options={[
                 { value: 'interne', label: "Interne à l'organisation" },
                 { value: 'externe', label: 'Externe (prestataire)' },
               ]}
-              value={cj.dpo?.type}
-              onChange={(v) => updatePart('cadre_juridique', { dpo: { ...cj.dpo, type: v } })}
+              value={cj.dpo_type}
+              onChange={(v) => updatePart('cadre_juridique', {
+                dpo_type: v,
+                // Reset des champs si on change
+                ...(v === 'interne'
+                  ? { dpo_externe_type: undefined, dpo_morale: undefined }
+                  : {}),
+              })}
             />
+
+            {/* 2a. DPO interne : formulaire personne physique */}
+            {cj.dpo_type === 'interne' && (
+              <div className="border-l-2 border-[var(--artci-orange)] pl-4 mt-3">
+                <p className="text-xs font-semibold text-gray-700 mb-2">Renseignements du DPO interne</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <TextField label="Nom et prénom(s)" required
+                    value={cj.dpo_physique?.nom_prenom}
+                    onChange={(v) => updatePart('cadre_juridique', { dpo_physique: { ...cj.dpo_physique, nom_prenom: v } })} />
+                  <TextField label="Fonction"
+                    value={cj.dpo_physique?.fonction}
+                    onChange={(v) => updatePart('cadre_juridique', { dpo_physique: { ...cj.dpo_physique, fonction: v } })} />
+                  <TextField label="Email professionnel" type="email" required
+                    value={cj.dpo_physique?.email}
+                    onChange={(v) => updatePart('cadre_juridique', { dpo_physique: { ...cj.dpo_physique, email: v } })} />
+                  <TextField label="Téléphone" type="tel"
+                    value={cj.dpo_physique?.telephone}
+                    onChange={(v) => updatePart('cadre_juridique', { dpo_physique: { ...cj.dpo_physique, telephone: v } })} />
+                  <TextField label="Date de désignation" type="date"
+                    value={cj.dpo_physique?.date_designation}
+                    onChange={(v) => updatePart('cadre_juridique', { dpo_physique: { ...cj.dpo_physique, date_designation: v } })} />
+                </div>
+              </div>
+            )}
+
+            {/* 2b. DPO externe : sous-question physique ou morale */}
+            {cj.dpo_type === 'externe' && (
+              <div className="border-l-2 border-[var(--artci-green)] pl-4 mt-3">
+                <RadioGroup
+                  legend="Le DPO externe est-il une personne physique ou une personne morale ?"
+                  required
+                  inline
+                  options={[
+                    { value: 'physique', label: 'Personne physique' },
+                    { value: 'morale', label: 'Personne morale' },
+                  ]}
+                  value={cj.dpo_externe_type}
+                  onChange={(v) => updatePart('cadre_juridique', {
+                    dpo_externe_type: v,
+                    ...(v === 'physique' ? { dpo_morale: undefined } : { dpo_physique: undefined }),
+                  })}
+                />
+
+                {cj.dpo_externe_type === 'physique' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                    <TextField label="Nom et prénom(s)" required
+                      value={cj.dpo_physique?.nom_prenom}
+                      onChange={(v) => updatePart('cadre_juridique', { dpo_physique: { ...cj.dpo_physique, nom_prenom: v } })} />
+                    <TextField label="Fonction"
+                      value={cj.dpo_physique?.fonction}
+                      onChange={(v) => updatePart('cadre_juridique', { dpo_physique: { ...cj.dpo_physique, fonction: v } })} />
+                    <TextField label="Email professionnel" type="email" required
+                      value={cj.dpo_physique?.email}
+                      onChange={(v) => updatePart('cadre_juridique', { dpo_physique: { ...cj.dpo_physique, email: v } })} />
+                    <TextField label="Téléphone" type="tel"
+                      value={cj.dpo_physique?.telephone}
+                      onChange={(v) => updatePart('cadre_juridique', { dpo_physique: { ...cj.dpo_physique, telephone: v } })} />
+                    <TextField label="Date du contrat" type="date"
+                      value={cj.dpo_physique?.date_designation}
+                      onChange={(v) => updatePart('cadre_juridique', { dpo_physique: { ...cj.dpo_physique, date_designation: v } })} />
+                  </div>
+                )}
+
+                {cj.dpo_externe_type === 'morale' && (
+                  <div className="mt-3">
+                    <p className="text-xs font-semibold text-gray-700 mb-2">Renseignements de la structure DPO externe</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <TextField label="Nom de la structure" required
+                        value={cj.dpo_morale?.nom_structure}
+                        onChange={(v) => updatePart('cadre_juridique', { dpo_morale: { ...cj.dpo_morale, nom_structure: v } })} />
+                      <TextField label="Contact référent"
+                        value={cj.dpo_morale?.contact_referent}
+                        onChange={(v) => updatePart('cadre_juridique', { dpo_morale: { ...cj.dpo_morale, contact_referent: v } })} />
+                      <TextField label="Email" type="email" required
+                        value={cj.dpo_morale?.email_contact}
+                        onChange={(v) => updatePart('cadre_juridique', { dpo_morale: { ...cj.dpo_morale, email_contact: v } })} />
+                      <TextField label="Téléphone" type="tel"
+                        value={cj.dpo_morale?.telephone_contact}
+                        onChange={(v) => updatePart('cadre_juridique', { dpo_morale: { ...cj.dpo_morale, telephone_contact: v } })} />
+                      <TextField label="Date du contrat" type="date"
+                        value={cj.dpo_morale?.date_contrat}
+                        onChange={(v) => updatePart('cadre_juridique', { dpo_morale: { ...cj.dpo_morale, date_contrat: v } })} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Upload obligatoire courrier d'habilitation ARTCI */}
+            <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded">
+              <p className="text-xs font-semibold text-gray-800 mb-2">
+                Upload du courrier d'habilitation émis par l'ARTCI <span className="text-red-500">*</span>
+              </p>
+              <input
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png"
+                onChange={(e) => updatePart('cadre_juridique', {
+                  dpo_courrier_habilitation_uploaded: !!e.target.files?.[0],
+                })}
+                className="text-xs"
+              />
+              {cj.dpo_courrier_habilitation_uploaded && (
+                <p className="text-xs text-green-600 mt-1">✓ Document sélectionné</p>
+              )}
+            </div>
+
             <RadioGroup
-              legend="Le CPD a-t-il le profil requis selon l'Arrêté N° 511/MPTIC/CAB ?"
+              legend="Le DPO a-t-il le profil requis selon l'Arrêté N° 511/MPTIC/CAB ?"
               inline
               options={[
                 { value: 'oui', label: 'Oui' },
@@ -357,6 +473,11 @@ export default function MonEnregistrementPage() {
           value={cj.distinction_decl_aut}
           onChange={(v) => updatePart('cadre_juridique', { distinction_decl_aut: v })}
         />
+
+        {/* Note : la question "Avez-vous effectue les formalites necessaires..." a ete deplacee
+            apres les finalites et est maintenant CALCULEE AUTOMATIQUEMENT (cf. §3.5 et §3.7).
+            Le resultat (Autorisation prealable vs Declaration prealable) sera affiche
+            dans le recapitulatif final. */}
 
         <RadioGroup
           legend="Avez-vous effectué les formalités nécessaires auprès de l'ARTCI pour vos traitements de données ?"
@@ -432,6 +553,36 @@ export default function MonEnregistrementPage() {
 
       {/* ============================ PARTIE 3 ============================ */}
       <FormSection title="PARTIE 3 : REGISTRE ET CARTOGRAPHIE DES TRAITEMENTS">
+
+        {/* Spec 3.6.1 : 1ere question = activites de traitement DCP (multi-cases) */}
+        <CheckboxGroup
+          legend="Quelles activités de traitement de données à caractère personnel effectuez-vous ? (cocher toutes les options applicables)"
+          columns={3}
+          options={[
+            { value: 'collecte', label: 'Collecte' },
+            { value: 'exploitation', label: 'Exploitation' },
+            { value: 'enregistrement', label: 'Enregistrement' },
+            { value: 'organisation', label: 'Organisation' },
+            { value: 'conservation', label: 'Conservation' },
+            { value: 'adaptation', label: 'Adaptation' },
+            { value: 'modification', label: 'Modification' },
+            { value: 'extraction', label: 'Extraction' },
+            { value: 'sauvegarde', label: 'Sauvegarde' },
+            { value: 'copie', label: 'Copie' },
+            { value: 'consultation', label: 'Consultation' },
+            { value: 'utilisation', label: 'Utilisation' },
+            { value: 'communication_transmission', label: 'Communication par transmission' },
+            { value: 'diffusion', label: 'Diffusion' },
+            { value: 'mise_a_disposition', label: 'Mise à disposition' },
+            { value: 'rapprochement_interconnexion', label: 'Rapprochement / interconnexion' },
+            { value: 'verrouillage', label: 'Verrouillage' },
+            { value: 'cryptage', label: 'Cryptage' },
+            { value: 'effacement', label: 'Effacement' },
+            { value: 'destruction', label: 'Destruction' },
+          ]}
+          values={reg.activites_traitement ?? []}
+          onChange={(v) => updatePart('registre', { activites_traitement: v as ActiviteTraitementDCP[] })}
+        />
 
         <RadioGroup
           legend="Disposez-vous d'un registre des activités de traitement tenu à jour ?"
@@ -710,18 +861,23 @@ export default function MonEnregistrementPage() {
         {st.transfert_hors_cedeao === 'oui' && (
           <fieldset className="border border-gray-200 p-4 mb-4">
             <legend className="text-xs font-bold text-gray-700 px-2">Si oui</legend>
-            <TextField label="Pays de destination"
-              value={st.pays_destination}
-              onChange={(v) => updatePart('sous_traitance_transferts', { pays_destination: v })} />
-            <RadioGroup
-              legend="Le transfert concerne :"
-              options={[
-                { value: 'tout_fichier', label: 'Tout le fichier' },
-                { value: 'partie_fichier', label: 'Une partie du fichier' },
-              ]}
-              value={st.transfert_concerne}
-              onChange={(v) => updatePart('sous_traitance_transferts', { transfert_concerne: v })}
-            />
+            {/* Spec 3.8 : multi-select pays de destination */}
+            <div className="form-group">
+              <label className="text-sm font-semibold">
+                Pays de destination (plusieurs possibles, un par ligne)
+              </label>
+              <textarea
+                rows={3}
+                value={(st.pays_transferts ?? []).join('\n')}
+                onChange={(e) => updatePart('sous_traitance_transferts', {
+                  pays_transferts: e.target.value.split('\n').map((p) => p.trim()).filter(Boolean),
+                })}
+                placeholder="France&#10;États-Unis&#10;Canada&#10;..."
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Saisissez un pays par ligne. {(st.pays_transferts ?? []).length} pays sélectionné(s).
+              </p>
+            </div>
             <TextField label="Objet/finalité du transfert"
               value={st.objet_transfert}
               onChange={(v) => updatePart('sous_traitance_transferts', { objet_transfert: v })} />
@@ -819,21 +975,74 @@ export default function MonEnregistrementPage() {
           onChange={(v) => updatePart('securite', { politique_securite: v })}
         />
 
-        <RadioGroup
-          legend="Des mesures techniques de sécurité sont-elles mises en place (mots de passe, chiffrement, pare-feu) ?"
-          inline
-          options={[{ value: 'oui', label: 'Oui' }, { value: 'non', label: 'Non' }]}
-          value={sec.mesures_techniques}
-          onChange={(v) => updatePart('securite', { mesures_techniques: v })}
-        />
+        {/* Spec 3.9 : si Oui formalisee → upload obligatoire de la charte */}
+        {sec.politique_securite === 'oui_formalisee' && (
+          <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded">
+            <p className="text-xs font-semibold text-gray-800 mb-2">
+              Upload de la Charte de protection des données <span className="text-red-500">*</span>
+            </p>
+            <input
+              type="file"
+              accept=".pdf,.doc,.docx"
+              onChange={(e) => updatePart('securite', { charte_uploaded: !!e.target.files?.[0] })}
+              className="text-xs"
+            />
+            {sec.charte_uploaded && <p className="text-xs text-green-600 mt-1">✓ Document sélectionné</p>}
+          </div>
+        )}
 
-        <RadioGroup
-          legend="Des mesures organisationnelles sont-elles prévues (restriction d'accès, habilitations) ?"
-          inline
-          options={[{ value: 'oui', label: 'Oui' }, { value: 'non', label: 'Non' }]}
-          value={sec.mesures_organisationnelles}
-          onChange={(v) => updatePart('securite', { mesures_organisationnelles: v })}
+        {/* Spec 3.9 : Mesures techniques en multi-select */}
+        <CheckboxGroup
+          legend="Quelles mesures techniques de sécurité sont mises en place ? (cocher toutes les options applicables)"
+          columns={2}
+          options={[
+            { value: 'mots_de_passe_forts', label: 'Mots de passe forts' },
+            { value: 'chiffrement_donnees', label: 'Chiffrement des données' },
+            { value: 'chiffrement_communications', label: 'Chiffrement des communications' },
+            { value: 'pare_feu', label: 'Pare-feu' },
+            { value: 'antivirus_antimalware', label: 'Antivirus / antimalware' },
+            { value: 'sauvegardes_regulieres', label: 'Sauvegardes régulières' },
+            { value: 'mises_a_jour_systeme', label: 'Mises à jour système' },
+            { value: 'detection_intrusion', label: "Détection d'intrusion" },
+            { value: 'segmentation_reseau', label: 'Segmentation réseau' },
+            { value: 'authentification_multi_facteurs', label: 'Authentification multi-facteurs (MFA)' },
+            { value: 'journalisation_logs', label: 'Journalisation / logs' },
+            { value: 'autre', label: 'Autre' },
+          ] satisfies { value: MesureTechnique; label: string }[] as { value: MesureTechnique; label: string }[]}
+          values={sec.mesures_techniques_list ?? []}
+          onChange={(v) => updatePart('securite', { mesures_techniques_list: v })}
         />
+        {sec.mesures_techniques_list?.includes('autre') && (
+          <TextField label="Préciser autre mesure technique"
+            value={sec.mesures_techniques_autre}
+            onChange={(v) => updatePart('securite', { mesures_techniques_autre: v })} />
+        )}
+
+        {/* Spec 3.9 : Mesures organisationnelles en multi-select */}
+        <CheckboxGroup
+          legend="Quelles mesures organisationnelles sont prévues ? (cocher toutes les options applicables)"
+          columns={2}
+          options={[
+            { value: 'restriction_acces', label: "Restriction d'accès" },
+            { value: 'habilitations', label: 'Habilitations' },
+            { value: 'sensibilisation_personnel', label: 'Sensibilisation du personnel' },
+            { value: 'charte_informatique', label: 'Charte informatique' },
+            { value: 'gestion_droits_utilisateurs', label: 'Gestion des droits utilisateurs' },
+            { value: 'procedure_arrivee_depart', label: 'Procédure arrivée / départ' },
+            { value: 'audit_interne_periodique', label: 'Audit interne périodique' },
+            { value: 'plan_continuite_activite', label: "Plan de continuité d'activité" },
+            { value: 'separation_environnements', label: 'Séparation des environnements' },
+            { value: 'gestion_prestataires', label: 'Gestion des prestataires' },
+            { value: 'autre', label: 'Autre' },
+          ] satisfies { value: MesureOrganisationnelle; label: string }[] as { value: MesureOrganisationnelle; label: string }[]}
+          values={sec.mesures_organisationnelles_list ?? []}
+          onChange={(v) => updatePart('securite', { mesures_organisationnelles_list: v })}
+        />
+        {sec.mesures_organisationnelles_list?.includes('autre') && (
+          <TextField label="Préciser autre mesure organisationnelle"
+            value={sec.mesures_organisationnelles_autre}
+            onChange={(v) => updatePart('securite', { mesures_organisationnelles_autre: v })} />
+        )}
 
         <RadioGroup
           legend="Avez-vous subi une violation de données personnelles (fuite, perte, accès non autorisé, etc.) au cours des 12 derniers mois ?"

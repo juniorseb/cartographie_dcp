@@ -63,8 +63,11 @@ export interface Partie1Identification {
 
 export type ConnaissanceLoi = 'oui' | 'non';
 export type ConnaissanceArtci = 'oui' | 'non' | 'partiellement';
-export type DpoDesignation = 'oui_designe' | 'non_pas_encore' | 'en_cours';
+// Spec 3.4 : "Avez-vous un DPO habilite par l'ARTCI ?" → Oui/Non
+export type DpoHabilite = 'oui' | 'non';
 export type DpoTypeOpt = 'interne' | 'externe';
+// Spec 3.4 : DPO externe = personne physique OU personne morale
+export type DpoExterneType = 'physique' | 'morale';
 export type CpdProfilRequis = 'oui' | 'non' | 'ne_sais_pas';
 export type DistinctionDeclAut = 'oui' | 'non' | 'incertain';
 export type FormalitesEffectuees = 'oui_tous' | 'non_aucune' | 'en_cours';
@@ -89,23 +92,43 @@ export const RAISONS_NON_FORMALITES = [
 ] as const;
 export type RaisonNonFormalites = typeof RAISONS_NON_FORMALITES[number];
 
-export interface DPO {
+// DPO interne ou externe physique : personne physique
+export interface DPOPhysique {
   nom_prenom?: string;
   email?: string;
   telephone?: string;
   date_designation?: string;
-  type?: DpoTypeOpt;
+  fonction?: string;
+}
+
+// DPO externe morale : structure
+export interface DPOMorale {
+  nom_structure?: string;
+  email_contact?: string;
+  telephone_contact?: string;
+  contact_referent?: string;
+  date_contrat?: string;
 }
 
 export interface Partie2CadreJuridique {
   connaissance_loi_2013?: ConnaissanceLoi;
   connaissance_obligations?: ConnaissanceLoi;
   connaissance_artci?: ConnaissanceArtci;
-  dpo_designation?: DpoDesignation;
-  dpo?: DPO;
+  // Q5 reformulee : "Avez-vous un DPO habilite par l'ARTCI ?"
+  dpo_habilite?: DpoHabilite;
+  dpo_type?: DpoTypeOpt;             // si dpo_habilite === 'oui'
+  dpo_externe_type?: DpoExterneType; // si dpo_type === 'externe'
+  dpo_physique?: DPOPhysique;        // interne OU externe physique
+  dpo_morale?: DPOMorale;            // externe morale
+  // Upload obligatoire du courrier d'habilitation (cote frontend, on stocke un nom de fichier ou un id)
+  dpo_courrier_habilitation_uploaded?: boolean;
   cpd_profil_requis?: CpdProfilRequis;
   distinction_decl_aut?: DistinctionDeclAut;
+  // Formalites_effectuees est maintenant CALCULE automatiquement (cf §3.7)
+  // Conserve pour migration / affichage admin
   formalites_effectuees?: FormalitesEffectuees;
+  formalite_calculee?: 'autorisation_prealable' | 'declaration_prealable' | 'aucune';
+  formalite_motifs?: string[]; // raisons du calcul
   stades_demarche?: StadeDemarche[];
   accompagnement_externe?: 'oui' | 'non';
   accompagnement_qui?: string;
@@ -115,6 +138,33 @@ export interface Partie2CadreJuridique {
 }
 
 // ----- Partie 3 : Registre & cartographie traitements -----
+
+// Activites de traitement DCP issues de la definition legale (§1.1)
+// Spec 3.6.1 : 1ere question Partie 3 = puces a cocher des activites
+export const ACTIVITES_TRAITEMENT_DCP = [
+  'collecte',
+  'exploitation',
+  'enregistrement',
+  'organisation',
+  'conservation',
+  'adaptation',
+  'modification',
+  'extraction',
+  'sauvegarde',
+  'copie',
+  'consultation',
+  'utilisation',
+  'communication_transmission',
+  'diffusion',
+  'mise_a_disposition',
+  'rapprochement_interconnexion',
+  'verrouillage',
+  'cryptage',
+  'effacement',
+  'destruction',
+] as const;
+export type ActiviteTraitementDCP = typeof ACTIVITES_TRAITEMENT_DCP[number];
+
 
 export type RegistreTenu = 'oui_complet' | 'oui_incomplet' | 'en_cours' | 'non';
 export type FormeRegistre = 'papier' | 'tableur' | 'logiciel' | 'base_donnees' | 'autre';
@@ -215,6 +265,8 @@ export const COMMENT_INFORMER = [
 export type CommentInformer = typeof COMMENT_INFORMER[number];
 
 export interface Partie3RegistreTraitements {
+  // 1ere question Partie 3 : activites de traitement (multi-select)
+  activites_traitement?: ActiviteTraitementDCP[];
   registre_tenu?: RegistreTenu;
   forme_registre?: FormeRegistre;
   forme_registre_autre?: string;
@@ -287,15 +339,17 @@ export type SuppressionAnonymisation =
 export type ProtectionSupports = 'oui_documentee' | 'non' | 'non_applicable';
 
 export interface Partie4SousTraitanceTransferts {
+  // Sous-traitance (spec 3.8) : juste un nombre + pays multi-select
   recours_sous_traitants?: RecoursSousTraitants;
-  contrats_sous_traitance?: ContratsSousTraitance;
-  contrats_nombre_tous?: string;
-  contrats_nombre_certains?: string;
-  clauses_obligatoires?: ClauseObligatoire[];
+  nombre_sous_traitants?: string;                  // entier sous forme texte
+  pays_sous_traitants?: string[];                  // codes ISO ou noms (multi-select)
+  contrats_sous_traitance_existence?: 'oui' | 'non';
+  clauses_obligatoires?: ClauseObligatoire[];      // multi-select
+  // Transferts hors CEDEAO (spec 3.8) : multi-select pays + garanties
   transfert_hors_cedeao?: TransfertHorsCedeao;
-  pays_destination?: string;
-  transfert_concerne?: TransfertConcerne;
+  pays_transferts?: string[];                      // multi-select pays destination
   objet_transfert?: string;
+  // Question reformulee : "Avez-vous obtenu une autorisation prealable de l'ARTCI pour ce transfert ?"
   autorisation_artci_transfert?: AutorisationArtciTransfert;
   numero_autorisation_transfert?: string;
   bases_juridiques_transfert?: BaseJuridiqueTransfert[];
@@ -304,11 +358,51 @@ export interface Partie4SousTraitanceTransferts {
   garantie_autre?: string;
   suppression_anonymisation?: SuppressionAnonymisation;
   protection_supports?: ProtectionSupports;
+  // Anciens champs gardes pour compatibilite
+  contrats_sous_traitance?: ContratsSousTraitance;
+  contrats_nombre_tous?: string;
+  contrats_nombre_certains?: string;
+  pays_destination?: string;
+  transfert_concerne?: TransfertConcerne;
 }
 
-// ----- Partie 5 : Securite & confidentialite -----
+// ----- Partie 5 : Securite & formation -----
 
-export type PolitiqueSecurite = 'oui_formalisee' | 'oui_non_formalisee' | 'en_cours' | 'non';
+// Spec 3.9 : Charte = juste 2 options (suppression "non formalisee" et "en cours")
+export type PolitiqueSecurite = 'oui_formalisee' | 'non';
+
+// Spec 3.9 : mesures techniques multi-select
+export const MESURES_TECHNIQUES = [
+  'mots_de_passe_forts',
+  'chiffrement_donnees',
+  'chiffrement_communications',
+  'pare_feu',
+  'antivirus_antimalware',
+  'sauvegardes_regulieres',
+  'mises_a_jour_systeme',
+  'detection_intrusion',
+  'segmentation_reseau',
+  'authentification_multi_facteurs',
+  'journalisation_logs',
+  'autre',
+] as const;
+export type MesureTechnique = typeof MESURES_TECHNIQUES[number];
+
+// Spec 3.9 : mesures organisationnelles multi-select
+export const MESURES_ORGANISATIONNELLES = [
+  'restriction_acces',
+  'habilitations',
+  'sensibilisation_personnel',
+  'charte_informatique',
+  'gestion_droits_utilisateurs',
+  'procedure_arrivee_depart',
+  'audit_interne_periodique',
+  'plan_continuite_activite',
+  'separation_environnements',
+  'gestion_prestataires',
+  'autre',
+] as const;
+export type MesureOrganisationnelle = typeof MESURES_ORGANISATIONNELLES[number];
 export type ViolationDouzeMois = 'oui' | 'non' | 'ne_sais_pas';
 export type NotificationArtci72h = 'oui_72h' | 'oui_tardivement' | 'non';
 export type InfoPersonnesViolation = 'oui' | 'non' | 'certains_cas';
@@ -325,17 +419,28 @@ export type PersonnelSensibilise =
 export type FrequenceFormations = 'reguliere' | 'ponctuelle' | 'aucune';
 
 export interface Partie5Securite {
+  // Charte de protection des donnees (anciennement "Politique de securite")
   politique_securite?: PolitiqueSecurite;
-  mesures_techniques?: 'oui' | 'non';
-  mesures_organisationnelles?: 'oui' | 'non';
+  // Si oui_formalisee : upload obligatoire du document charte
+  charte_uploaded?: boolean;
+  // Mesures multi-select (spec 3.9)
+  mesures_techniques_list?: MesureTechnique[];
+  mesures_techniques_autre?: string;
+  mesures_organisationnelles_list?: MesureOrganisationnelle[];
+  mesures_organisationnelles_autre?: string;
+  // Violations
   violation_12mois?: ViolationDouzeMois;
   nombre_violations?: string;
   notification_artci?: NotificationArtci72h;
   info_personnes_violation?: InfoPersonnesViolation;
   registre_violations?: 'oui' | 'non';
   procedures_violation?: ProcedureViolation;
+  // Formation
   personnel_sensibilise?: PersonnelSensibilise;
   frequence_formations?: FrequenceFormations;
+  // Anciens champs gardes pour compatibilite
+  mesures_techniques?: 'oui' | 'non';
+  mesures_organisationnelles?: 'oui' | 'non';
 }
 
 // ----- Formulaire complet -----

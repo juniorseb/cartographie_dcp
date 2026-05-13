@@ -227,6 +227,14 @@ def save_formulaire_dcp():
         )
         db.session.add(wf)
 
+    # Calculer automatiquement le type de formalite (Autorisation vs Declaration)
+    from app.services.formalite_engine import determiner_formalite
+    formalite_type, motifs = determiner_formalite(reponses)
+    cadre = reponses.get('cadre_juridique', {}) or {}
+    cadre['formalite_calculee'] = formalite_type
+    cadre['formalite_motifs'] = motifs
+    reponses['cadre_juridique'] = cadre
+
     form = FormulaireDCP.query.get(entite.id)
     if not form:
         form = FormulaireDCP(entite_id=entite.id, reponses=reponses)
@@ -237,6 +245,8 @@ def save_formulaire_dcp():
     return success_response({
         'entite_id': entite.id,
         'reponses': form.reponses,
+        'formalite_calculee': formalite_type,
+        'formalite_motifs': motifs,
     }, 'Formulaire sauvegarde.')
 
 
