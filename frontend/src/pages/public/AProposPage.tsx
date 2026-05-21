@@ -42,10 +42,6 @@ const FAQ_ITEMS = [
     answer: 'Connectez-vous à votre espace entreprise, accédez à "Mon Dossier" et cliquez sur "Modifier". Vous pouvez mettre à jour vos informations tant que votre dossier est en brouillon ou si des compléments vous sont demandés.',
   },
   {
-    question: 'Qu\'est-ce qu\'un DPO (Délégué à la Protection des Données) ?',
-    answer: 'Le DPO est la personne chargée de veiller au respect de la réglementation en matière de protection des données au sein de votre organisme. Il peut être interne (salarié) ou externe (prestataire). Sa désignation est obligatoire dans certains cas prévus par la loi.',
-  },
-  {
     question: 'Quels documents dois-je fournir ?',
     answer: 'Selon votre situation : registre de commerce, CNI du responsable légal, attestation fiscale, politique de sécurité, registre des traitements. La liste complète est indiquée dans le formulaire de déclaration.',
   },
@@ -121,26 +117,14 @@ export default function AProposPage() {
       {/* Présentation plateforme */}
       <section className="mb-10">
         <h2 className="text-xl font-bold mb-4">Plateforme DCP</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="card">
-            <h3 className="font-bold mb-2 text-[var(--artci-green)]">Objectifs</h3>
-            <ul className="space-y-2 text-sm text-gray-700">
-              <li>Recenser les responsables de traitement de données personnelles</li>
-              <li>Cartographier les entités conformes sur le territoire ivoirien</li>
-              <li>Faciliter les démarches de mise en conformité</li>
-              <li>Assurer le suivi et le renouvellement des agréments</li>
-            </ul>
-          </div>
-          <div className="card">
-            <h3 className="font-bold mb-2 text-[var(--artci-green)]">Fonctionnalités</h3>
-            <ul className="space-y-2 text-sm text-gray-700">
-              <li>Carte interactive des entités conformes</li>
-              <li>Formulaire de déclaration en ligne (50 questions)</li>
-              <li>Suivi en temps réel de votre dossier</li>
-              <li>Espace entreprise sécurisé (JWT + OTP)</li>
-              <li>Tableau de bord et statistiques</li>
-            </ul>
-          </div>
+        <div className="card">
+          <h3 className="font-bold mb-2 text-[var(--artci-green)]">Objectifs</h3>
+          <ul className="space-y-2 text-sm text-gray-700">
+            <li>Recenser les responsables de traitement de données personnelles</li>
+            <li>Cartographier les entités conformes sur le territoire ivoirien</li>
+            <li>Faciliter les démarches de mise en conformité</li>
+            <li>Assurer le suivi et le renouvellement des agréments</li>
+          </ul>
         </div>
       </section>
 

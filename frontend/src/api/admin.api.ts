@@ -9,13 +9,14 @@ import type {
   AdminEntiteListItem, AdminEntiteDetail,
   AssignationItem, AssignationCreateInput,
   ValidationN1Input,
-  FeedbackCreateInput,
+  FeedbackCreateInput, FeedbackListItem, StatutEcheanceFeedback,
   UserCreateInput, UserUpdateInput, UserListItem,
   ImportResult,
   HistoriqueItem, LogsFilter,
   RenouvellementAdminItem, RenouvellementFilter, RenouvellementDecisionInput,
   RapportActiviteItem, RapportFilter, RapportDecisionInput,
   NotificationItem, NotificationsFilter,
+  DashboardResponse,
 } from '@/types/admin';
 import type { DemandeInput } from '@/types/entreprise';
 
@@ -23,9 +24,12 @@ import type { DemandeInput } from '@/types/entreprise';
 // Dashboard / Stats
 // ============================================================
 
-/** GET /api/admin/dashboard */
-export async function getDashboardStats(filters?: AdminStatsFilter): Promise<AdminDashboardStats> {
-  const res = await apiClient.get<ApiResponse<AdminDashboardStats>>('/admin/dashboard', { params: filters });
+/** GET /api/admin/dashboard
+ * Renvoie un AdminDashboardStats pour reader/admin/super_admin,
+ * un EditorPerformance pour editor.
+ */
+export async function getDashboardStats(filters?: AdminStatsFilter): Promise<DashboardResponse> {
+  const res = await apiClient.get<ApiResponse<DashboardResponse>>('/admin/dashboard', { params: filters });
   return res.data.data!;
 }
 
@@ -324,6 +328,12 @@ export async function getPanier(): Promise<AssignationItem[]> {
   return res.data.data!;
 }
 
+/** GET /api/admin/assignations — toutes les assignations (vue globale) */
+export async function getAllAssignations(): Promise<AssignationItem[]> {
+  const res = await apiClient.get<ApiResponse<AssignationItem[]>>('/admin/assignations');
+  return res.data.data!;
+}
+
 /** POST /api/admin/assignation */
 export async function createAssignation(data: AssignationCreateInput): Promise<AssignationItem> {
   const res = await apiClient.post<ApiResponse<AssignationItem>>('/admin/assignation', data);
@@ -359,6 +369,271 @@ export async function validerN1(id: string, data: ValidationN1Input): Promise<As
 /** POST /api/admin/feedbacks */
 export async function createFeedback(data: FeedbackCreateInput): Promise<{ id: string }> {
   const res = await apiClient.post<ApiResponse<{ id: string }>>('/admin/feedbacks', data);
+  return res.data.data!;
+}
+
+/** GET /api/admin/feedbacks — liste paginee avec filtre echeance */
+export async function listFeedbacks(params: {
+  page?: number;
+  per_page?: number;
+  statut_echeance?: StatutEcheanceFeedback;
+}): Promise<PaginatedData<FeedbackListItem>> {
+  const res = await apiClient.get<ApiResponse<PaginatedData<FeedbackListItem>>>(
+    '/admin/feedbacks',
+    { params }
+  );
+  return res.data.data!;
+}
+
+// ============================================================
+// Formulaire DCP — vue admin (saisie ARTCI ou edition par agent)
+// ============================================================
+
+export interface AdminFormulaireDCPResponse {
+  entite_id: string;
+  denomination: string;
+  numero_cc: string;
+  reponses: Record<string, unknown>;
+  version: number;
+  formalite_calculee?: string;
+  formalite_motifs?: string[];
+}
+
+/** GET /api/admin/entites/:id/formulaire-dcp */
+export async function adminGetFormulaireDCP(
+  entiteId: string,
+): Promise<AdminFormulaireDCPResponse> {
+  const res = await apiClient.get<ApiResponse<AdminFormulaireDCPResponse>>(
+    `/admin/entites/${entiteId}/formulaire-dcp`
+  );
+  return res.data.data!;
+}
+
+/** PUT /api/admin/entites/:id/formulaire-dcp (verrouillage optimiste) */
+export async function adminSaveFormulaireDCP(
+  entiteId: string,
+  reponses: Record<string, unknown>,
+  expectedVersion?: number,
+): Promise<AdminFormulaireDCPResponse> {
+  const res = await apiClient.put<ApiResponse<AdminFormulaireDCPResponse>>(
+    `/admin/entites/${entiteId}/formulaire-dcp`,
+    { reponses, version: expectedVersion },
+  );
+  return res.data.data!;
+}
+
+/** POST /api/admin/entites/saisie-artci (creation initiale en saisie ARTCI) */
+export async function adminCreateSaisieArtci(payload: {
+  denomination?: string;
+  numero_cc?: string;
+  reponses: Record<string, unknown>;
+}): Promise<{ id: string; denomination: string; numero_cc: string; formalite_calculee?: string; version: number }> {
+  const res = await apiClient.post<ApiResponse<{
+    id: string; denomination: string; numero_cc: string;
+    formalite_calculee?: string; version: number;
+  }>>('/admin/entites/saisie-artci', payload);
+  return res.data.data!;
+}
+
+// ============================================================
+// Commentaires ancres + Revisions (Modele PR)
+// ============================================================
+
+export interface CommentaireDossierItem {
+  id: string;
+  entite_id: string;
+  revision_id: string | null;
+  agent_id: string;
+  agent_nom: string | null;
+  rubrique: string;
+  sous_question: string | null;
+  contenu: string;
+  etat: 'open' | 'resolved';
+  reponse_entreprise: string | null;
+  repondu_le: string | null;
+  resolu_par: string | null;
+  resolu_le: string | null;
+  cree_le: string | null;
+  // L1 PR : threads + edition
+  parent_id?: string | null;
+  auteur_role?: string | null;
+  edited_at?: string | null;
+}
+
+export interface CommentaireCreateInput {
+  rubrique: string;
+  sous_question?: string;
+  contenu: string;
+  revision_id?: string;
+  parent_id?: string;
+}
+
+export interface DossierRevisionItem {
+  id: string;
+  numero_revision: number;
+  soumis_le: string | null;
+  soumis_par_compte_id: string | null;
+  statut_au_moment: string | null;
+  score_automatique_snapshot: number | null;
+}
+
+/** GET /api/admin/entites/:id/commentaires */
+export async function listCommentaires(
+  entiteId: string,
+  params?: { etat?: 'open' | 'resolved'; revision_id?: string }
+): Promise<CommentaireDossierItem[]> {
+  const res = await apiClient.get<ApiResponse<{ items: CommentaireDossierItem[] }>>(
+    `/admin/entites/${entiteId}/commentaires`,
+    { params }
+  );
+  return res.data.data?.items ?? [];
+}
+
+/** POST /api/admin/entites/:id/commentaires */
+export async function addCommentaire(
+  entiteId: string,
+  payload: CommentaireCreateInput
+): Promise<{ id: string; etat: string }> {
+  const res = await apiClient.post<ApiResponse<{ id: string; etat: string }>>(
+    `/admin/entites/${entiteId}/commentaires`,
+    payload
+  );
+  return res.data.data!;
+}
+
+/** POST /api/admin/commentaires/:id/resoudre */
+export async function resoudreCommentaire(commentaireId: string): Promise<void> {
+  await apiClient.post(`/admin/commentaires/${commentaireId}/resoudre`);
+}
+
+/** PUT /api/admin/commentaires/:id (auteur uniquement, avant resolution) */
+export async function editerCommentaire(commentaireId: string, contenu: string): Promise<void> {
+  await apiClient.put(`/admin/commentaires/${commentaireId}`, { contenu });
+}
+
+export interface DossierEvenementItem {
+  id: string;
+  evenement_type: string;
+  acteur_user_id: string | null;
+  acteur_compte_id: string | null;
+  acteur_role: string | null;
+  acteur_nom: string;
+  payload: Record<string, unknown>;
+  createdAt: string | null;
+}
+
+/** GET /api/admin/entites/:id/evenements (audit trail) */
+export async function listEvenements(
+  entiteId: string,
+  params?: { type?: string; limit?: number }
+): Promise<DossierEvenementItem[]> {
+  const res = await apiClient.get<ApiResponse<{ items: DossierEvenementItem[] }>>(
+    `/admin/entites/${entiteId}/evenements`,
+    { params }
+  );
+  return res.data.data?.items ?? [];
+}
+
+/** GET /api/admin/entites/:id/revisions */
+export async function listRevisions(entiteId: string): Promise<DossierRevisionItem[]> {
+  const res = await apiClient.get<ApiResponse<{ items: DossierRevisionItem[] }>>(
+    `/admin/entites/${entiteId}/revisions`
+  );
+  return res.data.data?.items ?? [];
+}
+
+/** GET /api/admin/entites/:id/revisions/diff (mode simple, par rubrique) */
+export async function diffRevisions(
+  entiteId: string,
+  fromRev: number,
+  toRev: number
+): Promise<{ from: number; to: number; rubriques: Record<string, 'modifiee' | 'ajoutee' | 'supprimee' | 'inchangee'> }> {
+  const res = await apiClient.get<ApiResponse<{
+    from: number; to: number; rubriques: Record<string, 'modifiee' | 'ajoutee' | 'supprimee' | 'inchangee'>
+  }>>(
+    `/admin/entites/${entiteId}/revisions/diff`,
+    { params: { from: fromRev, to: toRev } }
+  );
+  return res.data.data!;
+}
+
+/** Champ modifie dans une rubrique (mode detail). */
+export interface ChampDiff {
+  cle: string;          // ex: 'volume_donnees', 'localisation.latitude'
+  avant: unknown;
+  apres: unknown;
+  type: 'scalaire' | 'liste';
+  ajoutes?: unknown[];  // si type=liste
+  retires?: unknown[];  // si type=liste
+}
+
+export interface RubriqueDiffDetail {
+  etat: 'modifiee' | 'ajoutee' | 'supprimee' | 'inchangee';
+  champs: ChampDiff[];
+}
+
+export interface DiffRevisionsDetailResponse {
+  from: number;
+  to: number;
+  rubriques: Record<string, RubriqueDiffDetail>;
+  total_champs_modifies: number;
+  total_rubriques_modifiees: number;
+}
+
+/** GET /api/admin/entites/:id/revisions/diff?detail=true (mode champ par champ) */
+export async function diffRevisionsDetail(
+  entiteId: string,
+  fromRev: number,
+  toRev: number
+): Promise<DiffRevisionsDetailResponse> {
+  const res = await apiClient.get<ApiResponse<DiffRevisionsDetailResponse>>(
+    `/admin/entites/${entiteId}/revisions/diff`,
+    { params: { from: fromRev, to: toRev, detail: 'true' } }
+  );
+  return res.data.data!;
+}
+
+// ============================================================
+// Signalements d'erreur (Super Admin uniquement)
+// ============================================================
+
+export type StatutSignalement = 'open' | 'in_progress' | 'resolved' | 'dismissed';
+
+export interface SignalementErreurAdminItem {
+  id: string;
+  entite_id: string;
+  entite_denomination?: string | null;
+  compte_id: string;
+  sujet: string;
+  description: string;
+  rubrique_concernee?: string | null;
+  statut: StatutSignalement;
+  reponse_admin?: string | null;
+  traite_par?: string | null;
+  date_traitement?: string | null;
+  createdAt: string | null;
+}
+
+/** GET /api/admin/signalements */
+export async function listSignalements(statut?: StatutSignalement): Promise<{
+  items: SignalementErreurAdminItem[]; total: number;
+}> {
+  const res = await apiClient.get<ApiResponse<{ items: SignalementErreurAdminItem[]; total: number }>>(
+    '/admin/signalements',
+    { params: statut ? { statut } : undefined }
+  );
+  return res.data.data!;
+}
+
+/** PUT /api/admin/signalements/:id */
+export async function repondreSignalement(
+  id: string,
+  payload: { statut: StatutSignalement; reponse_admin?: string }
+): Promise<{ id: string; statut: string }> {
+  const res = await apiClient.put<ApiResponse<{ id: string; statut: string }>>(
+    `/admin/signalements/${id}`,
+    payload
+  );
   return res.data.data!;
 }
 

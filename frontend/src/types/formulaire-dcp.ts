@@ -49,14 +49,24 @@ export interface ResponsableLegal {
   telephone?: string;
 }
 
+export interface LocalisationGeo {
+  latitude?: number;
+  longitude?: number;
+  adresse_resolue?: string;
+}
+
 export interface Partie1Identification {
   statut_juridique?: StatutJuridique;
   personne_morale?: PersonneMorale;
   personne_physique?: PersonnePhysique;
-  secteur_activite?: SecteurActivite;
+  // Multi-selection des secteurs d'activite (un meme groupe peut couvrir
+  // plusieurs secteurs). Liste codee dans constants/secteurs.
+  secteurs_activite?: string[];
   secteur_autre?: string;
   volume_donnees?: VolumeDonnees;
   responsable_legal?: ResponsableLegal;
+  // Pointage carte (Spec : localisation par pointage sur carte interactive)
+  localisation?: LocalisationGeo;
 }
 
 // ----- Partie 2 : Cadre juridique & conformite admin -----
@@ -127,6 +137,8 @@ export interface Partie2CadreJuridique {
   // Formalites_effectuees est maintenant CALCULE automatiquement (cf §3.7)
   // Conserve pour migration / affichage admin
   formalites_effectuees?: FormalitesEffectuees;
+  // Justificatif (récépissé de déclaration / autorisation ARTCI) si formalités effectuées
+  formalites_document_uploaded?: boolean;
   formalite_calculee?: 'autorisation_prealable' | 'declaration_prealable' | 'aucune';
   formalite_motifs?: string[]; // raisons du calcul
   stades_demarche?: StadeDemarche[];
@@ -166,7 +178,7 @@ export const ACTIVITES_TRAITEMENT_DCP = [
 export type ActiviteTraitementDCP = typeof ACTIVITES_TRAITEMENT_DCP[number];
 
 
-export type RegistreTenu = 'oui_complet' | 'oui_incomplet' | 'en_cours' | 'non';
+export type RegistreTenu = 'oui' | 'oui_complet' | 'oui_incomplet' | 'en_cours' | 'non';
 export type FormeRegistre = 'papier' | 'tableur' | 'logiciel' | 'base_donnees' | 'autre';
 export const CATEGORIES_PERSONNES = [
   'salaries_agents',
@@ -189,11 +201,15 @@ export interface CategorieDonneesDetail {
   item_autre?: string;
   origine: string[];            // ex: ['directement','indirectement']
   origine_indirect_precision?: string;
+  // Unités de durée cochées (ex: ['jours','annees']) ; un champ à remplir par unité cochée
+  duree_unites?: string[];
   duree_jours?: string;
   duree_mois?: string;
   duree_annees?: string;
   duree_autre?: string;
   destinataires?: string;
+  // "Non applicable" coché → pas de destinataire externe
+  destinataires_non_applicable?: boolean;
 }
 
 export interface CategoriesDonnees {
@@ -344,6 +360,7 @@ export interface Partie4SousTraitanceTransferts {
   nombre_sous_traitants?: string;                  // entier sous forme texte
   pays_sous_traitants?: string[];                  // codes ISO ou noms (multi-select)
   contrats_sous_traitance_existence?: 'oui' | 'non';
+  nombre_contrats_sous_traitance?: string;         // si contrats conclus
   clauses_obligatoires?: ClauseObligatoire[];      // multi-select
   // Transferts hors CEDEAO (spec 3.8) : multi-select pays + garanties
   transfert_hors_cedeao?: TransfertHorsCedeao;
@@ -352,7 +369,10 @@ export interface Partie4SousTraitanceTransferts {
   // Question reformulee : "Avez-vous obtenu une autorisation prealable de l'ARTCI pour ce transfert ?"
   autorisation_artci_transfert?: AutorisationArtciTransfert;
   numero_autorisation_transfert?: string;
-  bases_juridiques_transfert?: BaseJuridiqueTransfert[];
+  // Upload de l'autorisation de transfert si obtenue
+  autorisation_transfert_document_uploaded?: boolean;
+  // Reprend les mêmes éléments que les bases légales de traitement (Partie 3)
+  bases_juridiques_transfert?: BaseLegale[];
   garanties_transfert?: GarantieTransfert[];
   garanties_appropriees_precision?: string;
   garantie_autre?: string;
@@ -438,6 +458,8 @@ export interface Partie5Securite {
   // Formation
   personnel_sensibilise?: PersonnelSensibilise;
   frequence_formations?: FrequenceFormations;
+  // Si sensibilisation périodique : préciser la période
+  periode_sensibilisation?: 'journaliere' | 'hebdomadaire' | 'mensuelle';
   // Anciens champs gardes pour compatibilite
   mesures_techniques?: 'oui' | 'non';
   mesures_organisationnelles?: 'oui' | 'non';

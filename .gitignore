@@ -63,6 +63,12 @@ Thumbs.db
 # Uploads
 uploads/*
 !uploads/.gitkeep
+# Fichiers uploadés par les utilisateurs (données personnelles) — ne jamais committer.
+# (Les autorisations de démo restent suivies dans backend/uploads/autorisations/.)
+backend/uploads/audits/
+backend/uploads/dpo/
+backend/uploads/rapports/
+backend/uploads/inscriptions/
 
 # Logs
 *.log

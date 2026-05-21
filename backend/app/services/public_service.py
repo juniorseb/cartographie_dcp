@@ -95,16 +95,22 @@ class PublicService:
         ).group_by(EntiteConformite.statut_conformite).all()
 
         stats['total_entites_conformes'] = 0
+        stats['total_partiellement_conformes'] = 0
+        # Compat ascendante : on conserve les anciens libelles a 0 pour les
+        # clients deja deployes qui les consomment encore.
         stats['total_demarche_achevee'] = 0
         stats['total_demarche_en_cours'] = 0
 
         for statut, count in conformite_counts:
             if statut == StatutConformiteEnum.conforme:
                 stats['total_entites_conformes'] = count
+            elif statut == StatutConformiteEnum.partiellement_conforme:
+                stats['total_partiellement_conformes'] += count
             elif statut == StatutConformiteEnum.demarche_achevee:
-                stats['total_demarche_achevee'] = count
+                # Anciens dossiers historiques : on les agrege dans Partiellement
+                stats['total_partiellement_conformes'] += count
             elif statut == StatutConformiteEnum.demarche_en_cours:
-                stats['total_demarche_en_cours'] = count
+                stats['total_partiellement_conformes'] += count
 
         # Par secteur (conformes seulement)
         secteur_counts = db.session.query(

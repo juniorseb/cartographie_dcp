@@ -24,15 +24,15 @@ ALLOWED_TRANSITIONS = {
     'valide': ['publie'],
 }
 
-# Mapping workflow -> statut conformité
+# Mapping workflow -> statut conformité (libelles unifies : Partiellement conforme)
 CONFORMITE_MAPPING = {
     'conforme': StatutConformiteEnum.conforme,
     'valide': StatutConformiteEnum.conforme,
     'publie': StatutConformiteEnum.conforme,
-    'conforme_sous_reserve': StatutConformiteEnum.demarche_achevee,
-    'soumis': StatutConformiteEnum.demarche_en_cours,
-    'en_verification': StatutConformiteEnum.demarche_en_cours,
-    'en_attente_complements': StatutConformiteEnum.demarche_en_cours,
+    'conforme_sous_reserve': StatutConformiteEnum.partiellement_conforme,
+    'soumis': StatutConformiteEnum.partiellement_conforme,
+    'en_verification': StatutConformiteEnum.partiellement_conforme,
+    'en_attente_complements': StatutConformiteEnum.partiellement_conforme,
 }
 
 
@@ -131,10 +131,10 @@ class WorkflowService:
         )
         db.session.add(historique)
 
-        # Conformité -> Démarche en cours
+        # Conformité -> Partiellement conforme (en attente d'evaluation finale)
         conformite = EntiteConformite.query.get(entite_id)
         if conformite:
-            conformite.statut_conformite = StatutConformiteEnum.demarche_en_cours
+            conformite.statut_conformite = StatutConformiteEnum.partiellement_conforme
 
         db.session.commit()
         return assignation

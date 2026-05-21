@@ -32,13 +32,22 @@ class Config:
         o.strip().rstrip('/') for o in os.getenv('CORS_ORIGINS', 'http://localhost:5173').split(',') if o.strip()
     ]
     
-    # Email
+    # Email / SMTP
     MAIL_SERVER = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
     MAIL_PORT = int(os.getenv('MAIL_PORT', 587))
+    # Port 587 -> TLS (STARTTLS) ; Port 465 -> SSL
     MAIL_USE_TLS = os.getenv('MAIL_USE_TLS', 'True').lower() == 'true'
+    MAIL_USE_SSL = os.getenv('MAIL_USE_SSL', 'False').lower() == 'true'
     MAIL_USERNAME = os.getenv('MAIL_USERNAME', '')
     MAIL_PASSWORD = os.getenv('MAIL_PASSWORD', '')
     MAIL_DEFAULT_SENDER = os.getenv('MAIL_DEFAULT_SENDER', 'noreply@artci.ci')
+    # Delai de connexion SMTP (secondes) pour ne pas bloquer une requete
+    MAIL_TIMEOUT = int(os.getenv('MAIL_TIMEOUT', 15))
+    # Si True : on supprime l'envoi reel et on logge le mail en console (dev)
+    MAIL_SUPPRESS_SEND = os.getenv('MAIL_SUPPRESS_SEND', 'False').lower() == 'true'
+
+    # URL du frontend (pour construire les liens dans les emails)
+    FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173').rstrip('/')
     
     # OTP
     OTP_EXPIRATION_MINUTES = int(os.getenv('OTP_EXPIRATION_MINUTES', 10))

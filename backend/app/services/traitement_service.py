@@ -13,7 +13,13 @@ class TraitementService:
 
     @staticmethod
     def get_or_create_traitement(entite_id, traitant_id):
-        """Recupere ou cree le traitement courant pour cette entite."""
+        """Recupere ou cree le traitement courant pour cette entite.
+
+        Modele PR :
+        - le score automatique est calcule en LECTURE SEULE (pas de
+          persistance dans EntiteConformite tant que l'agent n'a pas valide)
+        - le score auto sert d'aide a la decision, pas de verite
+        """
         entite = EntiteBase.query.get(entite_id)
         if not entite:
             raise ValueError('Entite non trouvee.')
@@ -24,15 +30,15 @@ class TraitementService:
         ).filter(TraitementDossier.statut.in_(['en_cours', 'soumis_validation'])).first()
 
         if not traitement:
-            # Calculer le score automatique propose
-            ScoringService.mettre_a_jour_score(entite)
-            db.session.commit()
-            db.session.refresh(entite)
-            score_auto = entite.conformite.score_conformite if entite.conformite else 0
+            # Calcul score auto en lecture seule (pas de persistance EntiteConformite)
+            try:
+                score_auto, _statut = ScoringService.compute_score_only(entite)
+            except Exception:
+                score_auto = 0
             traitement = TraitementDossier(
                 entite_id=entite_id,
                 traitant_id=traitant_id,
-                commentaires_par_rubrique={},
+                commentaires_par_rubrique={},  # legacy, conserve pour retrocompat
                 score_automatique=score_auto,
                 score_manuel=score_auto,  # initialise au score auto
                 niveau_conformite=ScoringService.classifier(score_auto).value,
@@ -98,7 +104,14 @@ class TraitementService:
 
     @staticmethod
     def soumettre_pour_validation(traitement_id, traitant_id):
-        """L'editeur soumet son traitement pour validation N+1."""
+        """L'editeur soumet son traitement pour validation N+1.
+
+        Modele PR : convergence requise. Avant remontee a l'admin, on verifie
+        qu'il N'Y A PLUS DE COMMENTAIRES OPEN sur la derniere revision (sinon
+        l'editeur n'a pas encore acheve son cycle de revue).
+        """
+        from app.services.dossier_revision_service import DossierRevisionService
+
         traitement = TraitementDossier.query.get(traitement_id)
         if not traitement:
             raise ValueError('Traitement non trouve.')
@@ -106,6 +119,17 @@ class TraitementService:
             raise ValueError("Vous n'etes pas le traitant.")
         if traitement.statut != 'en_cours':
             raise ValueError('Le traitement n\'est plus en cours.')
+
+        # Garde-fou convergence : tous commentaires open doivent etre traites
+        open_count = DossierRevisionService.commentaires_open_count(
+            traitement.entite_id
+        )
+        if open_count > 0:
+            raise ValueError(
+                f"Convergence non atteinte : {open_count} commentaire(s) encore "
+                "ouvert(s) sur la derniere revision. Resolvez ou retournez-les "
+                "a l'entreprise avant de soumettre pour validation N+1."
+            )
 
         # Mettre a jour le workflow de l'entite
         wf = EntiteWorkflow.query.get(traitement.entite_id)
@@ -117,7 +141,17 @@ class TraitementService:
 
     @staticmethod
     def valider_traitement(traitement_id, validateur_id, decision, motif=None):
-        """Le validateur N+1 (Admin/Super Admin) approuve ou retourne."""
+        """Le validateur N+1 (Admin/Super Admin) approuve ou retourne.
+
+        Modele PR :
+        - 'approuve' : applique le score final via DossierRevisionService
+          (qui cree EntiteConformite si premier traitement et gere
+          l'auto-depublication si le score retombe < 70)
+        - 'retourne' : passe l'entite en en_attente_complements pour rouvrir
+          le formulaire cote entreprise (degrisement automatique)
+        """
+        from app.services.dossier_revision_service import DossierRevisionService
+
         if decision not in ('approuve', 'retourne'):
             raise ValueError('Decision invalide.')
         traitement = TraitementDossier.query.get(traitement_id)
@@ -132,50 +166,51 @@ class TraitementService:
         traitement.motif_retour = motif if decision == 'retourne' else None
         traitement.statut = 'valide' if decision == 'approuve' else 'retourne_entreprise'
 
-        # Mettre a jour le statut de l'entite et la conformite
-        entite = traitement.entite
         wf = EntiteWorkflow.query.get(traitement.entite_id)
-        conformite = EntiteConformite.query.get(traitement.entite_id)
 
         if decision == 'approuve':
-            # Appliquer le score manuel et le niveau de conformite finals
-            if conformite:
-                conformite.score_conformite = traitement.score_manuel
-                conformite.statut_conformite = ScoringService.classifier(
-                    traitement.score_manuel or 0
-                )
+            # Applique le score final via service (cree EntiteConformite si
+            # 1er traitement, declenche auto-depublication si necessaire,
+            # notifie l'entreprise du nouveau niveau de conformite,
+            # idempotent si rappele avec le meme score).
+            score_final = traitement.score_manuel or 0
+            DossierRevisionService.appliquer_score_final(
+                entite_id=traitement.entite_id,
+                score=score_final,
+                acteur_user_id=validateur_id,
+                source='validation_n_plus_1',
+            )
+
             if wf:
-                # Conforme : valide. Sinon : en_attente_complements (revision attendue)
-                if (traitement.score_manuel or 0) >= 100:
+                if score_final >= 100:
                     wf.statut = StatutWorkflowEnum.conforme
-                elif (traitement.score_manuel or 0) >= 70:
+                elif score_final >= 70:
                     wf.statut = StatutWorkflowEnum.conforme_sous_reserve
                 else:
+                    # Score < 70 : on rend la main a l'entreprise pour revision
                     wf.statut = StatutWorkflowEnum.en_attente_complements
                 wf.date_validation = datetime.now(timezone.utc)
 
-            # Notifier l'entreprise
-            try:
-                from app.models import Notification
-                if entite and entite.compte_entreprise_id:
-                    n = Notification(
-                        destinataire_type='entreprise',
-                        destinataire_id=entite.compte_entreprise_id,
-                        type='dossier_traite',
-                        titre='Votre dossier a ete examine',
-                        message=(
-                            "L'ARTCI a termine l'examen de votre dossier. "
-                            "Vous pouvez maintenant reviser votre formulaire si necessaire."
-                        ),
-                        entite_id=entite.id,
-                        lue=False,
-                    )
-                    db.session.add(n)
-            except Exception:
-                pass
-        else:  # retourne
-            if wf:
-                wf.statut = StatutWorkflowEnum.brouillon  # remis en brouillon pour le traitant
+            # Audit : validation N+1 approuvee
+            from app.services.dossier_revision_service import log_evenement
+            log_evenement(
+                entite_id=traitement.entite_id,
+                evenement_type='validation_n_plus_1',
+                payload={
+                    'decision': 'approuve',
+                    'score_final': score_final,
+                    'traitement_id': traitement.id,
+                },
+                acteur_user_id=validateur_id,
+                acteur_role='admin',
+            )
+        else:
+            # Retour vers l'entreprise via service (notifie + degrise formulaire + log)
+            DossierRevisionService.retourner_a_entreprise(
+                entite_id=traitement.entite_id,
+                motif=motif,
+                acteur_user_id=validateur_id,
+            )
 
         db.session.commit()
         return traitement

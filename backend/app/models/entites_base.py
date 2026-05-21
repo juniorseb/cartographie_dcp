@@ -28,6 +28,13 @@ class EntiteBase(UUIDMixin, TimestampMixin, db.Model):
     )
     publie_sur_carte = db.Column(db.Boolean, default=False, nullable=False, index=True)
 
+    # Soft delete : on n'efface jamais physiquement (registre legal). Une entite
+    # archivee est cachee des vues utilisateurs courantes mais reste consultable
+    # par les Super Admins et conservee pour audit (5-10 ans).
+    archive = db.Column(db.Boolean, default=False, nullable=False, index=True)
+    date_archivage = db.Column(db.DateTime(timezone=True))
+    motif_archivage = db.Column(db.Text)
+
     # Relationship parent
     compte_entreprise = db.relationship('CompteEntreprise', back_populates='entites')
 

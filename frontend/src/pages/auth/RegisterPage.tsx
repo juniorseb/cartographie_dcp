@@ -1,16 +1,18 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Building2, UserCheck, ChevronRight, ChevronLeft, CheckCircle, Info, Upload, FileText, X } from 'lucide-react';
+import { Building2, UserCheck, ChevronRight, ChevronLeft, CheckCircle, Info, FileText, X } from 'lucide-react';
 import * as authApi from '@/api/auth.api';
 import { ROUTES } from '@/utils/constants';
 import { cn } from '@/utils/cn';
 
 type Section = 1 | 2 | 3;
 
+// Ordre spec : Demandeur -> Entreprise -> Representant legal
+// (la personne qui remplit s'identifie d'abord, puis renseigne l'entite et son RL)
 const SECTIONS = [
-  { num: 1 as Section, title: 'Entreprise', icon: Building2 },
-  { num: 2 as Section, title: 'Représentant légal', icon: UserCheck },
-  { num: 3 as Section, title: 'Demandeur', icon: UserCheck },
+  { num: 1 as Section, title: 'Demandeur', icon: UserCheck },
+  { num: 2 as Section, title: 'Entreprise', icon: Building2 },
+  { num: 3 as Section, title: 'Représentant légal', icon: UserCheck },
 ];
 
 // Validations regex
@@ -54,31 +56,31 @@ export default function RegisterPage() {
   // Documents administratifs uploadés
   const [docRccm, setDocRccm] = useState<UploadedDoc | null>(null);
   const [docDfe, setDocDfe] = useState<UploadedDoc | null>(null);
-  const [docsAutres, setDocsAutres] = useState<UploadedDoc[]>([]);
 
   function updateField(key: string, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
   function validateSection(s: Section): string {
+    // Ordre spec : 1=Demandeur, 2=Entreprise, 3=RL
     if (s === 1) {
+      if (!form.dem_nom.trim() || !form.dem_prenom.trim()) return 'Nom et prénom du Demandeur obligatoires.';
+      if (!form.dem_email.trim() || !EMAIL_REGEX.test(form.dem_email)) return "L'email du Demandeur est obligatoire et doit être valide.";
+      if (form.dem_telephone && !PHONE_REGEX.test(form.dem_telephone)) return 'Format de téléphone du Demandeur invalide.';
+    }
+    if (s === 2) {
       if (!form.denomination.trim() || form.denomination.trim().length < 2) return "La dénomination de l'entreprise est obligatoire (2 caractères minimum).";
       if (!form.numero_cc.trim()) return 'Le numéro CC est obligatoire.';
       if (form.telephone && !PHONE_REGEX.test(form.telephone)) return 'Format de téléphone invalide.';
       if (!docRccm) return "Le RCCM (Registre du Commerce et du Crédit Mobilier) est obligatoire.";
       if (!docDfe) return "La DFE (Déclaration Fiscale d'Existence) est obligatoire.";
     }
-    if (s === 2) {
+    if (s === 3) {
       if (!form.rl_nom.trim() || !form.rl_prenom.trim()) return 'Nom et prénom du représentant légal obligatoires.';
       if (!form.rl_email.trim() || !EMAIL_REGEX.test(form.rl_email)) return "L'email du représentant légal est obligatoire et doit être valide.";
       if (form.rl_telephone && !PHONE_REGEX.test(form.rl_telephone)) return 'Format de téléphone du représentant légal invalide.';
-    }
-    if (s === 3) {
-      if (!form.dem_nom.trim() || !form.dem_prenom.trim()) return 'Nom et prénom du Demandeur obligatoires.';
-      if (!form.dem_email.trim() || !EMAIL_REGEX.test(form.dem_email)) return "L'email du Demandeur est obligatoire et doit être valide.";
-      if (form.dem_telephone && !PHONE_REGEX.test(form.dem_telephone)) return 'Format de téléphone du Demandeur invalide.';
-      if (form.rl_email && form.dem_email === form.rl_email) {
-        return "L'email du Demandeur doit être différent de celui du représentant légal.";
+      if (form.dem_email && form.rl_email === form.dem_email) {
+        return "L'email du Représentant légal doit être différent de celui du Demandeur.";
       }
     }
     return '';
@@ -107,25 +109,31 @@ export default function RegisterPage() {
     try {
       // Note : on map les champs Demandeur → champs dpo_* en backend
       // (le "DPO" de l'inscription = "Demandeur" selon la nouvelle spec §9)
-      await authApi.register({
-        denomination: form.denomination,
-        numero_cc: form.numero_cc,
-        telephone: form.telephone || undefined,
-        adresse: form.adresse || undefined,
-        ville: form.ville || undefined,
-        region: form.region || undefined,
-        // Représentant légal
-        dg_nom: form.rl_nom,
-        dg_prenom: form.rl_prenom,
-        dg_fonction: form.rl_fonction || undefined,
-        dg_telephone: form.rl_telephone || undefined,
-        dg_email: form.rl_email,
-        // Demandeur (mapping vers anciens champs dpo_*)
-        dpo_nom: form.dem_nom,
-        dpo_prenom: form.dem_prenom,
-        dpo_telephone: form.dem_telephone || undefined,
-        dpo_email: form.dem_email,
-      });
+      await authApi.register(
+        {
+          denomination: form.denomination,
+          numero_cc: form.numero_cc,
+          telephone: form.telephone || undefined,
+          adresse: form.adresse || undefined,
+          ville: form.ville || undefined,
+          region: form.region || undefined,
+          // Représentant légal
+          dg_nom: form.rl_nom,
+          dg_prenom: form.rl_prenom,
+          dg_fonction: form.rl_fonction || undefined,
+          dg_telephone: form.rl_telephone || undefined,
+          dg_email: form.rl_email,
+          // Demandeur (mapping vers anciens champs dpo_*)
+          dpo_nom: form.dem_nom,
+          dpo_prenom: form.dem_prenom,
+          dpo_telephone: form.dem_telephone || undefined,
+          dpo_email: form.dem_email,
+        },
+        {
+          rccm: docRccm?.file,
+          dfe: docDfe?.file,
+        }
+      );
       setSubmitted(true);
     } catch {
       setError("Erreur lors de l'inscription. Vérifiez que l'email du Représentant légal ou le numéro CC ne sont pas déjà utilisés.");
@@ -139,13 +147,8 @@ export default function RegisterPage() {
       <div className="text-center py-6">
         <CheckCircle className="w-14 h-14 text-green-500 mx-auto mb-4" />
         <h2 className="text-xl font-bold mb-2">Inscription enregistrée</h2>
-        <p className="text-base text-gray-700 mb-4 font-semibold">
+        <p className="text-base text-gray-700 mb-6 font-semibold">
           Le processus d'inscription est en cours. Vous recevrez un email de confirmation.
-        </p>
-        <p className="text-sm text-gray-500 mb-6">
-          Notre équipe va contacter le Représentant légal pour confirmer l'existence de
-          l'entreprise et le mandat du Demandeur. Une fois validés, le Représentant légal et
-          le Demandeur recevront chacun par email leurs identifiants de connexion.
         </p>
         <Link to={ROUTES.LOGIN} className="btn btn-outline inline-block no-underline">
           Retour à la connexion
@@ -190,15 +193,16 @@ export default function RegisterPage() {
 
       <form onSubmit={handleSubmit}>
         {section === 1 && (
+          <SectionDemandeur form={form} updateField={updateField} />
+        )}
+        {section === 2 && (
           <SectionEntreprise
             form={form} updateField={updateField}
             docRccm={docRccm} setDocRccm={setDocRccm}
             docDfe={docDfe} setDocDfe={setDocDfe}
-            docsAutres={docsAutres} setDocsAutres={setDocsAutres}
           />
         )}
-        {section === 2 && <SectionRL form={form} updateField={updateField} />}
-        {section === 3 && <SectionDemandeur form={form} updateField={updateField} />}
+        {section === 3 && <SectionRL form={form} updateField={updateField} />}
 
         <div className="flex items-center justify-between gap-3 mt-6">
           {section > 1 ? (
@@ -238,20 +242,24 @@ interface SectionProps {
 function SectionEntreprise({
   form, updateField,
   docRccm, setDocRccm, docDfe, setDocDfe,
-  docsAutres, setDocsAutres,
 }: SectionProps & {
   docRccm: UploadedDoc | null; setDocRccm: (d: UploadedDoc | null) => void;
   docDfe: UploadedDoc | null; setDocDfe: (d: UploadedDoc | null) => void;
-  docsAutres: UploadedDoc[]; setDocsAutres: (d: UploadedDoc[]) => void;
 }) {
   function handleFile(e: React.ChangeEvent<HTMLInputElement>, set: (d: UploadedDoc | null) => void) {
     const f = e.target.files?.[0];
-    if (f) set({ name: f.name, size: f.size, file: f });
-  }
-
-  function handleAddAutre(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    if (f) setDocsAutres([...docsAutres, { name: f.name, size: f.size, file: f }]);
+    if (!f) return;
+    if (f.type !== 'application/pdf') {
+      alert('Format invalide : seuls les fichiers PDF sont acceptés.');
+      e.target.value = '';
+      return;
+    }
+    if (f.size > 5 * 1024 * 1024) {
+      alert('Fichier trop volumineux : 5 Mo maximum.');
+      e.target.value = '';
+      return;
+    }
+    set({ name: f.name, size: f.size, file: f });
   }
 
   return (
@@ -303,7 +311,9 @@ function SectionEntreprise({
           Documents administratifs <span className="text-red-500">*</span>
         </p>
         <p className="text-xs text-gray-600 mb-3">
-          Téléversez les documents officiels de votre entreprise (RCCM, DFE et autres).
+          Téléversez les documents officiels de votre entreprise (RCCM, DFE).
+          <br />
+          <span className="text-gray-500">Format accepté : PDF uniquement — taille max 5 Mo par fichier.</span>
         </p>
 
         <UploadField
@@ -319,25 +329,6 @@ function SectionEntreprise({
           onSelect={(e) => handleFile(e, setDocDfe)}
           onRemove={() => setDocDfe(null)}
         />
-
-        {docsAutres.map((d, i) => (
-          <div key={i} className="flex items-center justify-between p-2 mb-1 bg-white border border-gray-200 rounded text-xs">
-            <span className="truncate">{d.name} ({Math.round(d.size / 1024)} Ko)</span>
-            <button
-              type="button"
-              onClick={() => setDocsAutres(docsAutres.filter((_, j) => j !== i))}
-              className="text-red-500 hover:text-red-700"
-            >
-              <X className="w-3 h-3" />
-            </button>
-          </div>
-        ))}
-
-        <label className="text-xs text-[var(--artci-orange)] hover:underline cursor-pointer inline-flex items-center gap-1">
-          <Upload className="w-3 h-3" />
-          + Ajouter un autre document
-          <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" onChange={handleAddAutre} />
-        </label>
       </div>
     </fieldset>
   );
@@ -363,7 +354,7 @@ function UploadField({
         </div>
       ) : (
         <input
-          type="file" accept=".pdf,.jpg,.jpeg,.png"
+          type="file" accept="application/pdf"
           onChange={onSelect}
           className="text-xs"
         />
@@ -426,13 +417,6 @@ function SectionDemandeur({ form, updateField }: SectionProps) {
         <UserCheck className="w-4 h-4 text-[var(--artci-orange)]" />
         Demandeur
       </legend>
-      <div className="alert alert-info mb-4 flex items-start gap-2 text-sm">
-        <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
-        <div>
-          <strong>Le Demandeur</strong> est la personne qui remplit cette inscription.
-          Son email servira d'identifiant de connexion (différent de celui du Représentant légal).
-        </div>
-      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="form-group">
           <label htmlFor="dem_nom">Nom *</label>

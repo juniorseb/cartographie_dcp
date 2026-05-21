@@ -2,10 +2,9 @@ import { useState } from 'react';
 import { Settings, Save, Sliders, Clock, Mail, Upload } from 'lucide-react';
 
 interface ParametresState {
-  // Seuils de conformité
-  score_conforme: number;
-  score_demarche_achevee: number;
-  score_demarche_en_cours: number;
+  // Seuils de conformité (3 niveaux : Non conforme / Partiellement conforme / Conforme)
+  seuil_partiellement_conforme: number; // à partir de ce score → Partiellement conforme
+  seuil_conforme: number;               // à partir de ce score → Conforme
   // Délais
   echeance_traitement_jours: number;
   alerte_renouvellement_mois: number;
@@ -19,9 +18,8 @@ interface ParametresState {
 }
 
 const DEFAULT_PARAMS: ParametresState = {
-  score_conforme: 80,
-  score_demarche_achevee: 60,
-  score_demarche_en_cours: 30,
+  seuil_partiellement_conforme: 70,
+  seuil_conforme: 100,
   echeance_traitement_jours: 30,
   alerte_renouvellement_mois: 3,
   expiration_otp_minutes: 10,
@@ -73,54 +71,50 @@ export default function ParametresPage() {
           Seuils de conformité
         </h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <p className="text-sm text-gray-500 mb-4">
+          Trois niveaux : <strong>Non conforme</strong> (en dessous du seuil partiel),
+          <strong> Partiellement conforme</strong> (à partir du seuil partiel),
+          <strong> Conforme</strong> (à partir du seuil conforme).
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="form-group">
-            <label htmlFor="score_conforme">Score conforme (%)</label>
+            <label htmlFor="seuil_partiellement_conforme">Seuil « Partiellement conforme » (%)</label>
             <div className="flex items-center gap-3">
               <input
-                id="score_conforme"
+                id="seuil_partiellement_conforme"
                 type="range"
                 min={0}
                 max={100}
-                value={params.score_conforme}
-                onChange={(e) => updateParam('score_conforme', Number(e.target.value))}
+                value={params.seuil_partiellement_conforme}
+                onChange={(e) => updateParam('seuil_partiellement_conforme', Number(e.target.value))}
                 className="flex-1"
               />
-              <span className="text-sm font-mono w-10 text-right">{params.score_conforme}</span>
+              <span className="text-sm font-mono w-10 text-right">{params.seuil_partiellement_conforme}</span>
             </div>
           </div>
 
           <div className="form-group">
-            <label htmlFor="score_demarche_achevee">Score démarche achevée (%)</label>
+            <label htmlFor="seuil_conforme">Seuil « Conforme » (%)</label>
             <div className="flex items-center gap-3">
               <input
-                id="score_demarche_achevee"
+                id="seuil_conforme"
                 type="range"
                 min={0}
                 max={100}
-                value={params.score_demarche_achevee}
-                onChange={(e) => updateParam('score_demarche_achevee', Number(e.target.value))}
+                value={params.seuil_conforme}
+                onChange={(e) => updateParam('seuil_conforme', Number(e.target.value))}
                 className="flex-1"
               />
-              <span className="text-sm font-mono w-10 text-right">{params.score_demarche_achevee}</span>
+              <span className="text-sm font-mono w-10 text-right">{params.seuil_conforme}</span>
             </div>
           </div>
+        </div>
 
-          <div className="form-group">
-            <label htmlFor="score_demarche_en_cours">Score démarche en cours (%)</label>
-            <div className="flex items-center gap-3">
-              <input
-                id="score_demarche_en_cours"
-                type="range"
-                min={0}
-                max={100}
-                value={params.score_demarche_en_cours}
-                onChange={(e) => updateParam('score_demarche_en_cours', Number(e.target.value))}
-                className="flex-1"
-              />
-              <span className="text-sm font-mono w-10 text-right">{params.score_demarche_en_cours}</span>
-            </div>
-          </div>
+        <div className="mt-4 text-xs text-gray-500 space-y-1">
+          <p>• Non conforme : 0 – {params.seuil_partiellement_conforme - 1}%</p>
+          <p>• Partiellement conforme : {params.seuil_partiellement_conforme} – {params.seuil_conforme - 1}%</p>
+          <p>• Conforme : {params.seuil_conforme}%{params.seuil_conforme < 100 ? ' et plus' : ''}</p>
         </div>
       </div>
 

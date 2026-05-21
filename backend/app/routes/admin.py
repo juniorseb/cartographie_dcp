@@ -31,10 +31,21 @@ admin_bp = Blueprint('admin', __name__)
 @admin_bp.route('/dashboard', methods=['GET'])
 @role_required('super_admin', 'admin', 'editor', 'reader')
 def dashboard():
-    """Statistiques admin avec filtres optionnels."""
+    """Statistiques admin avec filtres optionnels.
+
+    Editor : retourne le suivi de performance personnel (charge de travail,
+    delai moyen, derniers traites, panier en cours) -- pas les stats globales.
+    Les autres roles : stats globales avec filtres de periode.
+
+    Filtre 'period' accepte : today / 7d / 30d / all (defaut : all).
+    """
+    if g.current_user_role == 'editor':
+        return success_response(AdminService.get_editor_performance(g.current_user_id))
+
     filters = {
         'date_debut': request.args.get('date_debut'),
         'date_fin': request.args.get('date_fin'),
+        'period': request.args.get('period'),
     }
     filters = {k: v for k, v in filters.items() if v}
     stats = AdminService.get_dashboard_stats(filters or None)
@@ -44,12 +55,16 @@ def dashboard():
 @admin_bp.route('/stats', methods=['GET'])
 @role_required('super_admin', 'admin', 'editor', 'reader')
 def stats():
-    """Stats avancées avec filtres de période."""
+    """Stats avancées avec filtres de période.
+    Editor : scope automatique aux entites qui lui sont assignees."""
     filters = {
         'date_debut': request.args.get('date_debut'),
         'date_fin': request.args.get('date_fin'),
+        'period': request.args.get('period'),
     }
     filters = {k: v for k, v in filters.items() if v}
+    if g.current_user_role == 'editor':
+        filters['scope_user_id'] = g.current_user_id
     stats = AdminService.get_dashboard_stats(filters or None)
     return success_response(stats)
 
@@ -72,11 +87,32 @@ def list_entites():
     }
     filters = {k: v for k, v in filters.items() if v}
 
+    # publie_sur_carte est un filtre booleen : on accepte 'true'/'false' string
+    publie_param = request.args.get('publie_sur_carte')
+    if publie_param is not None:
+        filters['publie_sur_carte'] = publie_param.lower() == 'true'
+
+    # validees : ne renvoyer que les entites validees (conforme / valide / publie)
+    if request.args.get('validees') == 'true':
+        filters['validees_only'] = True
+
+    # Spec : un editeur ne voit que les entites qui lui sont assignees,
+    # et JAMAIS les brouillons (statut workflow 'brouillon' ou 'brouillon_artci').
+    # On force le scope cote serveur, indissociable du role.
+    if g.current_user_role == 'editor':
+        filters['assigned_to_user_id'] = g.current_user_id
+        filters['exclude_brouillons'] = True
+
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
+    sort = request.args.get('sort', 'created')  # created|activite|denomination
+
+    # Inclure les archives uniquement sur demande explicite (admin+)
+    if request.args.get('include_archives') == 'true' and g.current_user_role in ('admin', 'super_admin'):
+        filters['include_archives'] = True
 
     result = AdminService.list_all_entites(
-        filters=filters or None, page=page, per_page=per_page
+        filters=filters or None, page=page, per_page=per_page, sort=sort,
     )
     return success_response(result)
 
@@ -84,7 +120,15 @@ def list_entites():
 @admin_bp.route('/entites/<string:entite_id>', methods=['GET'])
 @role_required('super_admin', 'admin', 'editor', 'reader')
 def get_entite(entite_id):
-    """Détail complet d'une entité (vue admin)."""
+    """Détail complet d'une entité (vue admin).
+    Editor : 403 si l'entite ne lui est pas assignee."""
+    if g.current_user_role == 'editor':
+        from app.models import AssignationDemande
+        assigned = AssignationDemande.query.filter_by(
+            agent_id=g.current_user_id, entite_id=entite_id,
+        ).first()
+        if not assigned:
+            return error_response("Vous n'avez pas accès à cette entité.", 403)
     result = AdminService.get_entite_detail(entite_id)
     if not result:
         return error_response('Entité non trouvée.', 404)
@@ -417,6 +461,14 @@ def upload_rapport_audit(entite_id):
 def get_panier():
     """Mon panier de demandes assignées."""
     result = AdminService.get_panier(g.current_user_id)
+    return success_response(result)
+
+
+@admin_bp.route('/assignations', methods=['GET'])
+@admin_or_above
+def list_assignations():
+    """Liste de toutes les assignations (vue globale admin/super-admin)."""
+    result = AdminService.list_all_assignations()
     return success_response(result)
 
 
@@ -790,8 +842,521 @@ def mark_notification_read(notification_id):
 @admin_bp.route('/feedbacks', methods=['GET'])
 @role_required('super_admin', 'admin', 'editor', 'reader')
 def list_feedbacks():
-    """Liste paginée de tous les feedbacks de vérification."""
+    """Liste paginée de tous les feedbacks de vérification.
+    Filtre optionnel statut_echeance : overdue/today/upcoming/no_deadline/with_deadline.
+    Editor : scope automatique aux feedbacks des entites qui lui sont assignees."""
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
-    result = AdminService.list_feedbacks(page=page, per_page=per_page)
+    statut_echeance = request.args.get('statut_echeance')
+    scope_user_id = g.current_user_id if g.current_user_role == 'editor' else None
+    result = AdminService.list_feedbacks(
+        page=page, per_page=per_page, statut_echeance=statut_echeance,
+        scope_user_id=scope_user_id,
+    )
     return success_response(result)
+
+
+# --- Formulaire DCP cote admin (saisie ARTCI) ---
+# Permet aux agents (super_admin/admin/editor) d'editer le meme formulaire
+# que cote entreprise, avec source de verite unique formulaires_dcp.
+
+@admin_bp.route('/entites/<string:entite_id>/formulaire-dcp', methods=['GET'])
+@role_required('super_admin', 'admin', 'editor', 'reader')
+def admin_get_formulaire_dcp(entite_id):
+    """Recupere les reponses au formulaire DCP d'une entite (vue admin)."""
+    from app.models import EntiteBase, FormulaireDCP
+
+    if g.current_user_role == 'editor':
+        from app.models import AssignationDemande
+        assigned = AssignationDemande.query.filter_by(
+            agent_id=g.current_user_id, entite_id=entite_id,
+        ).first()
+        if not assigned:
+            return error_response("Vous n'avez pas accès à cette entité.", 403)
+
+    entite = EntiteBase.query.get(entite_id)
+    if not entite:
+        return error_response("Entité introuvable.", 404)
+    form = FormulaireDCP.query.get(entite.id)
+    return success_response({
+        'entite_id': entite.id,
+        'denomination': entite.denomination,
+        'numero_cc': entite.numero_cc,
+        'reponses': form.reponses if form else {},
+        'version': form.version if form else 0,
+    })
+
+
+@admin_bp.route('/entites/<string:entite_id>/formulaire-dcp', methods=['PUT'])
+@role_required('super_admin', 'admin', 'editor')
+def admin_save_formulaire_dcp(entite_id):
+    """Sauvegarde les reponses au formulaire DCP cote admin (verrouillage optimiste).
+    Calcule formalite + propage lat/lng comme cote entreprise."""
+    from app.extensions import db
+    from app.models import EntiteBase, FormulaireDCP, EntiteLocalisation
+
+    if g.current_user_role == 'editor':
+        from app.models import AssignationDemande
+        assigned = AssignationDemande.query.filter_by(
+            agent_id=g.current_user_id, entite_id=entite_id,
+        ).first()
+        if not assigned:
+            return error_response("Vous n'avez pas accès à cette entité.", 403)
+
+    data = request.get_json() or {}
+    reponses = data.get('reponses', {})
+    if not isinstance(reponses, dict):
+        return error_response("Les reponses doivent etre un objet.", 400)
+    expected_version = data.get('version')
+
+    entite = EntiteBase.query.get(entite_id)
+    if not entite:
+        return error_response("Entité introuvable.", 404)
+
+    # Auto-calcul formalite (Autorisation vs Declaration)
+    from app.services.formalite_engine import determiner_formalite
+    formalite_type, motifs = determiner_formalite(reponses)
+    cadre = reponses.get('cadre_juridique', {}) or {}
+    cadre['formalite_calculee'] = formalite_type
+    cadre['formalite_motifs'] = motifs
+    reponses['cadre_juridique'] = cadre
+
+    # Propagation lat/lng vers EntiteLocalisation
+    loc = (reponses.get('identification') or {}).get('localisation') or {}
+    if isinstance(loc, dict):
+        lat = loc.get('latitude')
+        lng = loc.get('longitude')
+        if isinstance(lat, (int, float)) or isinstance(lng, (int, float)):
+            geo = EntiteLocalisation.query.get(entite.id)
+            if not geo:
+                geo = EntiteLocalisation(
+                    entite_id=entite.id,
+                    methode_geolocalisation='pointage_carte',
+                )
+                db.session.add(geo)
+            if isinstance(lat, (int, float)):
+                geo.latitude = float(lat)
+            if isinstance(lng, (int, float)):
+                geo.longitude = float(lng)
+            geo.methode_geolocalisation = 'pointage_carte'
+
+    # Verrouillage optimiste
+    form = FormulaireDCP.query.get(entite.id)
+    if not form:
+        form = FormulaireDCP(entite_id=entite.id, reponses=reponses, version=1)
+        db.session.add(form)
+    else:
+        if expected_version is not None and form.version != expected_version:
+            return error_response(
+                f"Le dossier a été modifié pendant votre session "
+                f"(version actuelle : {form.version}, vous éditez : {expected_version}). "
+                "Rechargez la page pour récupérer la dernière version.",
+                409,
+            )
+        form.reponses = reponses
+        form.version = (form.version or 1) + 1
+    db.session.commit()
+    return success_response({
+        'entite_id': entite.id,
+        'reponses': form.reponses,
+        'version': form.version,
+        'formalite_calculee': formalite_type,
+        'formalite_motifs': motifs,
+    }, 'Formulaire sauvegardé.')
+
+
+@admin_bp.route('/entites/saisie-artci', methods=['POST'])
+@role_required('super_admin', 'admin', 'editor')
+def admin_create_saisie_artci():
+    """Cree une nouvelle entite en origine 'saisie_artci' avec son formulaire-dcp.
+    Body : { denomination, numero_cc, reponses }
+    L'entite est creee sans compte_entreprise (saisie directe agent ARTCI).
+    """
+    from app.extensions import db
+    from app.models import EntiteBase, EntiteWorkflow, FormulaireDCP, EntiteLocalisation
+    from app.models.enums import OrigineSaisieEnum, StatutWorkflowEnum
+
+    data = request.get_json() or {}
+    reponses = data.get('reponses', {}) or {}
+    if not isinstance(reponses, dict):
+        return error_response("Les reponses doivent etre un objet.", 400)
+
+    # Denomination + numero_cc : on cherche dans le payload, fallback sur reponses
+    identif = (reponses.get('identification') or {})
+    pm = identif.get('personne_morale') or {}
+    pp = identif.get('personne_physique') or {}
+    denomination = (
+        data.get('denomination')
+        or pm.get('denomination_officielle')
+        or pp.get('nom_prenom')
+        or 'Entité ARTCI'
+    )
+    numero_cc = (
+        data.get('numero_cc')
+        or pm.get('numero_cc')
+        or None
+    )
+    if not numero_cc:
+        return error_response('numero_cc requis (ou champ identification.personne_morale.numero_cc).', 400)
+
+    # Verifier doublon
+    if EntiteBase.query.filter_by(numero_cc=numero_cc).first():
+        return error_response(f"Une entite avec le N° CC '{numero_cc}' existe deja.", 409)
+
+    # Calcul formalite
+    from app.services.formalite_engine import determiner_formalite
+    formalite_type, motifs = determiner_formalite(reponses)
+    cadre = reponses.get('cadre_juridique', {}) or {}
+    cadre['formalite_calculee'] = formalite_type
+    cadre['formalite_motifs'] = motifs
+    reponses['cadre_juridique'] = cadre
+
+    # Creer l'entite + workflow + formulaire
+    entite = EntiteBase(
+        compte_entreprise_id=None,  # saisie ARTCI, pas de compte entreprise
+        denomination=denomination[:255],
+        numero_cc=numero_cc[:50],
+        origine_saisie=OrigineSaisieEnum.saisie_artci,
+        publie_sur_carte=False,
+    )
+    db.session.add(entite)
+    db.session.flush()
+
+    wf = EntiteWorkflow(
+        entite_id=entite.id,
+        statut=StatutWorkflowEnum.brouillon_artci,
+        createdBy=g.current_user_id,
+    )
+    db.session.add(wf)
+
+    form = FormulaireDCP(entite_id=entite.id, reponses=reponses, version=1)
+    db.session.add(form)
+
+    # Propagation lat/lng
+    loc = identif.get('localisation') or {}
+    if isinstance(loc, dict):
+        lat = loc.get('latitude')
+        lng = loc.get('longitude')
+        if isinstance(lat, (int, float)) or isinstance(lng, (int, float)):
+            geo = EntiteLocalisation(
+                entite_id=entite.id,
+                methode_geolocalisation='saisie_artci',
+            )
+            if isinstance(lat, (int, float)):
+                geo.latitude = float(lat)
+            if isinstance(lng, (int, float)):
+                geo.longitude = float(lng)
+            db.session.add(geo)
+
+    db.session.commit()
+    return created_response({
+        'id': entite.id,
+        'denomination': entite.denomination,
+        'numero_cc': entite.numero_cc,
+        'formalite_calculee': formalite_type,
+        'version': form.version,
+    }, 'Entité créée en saisie ARTCI.')
+
+
+# --- Commentaires ancres + Revisions (Modele PR) ---
+
+@admin_bp.route('/entites/<string:entite_id>/commentaires', methods=['GET'])
+@role_required('super_admin', 'admin', 'editor', 'reader')
+def list_commentaires(entite_id):
+    """Liste les commentaires ancres d'un dossier.
+    Filtre optionnel : ?etat=open|resolved, ?revision_id=...
+    """
+    from app.services.dossier_revision_service import DossierRevisionService
+    etat = request.args.get('etat')
+    revision_id = request.args.get('revision_id')
+    commentaires = DossierRevisionService.lister_commentaires(
+        entite_id, etat=etat, revision_id=revision_id,
+    )
+    return success_response({
+        'items': [{
+            'id': c.id,
+            'entite_id': c.entite_id,
+            'revision_id': c.revision_id,
+            'agent_id': c.agent_id,
+            'agent_nom': (
+                f"{c.agent.prenom or ''} {c.agent.nom or ''}".strip()
+                if c.agent else None
+            ),
+            'rubrique': c.rubrique,
+            'sous_question': c.sous_question,
+            'contenu': c.contenu,
+            'etat': c.etat,
+            'reponse_entreprise': c.reponse_entreprise,
+            'repondu_le': c.repondu_le.isoformat() if c.repondu_le else None,
+            'resolu_par': c.resolu_par,
+            'resolu_le': c.resolu_le.isoformat() if c.resolu_le else None,
+            'cree_le': c.cree_le.isoformat() if c.cree_le else None,
+            # L1 PR : threads + edition
+            'parent_id': c.parent_id,
+            'auteur_role': c.auteur_role,
+            'edited_at': c.edited_at.isoformat() if c.edited_at else None,
+        } for c in commentaires],
+    })
+
+
+@admin_bp.route('/entites/<string:entite_id>/commentaires', methods=['POST'])
+@role_required('super_admin', 'admin', 'editor')
+def add_commentaire(entite_id):
+    """Cree un commentaire ancre sur une rubrique du dossier.
+    Body : { rubrique, sous_question?, contenu, revision_id?, parent_id? }
+    parent_id = reponse en thread a un commentaire existant.
+    """
+    from app.extensions import db
+    from app.services.dossier_revision_service import DossierRevisionService
+
+    # Editor : uniquement sur ses dossiers assignes
+    if g.current_user_role == 'editor':
+        from app.models import AssignationDemande
+        assigned = AssignationDemande.query.filter_by(
+            agent_id=g.current_user_id, entite_id=entite_id,
+        ).first()
+        if not assigned:
+            return error_response("Vous n'avez pas accès à cette entité.", 403)
+
+    data = request.get_json() or {}
+    try:
+        c = DossierRevisionService.creer_commentaire(
+            entite_id=entite_id,
+            agent_id=g.current_user_id,
+            rubrique=data.get('rubrique'),
+            sous_question=data.get('sous_question'),
+            contenu=data.get('contenu'),
+            revision_id=data.get('revision_id'),
+            parent_id=data.get('parent_id'),
+            auteur_role=g.current_user_role,
+        )
+        db.session.commit()
+        return created_response({'id': c.id, 'etat': c.etat}, 'Commentaire ajouté.')
+    except ValueError as e:
+        return error_response(str(e), 400)
+
+
+@admin_bp.route('/commentaires/<string:commentaire_id>', methods=['PUT'])
+@role_required('super_admin', 'admin', 'editor')
+def editer_commentaire(commentaire_id):
+    """Editer un commentaire (auteur uniquement, AVANT resolution).
+    Body : { contenu }
+    """
+    from app.extensions import db
+    from app.services.dossier_revision_service import DossierRevisionService
+    data = request.get_json() or {}
+    try:
+        c = DossierRevisionService.editer_commentaire(
+            commentaire_id, g.current_user_id, data.get('contenu', ''),
+        )
+        db.session.commit()
+        return success_response({'id': c.id, 'edited_at': c.edited_at.isoformat() if c.edited_at else None})
+    except PermissionError as e:
+        return error_response(str(e), 403)
+    except ValueError as e:
+        return error_response(str(e), 400)
+
+
+@admin_bp.route('/entites/<string:entite_id>/evenements', methods=['GET'])
+@role_required('super_admin', 'admin', 'editor', 'reader')
+def list_evenements(entite_id):
+    """Liste l'audit trail d'un dossier (tous types d'evenements).
+    Filtres : ?type=xxx, ?limit=N (defaut 100, max 500)
+    """
+    from app.models import DossierEvenement
+
+    if g.current_user_role == 'editor':
+        from app.models import AssignationDemande
+        assigned = AssignationDemande.query.filter_by(
+            agent_id=g.current_user_id, entite_id=entite_id,
+        ).first()
+        if not assigned:
+            return error_response("Vous n'avez pas accès à cette entité.", 403)
+
+    type_filter = request.args.get('type')
+    limit = min(int(request.args.get('limit', 100)), 500)
+
+    q = DossierEvenement.query.filter_by(entite_id=entite_id)
+    if type_filter:
+        q = q.filter_by(evenement_type=type_filter)
+    events = q.order_by(DossierEvenement.createdAt.desc()).limit(limit).all()
+
+    return success_response({
+        'items': [{
+            'id': e.id,
+            'evenement_type': e.evenement_type,
+            'acteur_user_id': e.acteur_user_id,
+            'acteur_compte_id': e.acteur_compte_id,
+            'acteur_role': e.acteur_role,
+            'acteur_nom': (
+                f"{e.acteur_user.prenom or ''} {e.acteur_user.nom or ''}".strip()
+                if e.acteur_user else
+                (e.acteur_compte.denomination if e.acteur_compte else 'Système')
+            ),
+            'payload': e.payload,
+            'createdAt': e.createdAt.isoformat() if e.createdAt else None,
+        } for e in events],
+    })
+
+
+@admin_bp.route('/commentaires/<string:commentaire_id>/resoudre', methods=['POST'])
+@role_required('super_admin', 'admin', 'editor')
+def resoudre_commentaire(commentaire_id):
+    """Marque un commentaire comme resolu (action AGENT uniquement)."""
+    from app.extensions import db
+    from app.models import CommentaireDossier
+    from app.services.dossier_revision_service import DossierRevisionService
+
+    c = CommentaireDossier.query.get(commentaire_id)
+    if not c:
+        return error_response("Commentaire introuvable.", 404)
+
+    # Editor : uniquement sur ses dossiers assignes
+    if g.current_user_role == 'editor':
+        from app.models import AssignationDemande
+        assigned = AssignationDemande.query.filter_by(
+            agent_id=g.current_user_id, entite_id=c.entite_id,
+        ).first()
+        if not assigned:
+            return error_response("Vous n'avez pas accès à cette entité.", 403)
+
+    try:
+        DossierRevisionService.resoudre_commentaire(commentaire_id, g.current_user_id)
+        db.session.commit()
+        return success_response({'id': commentaire_id, 'etat': 'resolved'})
+    except ValueError as e:
+        return error_response(str(e), 400)
+
+
+@admin_bp.route('/entites/<string:entite_id>/revisions', methods=['GET'])
+@role_required('super_admin', 'admin', 'editor', 'reader')
+def list_revisions(entite_id):
+    """Liste les revisions d'un dossier (modele PR)."""
+    from app.services.dossier_revision_service import DossierRevisionService
+
+    if g.current_user_role == 'editor':
+        from app.models import AssignationDemande
+        assigned = AssignationDemande.query.filter_by(
+            agent_id=g.current_user_id, entite_id=entite_id,
+        ).first()
+        if not assigned:
+            return error_response("Vous n'avez pas accès à cette entité.", 403)
+
+    revs = DossierRevisionService.lister_revisions(entite_id)
+    return success_response({
+        'items': [{
+            'id': r.id,
+            'numero_revision': r.numero_revision,
+            'soumis_le': r.soumis_le.isoformat() if r.soumis_le else None,
+            'soumis_par_compte_id': r.soumis_par_compte_id,
+            'statut_au_moment': r.statut_au_moment,
+            'score_automatique_snapshot': r.score_automatique_snapshot,
+        } for r in revs],
+    })
+
+
+@admin_bp.route('/entites/<string:entite_id>/revisions/diff', methods=['GET'])
+@role_required('super_admin', 'admin', 'editor', 'reader')
+def diff_revisions(entite_id):
+    """Diff entre deux revisions : ?from=N&to=M.
+    Param ?detail=true : diff semantique champ par champ avec valeurs avant/apres.
+    Sinon : diff simple par rubrique (statut modifiee/inchangee/...).
+    """
+    from app.services.dossier_revision_service import DossierRevisionService
+    from app.models import DossierRevision
+
+    if g.current_user_role == 'editor':
+        from app.models import AssignationDemande
+        assigned = AssignationDemande.query.filter_by(
+            agent_id=g.current_user_id, entite_id=entite_id,
+        ).first()
+        if not assigned:
+            return error_response("Vous n'avez pas accès à cette entité.", 403)
+
+    n_from = request.args.get('from', type=int)
+    n_to = request.args.get('to', type=int)
+    detail = request.args.get('detail', '').lower() == 'true'
+    if not n_from or not n_to:
+        return error_response("Parametres 'from' et 'to' requis (numeros de revision).", 400)
+    rev_a = DossierRevision.query.filter_by(
+        entite_id=entite_id, numero_revision=n_from
+    ).first()
+    rev_b = DossierRevision.query.filter_by(
+        entite_id=entite_id, numero_revision=n_to
+    ).first()
+    if not rev_a or not rev_b:
+        return error_response("Revision introuvable.", 404)
+
+    if detail:
+        result = DossierRevisionService.diff_revisions_detail(rev_a, rev_b)
+        return success_response({
+            'from': n_from, 'to': n_to,
+            **result,
+        })
+
+    diff = DossierRevisionService.diff_revisions(rev_a, rev_b)
+    return success_response({
+        'from': n_from, 'to': n_to,
+        'rubriques': diff,
+    })
+
+
+# --- Signalements d'erreur entreprise (Super Admin uniquement) ---
+
+@admin_bp.route('/signalements', methods=['GET'])
+@role_required('super_admin')
+def list_signalements():
+    """Liste tous les signalements d'erreur emis par les entreprises."""
+    from app.models import SignalementErreur, EntiteBase
+    statut = request.args.get('statut')  # open/in_progress/resolved/dismissed
+    query = (
+        SignalementErreur.query
+        .join(EntiteBase, EntiteBase.id == SignalementErreur.entite_id)
+    )
+    if statut:
+        query = query.filter(SignalementErreur.statut == statut)
+    query = query.order_by(SignalementErreur.createdAt.desc())
+    items = []
+    for s in query.all():
+        items.append({
+            'id': s.id,
+            'entite_id': s.entite_id,
+            'entite_denomination': s.entite.denomination if s.entite else None,
+            'compte_id': s.compte_id,
+            'sujet': s.sujet,
+            'description': s.description,
+            'rubrique_concernee': s.rubrique_concernee,
+            'statut': s.statut,
+            'reponse_admin': s.reponse_admin,
+            'traite_par': s.traite_par,
+            'date_traitement': s.date_traitement.isoformat() if s.date_traitement else None,
+            'createdAt': s.createdAt.isoformat() if s.createdAt else None,
+        })
+    return success_response({'items': items, 'total': len(items)})
+
+
+@admin_bp.route('/signalements/<string:signalement_id>', methods=['PUT'])
+@role_required('super_admin')
+def repondre_signalement(signalement_id):
+    """Mettre a jour le statut d'un signalement et apporter une reponse."""
+    from datetime import datetime, timezone
+    from app.extensions import db
+    from app.models import SignalementErreur
+    data = request.get_json() or {}
+    statut = data.get('statut')
+    if statut not in ('open', 'in_progress', 'resolved', 'dismissed'):
+        return error_response('Statut invalide.', 400)
+    signalement = SignalementErreur.query.get(signalement_id)
+    if not signalement:
+        return error_response('Signalement introuvable.', 404)
+    signalement.statut = statut
+    signalement.traite_par = g.current_user_id
+    if 'reponse_admin' in data:
+        signalement.reponse_admin = data['reponse_admin']
+    if statut in ('resolved', 'dismissed'):
+        signalement.date_traitement = datetime.now(timezone.utc)
+    db.session.commit()
+    return success_response(
+        {'id': signalement.id, 'statut': signalement.statut},
+        'Signalement mis a jour.'
+    )

@@ -1,12 +1,14 @@
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Database, Inbox, UserCheck, CheckSquare,
-  MessageSquare, Users, Upload, X, BarChart3,
-  RefreshCw, FileCheck, Bell, ClipboardCheck,
-  Settings, Archive, HardDrive, FilePlus, UserPlus, Activity,
+  Users, Upload, X, BarChart3,
+  RefreshCw, Bell, ClipboardCheck,
+  Settings, Archive, HardDrive, FilePlus, UserPlus, Activity, AlertTriangle,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { useAuth } from '@/hooks/useAuth';
+import { useApi } from '@/hooks/useApi';
+import * as adminApi from '@/api/admin.api';
 import { ROUTES } from '@/utils/constants';
 import type { Role } from '@/types/enums';
 
@@ -44,7 +46,7 @@ const sidebarSections: SidebarSection[] = [
     links: [
       { to: ROUTES.ADMIN_DASHBOARD, label: 'Tableau de bord', icon: LayoutDashboard, end: true, minRole: 'reader' },
       { to: ROUTES.ADMIN_ENTITES, label: 'Entités', icon: Database, end: true, minRole: 'reader' },
-      { to: ROUTES.ADMIN_ENTITE_CREATE, label: 'Nouveau Recensement', icon: FilePlus, end: false, minRole: 'editor' },
+      { to: ROUTES.ADMIN_ENTITE_CREATE, label: 'Nouvelle entité', icon: FilePlus, end: false, minRole: 'editor' },
       { to: ROUTES.ADMIN_STATISTIQUES, label: 'Statistiques', icon: BarChart3, end: false, minRole: 'reader' },
     ],
   },
@@ -54,9 +56,10 @@ const sidebarSections: SidebarSection[] = [
       // Spec §5.3 : "Inscriptions à valider" reserve Admin / Super Admin
       { to: ROUTES.ADMIN_INSCRIPTIONS, label: 'Inscriptions à valider', icon: UserPlus, end: false, minRole: 'admin' },
       { to: ROUTES.ADMIN_PANIER, label: 'Mon Panier', icon: Inbox, end: false, minRole: 'editor' },
-      { to: ROUTES.ADMIN_FEEDBACKS, label: 'Notifications', icon: MessageSquare, end: false, minRole: 'editor' },
+      // Spec : sidebar "Feedback" supprimee (redondante avec Notifications + commentaires dossier)
+      { to: ROUTES.ADMIN_ECHEANCES_FEEDBACKS, label: 'Échéances feedbacks', icon: AlertTriangle, end: false, minRole: 'admin' },
       { to: ROUTES.ADMIN_ASSIGNATION, label: 'Assignation', icon: UserCheck, end: false, minRole: 'admin' },
-      { to: ROUTES.ADMIN_VALIDATION, label: 'Validation N+1', icon: CheckSquare, end: false, minRole: 'admin' },
+      { to: ROUTES.ADMIN_VALIDATION, label: 'Validation', icon: CheckSquare, end: false, minRole: 'admin' },
       { to: ROUTES.ADMIN_SUIVI_AGENTS, label: 'Suivi des agents', icon: Activity, end: false, minRole: 'admin' },
     ],
   },
@@ -64,7 +67,6 @@ const sidebarSections: SidebarSection[] = [
     title: 'Gestion',
     links: [
       { to: ROUTES.ADMIN_FORMALITES, label: 'Formalités', icon: RefreshCw, end: false, minRole: 'admin' },
-      { to: ROUTES.ADMIN_RAPPORTS_VALIDATION, label: 'Rapports', icon: FileCheck, end: false, minRole: 'admin' },
     ],
   },
   {
@@ -73,14 +75,15 @@ const sidebarSections: SidebarSection[] = [
       { to: ROUTES.ADMIN_USERS, label: 'Utilisateurs', icon: Users, end: false, minRole: 'admin' },
       { to: ROUTES.ADMIN_IMPORT, label: 'Import Excel', icon: Upload, end: false, minRole: 'admin' },
       { to: ROUTES.ADMIN_IMPORTS_HISTORIQUE, label: 'Historique Imports', icon: Archive, end: false, minRole: 'admin' },
-      // Logs renommé en Journal d'audit (fusion ancien Logs + Audits)
-      { to: ROUTES.ADMIN_LOGS, label: "Journal d'audit", icon: ClipboardCheck, end: false, minRole: 'admin' },
+      // Logs renommé en Journal d'événements (fusion ancien Logs + Audits)
+      { to: ROUTES.ADMIN_LOGS, label: "Journal d'événements", icon: ClipboardCheck, end: false, minRole: 'admin' },
       { to: ROUTES.ADMIN_NOTIFICATIONS, label: 'Notifications', icon: Bell, end: false, minRole: 'reader' },
     ],
   },
   {
     title: 'Système',
     links: [
+      { to: ROUTES.ADMIN_SIGNALEMENTS, label: "Signalements d'erreur", icon: AlertTriangle, end: false, minRole: 'super_admin' },
       { to: ROUTES.ADMIN_PARAMETRES, label: 'Paramètres', icon: Settings, end: false, minRole: 'super_admin' },
       { to: ROUTES.ADMIN_BACKUP, label: 'Sauvegarde', icon: HardDrive, end: false, minRole: 'super_admin' },
     ],
@@ -95,6 +98,10 @@ interface AdminSidebarProps {
 export default function AdminSidebar({ mobileOpen, onClose }: AdminSidebarProps) {
   const { user } = useAuth();
   const userRole = user?.role ?? 'reader';
+
+  // Compteur de notifications non lues affiché en badge sur le volet « Notifications »
+  const { data: notifications } = useApi(() => adminApi.getNotifications(), []);
+  const unreadCount = (notifications ?? []).filter((n) => !n.lue).length;
 
   const visibleSections = sidebarSections
     .map((section) => ({
@@ -146,7 +153,12 @@ export default function AdminSidebar({ mobileOpen, onClose }: AdminSidebarProps)
                     }
                   >
                     <Icon className="w-4 h-4 flex-shrink-0" />
-                    {label}
+                    <span className="flex-1">{label}</span>
+                    {to === ROUTES.ADMIN_NOTIFICATIONS && unreadCount > 0 && (
+                      <span className="ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[11px] font-bold">
+                        {unreadCount}
+                      </span>
+                    )}
                   </NavLink>
                 ))}
               </div>

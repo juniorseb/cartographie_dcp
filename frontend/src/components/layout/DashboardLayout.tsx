@@ -28,7 +28,7 @@ export default function DashboardLayout() {
             >
               <Menu className="w-6 h-6" />
             </button>
-            <Link to="/" className="flex items-center gap-3 no-underline">
+            <Link to="/" className="nav-logo flex items-center gap-3 no-underline">
               <img src={logoArtci} alt="Cartographie DCP" className="w-10 h-10 object-contain" />
               <div className="hidden sm:block">
                 <div className="font-bold text-sm text-[var(--artci-black)]">Cartographie DCP</div>

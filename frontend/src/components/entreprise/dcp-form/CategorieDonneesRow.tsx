@@ -44,6 +44,14 @@ export default function CategorieDonneesRow({
     update({ origine: ori });
   }
 
+  const dureeUnites = data.duree_unites ?? [];
+  function toggleUnite(value: string) {
+    const unites = dureeUnites.includes(value)
+      ? dureeUnites.filter((x) => x !== value)
+      : [...dureeUnites, value];
+    update({ duree_unites: unites });
+  }
+
   return (
     <div className="border border-gray-200 p-4 mb-3 bg-gray-50 rounded">
       <h4 className="font-bold text-sm uppercase mb-3 text-[var(--artci-green)]">{titre}</h4>
@@ -73,12 +81,16 @@ export default function CategorieDonneesRow({
               />
               <span>Autre (préciser)</span>
             </label>
+            <p className="text-[11px] text-gray-500 italic leading-snug">
+              Cochez « Autre » pour toute donnée de cette catégorie non listée ci-dessus
+              (ex. : un champ spécifique à votre activité), puis précisez-en la nature.
+            </p>
             {data.items_coches.includes('autre') && (
               <input
                 type="text"
                 value={data.item_autre ?? ''}
                 onChange={(e) => update({ item_autre: e.target.value })}
-                placeholder="Préciser..."
+                placeholder="Préciser la donnée concernée..."
                 className="text-xs mt-1"
               />
             )}
@@ -114,57 +126,94 @@ export default function CategorieDonneesRow({
 
         {/* Durée de conservation */}
         <div>
-          <p className="text-xs font-semibold text-gray-700 mb-2">Durée de conservation (sur support informatique)</p>
+          <p className="text-xs font-semibold text-gray-700 mb-2">Durée de conservation</p>
+          <p className="text-[11px] text-gray-500 italic mb-2 leading-snug">
+            Cochez la ou les unités applicables, puis indiquez la durée pour chaque unité cochée.
+          </p>
           <div className="space-y-1">
-            <div className="flex items-center gap-2">
+            <label className="flex items-center gap-2 text-xs cursor-pointer">
+              <input type="checkbox" checked={dureeUnites.includes('jours')} onChange={() => toggleUnite('jours')} />
+              <span>Jours</span>
+            </label>
+            {dureeUnites.includes('jours') && (
               <input
                 type="number"
                 min={0}
                 value={data.duree_jours ?? ''}
                 onChange={(e) => update({ duree_jours: e.target.value })}
-                className="text-xs w-16"
+                placeholder="Nombre de jours"
+                className="text-xs w-full mb-1"
               />
-              <span className="text-xs">jours</span>
-            </div>
-            <div className="flex items-center gap-2">
+            )}
+
+            <label className="flex items-center gap-2 text-xs cursor-pointer">
+              <input type="checkbox" checked={dureeUnites.includes('mois')} onChange={() => toggleUnite('mois')} />
+              <span>Mois</span>
+            </label>
+            {dureeUnites.includes('mois') && (
               <input
                 type="number"
                 min={0}
                 value={data.duree_mois ?? ''}
                 onChange={(e) => update({ duree_mois: e.target.value })}
-                className="text-xs w-16"
+                placeholder="Nombre de mois"
+                className="text-xs w-full mb-1"
               />
-              <span className="text-xs">mois</span>
-            </div>
-            <div className="flex items-center gap-2">
+            )}
+
+            <label className="flex items-center gap-2 text-xs cursor-pointer">
+              <input type="checkbox" checked={dureeUnites.includes('annees')} onChange={() => toggleUnite('annees')} />
+              <span>Années</span>
+            </label>
+            {dureeUnites.includes('annees') && (
               <input
                 type="number"
                 min={0}
                 value={data.duree_annees ?? ''}
                 onChange={(e) => update({ duree_annees: e.target.value })}
-                className="text-xs w-16"
+                placeholder="Nombre d'années"
+                className="text-xs w-full mb-1"
               />
-              <span className="text-xs">années</span>
-            </div>
-            <input
-              type="text"
-              value={data.duree_autre ?? ''}
-              onChange={(e) => update({ duree_autre: e.target.value })}
-              placeholder="Autre (préciser)..."
-              className="text-xs mt-1"
-            />
+            )}
+
+            <label className="flex items-center gap-2 text-xs cursor-pointer">
+              <input type="checkbox" checked={dureeUnites.includes('autre')} onChange={() => toggleUnite('autre')} />
+              <span>Autre</span>
+            </label>
+            {dureeUnites.includes('autre') && (
+              <input
+                type="text"
+                value={data.duree_autre ?? ''}
+                onChange={(e) => update({ duree_autre: e.target.value })}
+                placeholder="Préciser la durée..."
+                className="text-xs w-full"
+              />
+            )}
           </div>
         </div>
 
         {/* Destinataires */}
         <div>
           <p className="text-xs font-semibold text-gray-700 mb-2">Destinataires (organismes auxquels les données sont transmises)</p>
-          <textarea
-            value={data.destinataires ?? ''}
-            onChange={(e) => update({ destinataires: e.target.value })}
-            rows={4}
-            className="text-xs"
-          />
+          <label className="flex items-center gap-2 text-xs cursor-pointer mb-2">
+            <input
+              type="checkbox"
+              checked={data.destinataires_non_applicable ?? false}
+              onChange={(e) => update({
+                destinataires_non_applicable: e.target.checked,
+                destinataires: e.target.checked ? '' : data.destinataires,
+              })}
+            />
+            <span>Non applicable (aucun destinataire externe)</span>
+          </label>
+          {!data.destinataires_non_applicable && (
+            <textarea
+              value={data.destinataires ?? ''}
+              onChange={(e) => update({ destinataires: e.target.value })}
+              rows={3}
+              className="text-xs"
+            />
+          )}
         </div>
       </div>
     </div>

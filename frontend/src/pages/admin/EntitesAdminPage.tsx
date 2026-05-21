@@ -22,8 +22,9 @@ export default function EntitesAdminPage() {
   const [filters, setFilters] = useState<AdminEntiteFilter>({});
   const [page, setPage] = useState(1);
 
+  // « Entités » = uniquement les entités validées par admin/super-admin (après review éditeur)
   const fetchEntites = useCallback(
-    () => adminApi.getEntites({ ...filters, page, per_page: ITEMS_PER_PAGE }),
+    () => adminApi.getEntites({ ...filters, validees: true, page, per_page: ITEMS_PER_PAGE }),
     [filters, page]
   );
   const { data, isLoading, error, refetch } = useApi(fetchEntites, [filters, page]);
@@ -45,18 +46,14 @@ export default function EntitesAdminPage() {
       </div>
 
       {/* Filtres */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
         <SearchBar value={filters.search ?? ''} onChange={(v) => updateFilter('search', v)} placeholder="Rechercher..." />
         <div className="form-group mb-0">
           <select value={filters.statut_workflow ?? ''} onChange={(e) => updateFilter('statut_workflow', e.target.value)} className="w-full py-2.5">
-            <option value="">Tous les statuts workflow</option>
-            <option value="brouillon">Brouillon</option>
-            <option value="soumis">Soumis</option>
-            <option value="en_verification">En vérification</option>
-            <option value="en_attente_complements">En attente compléments</option>
+            <option value="">Tous les statuts (validés)</option>
             <option value="conforme">Conforme</option>
+            <option value="conforme_sous_reserve">Conforme sous réserve</option>
             <option value="valide">Validé</option>
-            <option value="rejete">Rejeté</option>
             <option value="publie">Publié</option>
           </select>
         </div>
@@ -82,6 +79,21 @@ export default function EntitesAdminPage() {
             <option value="saisie_artci">Saisie ARTCI</option>
           </select>
         </div>
+        <div className="form-group mb-0">
+          <select
+            value={filters.publie_sur_carte === undefined ? '' : String(filters.publie_sur_carte)}
+            onChange={(e) => {
+              const v = e.target.value;
+              setFilters((prev) => ({ ...prev, publie_sur_carte: v === '' ? undefined : v === 'true' }));
+              setPage(1);
+            }}
+            className="w-full py-2.5"
+          >
+            <option value="">Publication (toutes)</option>
+            <option value="true">Publiées sur la carte</option>
+            <option value="false">Non publiées</option>
+          </select>
+        </div>
       </div>
 
       {/* Table */}
@@ -105,6 +117,8 @@ export default function EntitesAdminPage() {
                   <th>Origine</th>
                   <th>Workflow</th>
                   <th>Conformité</th>
+                  <th>Score</th>
+                  <th>Publication</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -127,6 +141,16 @@ export default function EntitesAdminPage() {
                         <StatusBadge statut={entite.statut_conformite as StatutConformite} />
                       ) : (
                         <span className="text-gray-400 text-sm">-</span>
+                      )}
+                    </td>
+                    <td className="text-sm font-semibold">
+                      {entite.score_conformite != null ? `${entite.score_conformite}/100` : '-'}
+                    </td>
+                    <td className="text-xs">
+                      {entite.publie_sur_carte ? (
+                        <span className="badge badge-conforme">Publiée</span>
+                      ) : (
+                        <span className="badge badge-encours">Non publiée</span>
                       )}
                     </td>
                     <td>

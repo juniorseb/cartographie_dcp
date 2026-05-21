@@ -19,6 +19,11 @@ class FormulaireDCP(db.Model):
     # Toutes les reponses du questionnaire officiel
     # Structure : voir frontend src/types/formulaire-dcp.ts
     reponses = db.Column(JSONB, nullable=False, default=dict)
+    # Verrouillage optimiste : incrementee a chaque save. Le client envoie sa
+    # version lue + on rejette le PUT si la version a change entre temps.
+    # Evite les ecrasements silencieux entre Demandeur et Representant legal
+    # qui editent le meme dossier en parallele.
+    version = db.Column(db.Integer, nullable=False, default=1)
     createdAt = db.Column(db.DateTime(timezone=True), server_default=db.func.now(), nullable=False)
     updatedAt = db.Column(
         db.DateTime(timezone=True),

@@ -60,6 +60,7 @@ class FeedbackOutputSchema(Schema):
     """Feedback sérialisé."""
     id = fields.String()
     entite_id = fields.String()
+    entite_denomination = fields.Method('get_entite_denomination')
     agent_id = fields.String()
     date_feedback = fields.DateTime()
     commentaires = fields.String()
@@ -67,6 +68,9 @@ class FeedbackOutputSchema(Schema):
     delai_fourniture = fields.Date()
     agent = fields.Nested('UserSummarySchema', dump_default=None)
     createdAt = fields.DateTime()
+
+    def get_entite_denomination(self, obj):
+        return obj.entite.denomination if obj.entite else None
 
 
 # --- VALIDATION N+1 ---

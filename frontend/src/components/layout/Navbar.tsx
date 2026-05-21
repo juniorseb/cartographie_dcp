@@ -1,5 +1,5 @@
 import { NavLink, Link } from 'react-router-dom';
-import { Menu, X, LogIn, LayoutDashboard, Shield } from 'lucide-react';
+import { Menu, X, LogIn, LayoutDashboard } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/utils/cn';
@@ -50,7 +50,8 @@ export default function Navbar() {
           ))}
         </div>
 
-        {/* Actions */}
+        {/* Actions — la navbar publique est 100% cote ENTREPRISE.
+            La plateforme admin est un univers separe (acces via /admin/connexion). */}
         <div className="flex items-center gap-2">
           {isAuthenticated && userType === 'entreprise' ? (
             <Link
@@ -59,14 +60,6 @@ export default function Navbar() {
             >
               <LayoutDashboard className="w-4 h-4" />
               Mon Espace
-            </Link>
-          ) : isAuthenticated && userType === 'artci' ? (
-            <Link
-              to={ROUTES.ADMIN_DASHBOARD}
-              className="hidden md:flex items-center gap-2 btn btn-secondary py-2 px-4 text-sm no-underline"
-            >
-              <Shield className="w-4 h-4" />
-              Administration
             </Link>
           ) : (
             <Link
@@ -117,15 +110,6 @@ export default function Navbar() {
             >
               <LayoutDashboard className="w-4 h-4" />
               Mon Espace
-            </Link>
-          ) : isAuthenticated && userType === 'artci' ? (
-            <Link
-              to={ROUTES.ADMIN_DASHBOARD}
-              onClick={() => setMobileOpen(false)}
-              className="flex items-center gap-3 px-6 py-3 text-sm font-semibold text-[var(--artci-green)] no-underline border-t"
-            >
-              <Shield className="w-4 h-4" />
-              Administration
             </Link>
           ) : (
             <Link

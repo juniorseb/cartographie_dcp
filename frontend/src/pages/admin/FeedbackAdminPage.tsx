@@ -125,13 +125,16 @@ export default function FeedbackAdminPage() {
         </div>
 
         <div className="form-group">
-          <label>Délai de fourniture</label>
+          <label>Date limite de fourniture</label>
           <input
-            type="text"
+            type="date"
             value={delai}
             onChange={(e) => setDelai(e.target.value)}
-            placeholder="Ex: 15 jours"
+            min={new Date().toISOString().slice(0, 10)}
           />
+          <p className="text-xs text-gray-500 mt-1">
+            La date sera affichée sur le tableau « Échéances feedbacks ».
+          </p>
         </div>
 
         <button type="submit" disabled={saving} className="btn btn-primary w-full flex items-center justify-center gap-2">

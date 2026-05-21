@@ -24,22 +24,49 @@ auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
-    """Inscription entreprise (3 sections : DG, DPO, acces).
+    """Inscription entreprise (3 sections : RL, Demandeur, acces).
+    Accepte JSON (sans documents) ou multipart/form-data avec les fichiers
+    RCCM, DFE et eventuels autres documents.
     Le compte est cree mais reste inactif jusqu'a validation manuelle ARTCI."""
+    import json as _json
+
+    if request.content_type and request.content_type.startswith('multipart/form-data'):
+        # Champs JSON dans un champ texte 'payload'
+        payload_str = request.form.get('payload')
+        if not payload_str:
+            return error_response("Champ 'payload' manquant.", 400)
+        try:
+            raw_data = _json.loads(payload_str)
+        except _json.JSONDecodeError:
+            return error_response("Payload JSON invalide.", 400)
+        files = request.files
+    else:
+        raw_data = request.get_json() or {}
+        files = None
+
     schema = RegisterInputSchema()
     try:
-        data = schema.load(request.get_json())
+        data = schema.load(raw_data)
     except ValidationError as err:
         return validation_error_response(err.messages)
 
     try:
-        compte, _ = AuthService.register_entreprise(data)
+        compte, _ = AuthService.register_entreprise(data, files=files)
         return created_response(
             CompteEntrepriseOutputSchema().dump(compte),
             "Inscription enregistrée. Votre compte sera activé après vérification par l'ARTCI."
         )
     except ValueError as e:
         return error_response(str(e), 409)
+
+
+@auth_bp.route('/verify-rl-email/<token>', methods=['GET'])
+def verify_rl_email(token):
+    """Verification de l'email du Representant legal via lien magique."""
+    success, message = AuthService.verify_rl_email_token(token)
+    if not success:
+        return error_response(message, 400)
+    return success_response(message=message)
 
 
 @auth_bp.route('/verify-otp', methods=['POST'])

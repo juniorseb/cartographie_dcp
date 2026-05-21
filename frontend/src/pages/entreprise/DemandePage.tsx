@@ -479,32 +479,12 @@ function Partie6Recapitulatif({
         },
       ],
     },
-    {
-      title: 'Registre & Traitements',
-      rows: [
-        { label: 'Traitements enregistrés', value: String((formData.registre_traitements ?? []).length) },
-        { label: 'Catégories de données', value: String((formData.categories_donnees ?? []).length) },
-        { label: 'Finalités', value: String((formData.finalites ?? []).length) },
-      ],
-    },
+    // Spec : recap aligne sur les questions clés - on retire Registre/Mesures/Politique
     {
       title: 'Sous-traitance & Transferts',
       rows: [
         { label: 'Sous-traitants', value: String((formData.sous_traitants ?? []).length) },
         { label: 'Transferts internationaux', value: String((formData.transferts ?? []).length) },
-      ],
-    },
-    {
-      title: 'Sécurité',
-      rows: [
-        { label: 'Politique de sécurité', value: formData.securite?.politique_securite ? 'Oui' : 'Non' },
-        { label: 'Responsable sécurité', value: formData.securite?.responsable_securite ? 'Oui' : 'Non' },
-        { label: 'Analyse des risques', value: formData.securite?.analyse_risques ? 'Oui' : 'Non' },
-        { label: 'Plan de continuité', value: formData.securite?.plan_continuite ? 'Oui' : 'Non' },
-        { label: 'Notification violations', value: formData.securite?.notification_violations ? 'Oui' : 'Non' },
-        { label: 'Formation personnel', value: formData.securite?.formation_personnel ? 'Oui' : 'Non' },
-        { label: 'Mesures', value: String((formData.mesures_securite ?? []).length) },
-        { label: 'Certifications', value: String((formData.certifications ?? []).length) },
       ],
     },
   ];
@@ -1086,10 +1066,6 @@ function Partie3Registre({
                     <option value="interet_legitime">Intérêt légitime</option>
                   </select>
                 </div>
-                <div className="form-group mb-2">
-                  <label className="text-xs">Pourcentage (%)</label>
-                  <input type="number" min={0} max={100} value={f.pourcentage ?? ''} onChange={(e) => updateListItem<FinaliteBaseLegale>('finalites', i, 'pourcentage', e.target.value ? parseInt(e.target.value) : undefined)} />
-                </div>
               </div>
             </div>
           ))}
@@ -1225,10 +1201,7 @@ function Partie4SousTraitance({
                     <label className="text-xs">Pays de destination *</label>
                     <input type="text" value={t.pays_destination} onChange={(e) => updateListItem<TransfertInternational>('transferts', i, 'pays_destination', e.target.value)} />
                   </div>
-                  <div className="form-group mb-2">
-                    <label className="text-xs">Organisme destinataire</label>
-                    <input type="text" value={t.organisme_destinataire ?? ''} onChange={(e) => updateListItem<TransfertInternational>('transferts', i, 'organisme_destinataire', e.target.value)} />
-                  </div>
+                  {/* Spec : "Organisme destinataire" supprime (redondant) */}
                   <div className="form-group mb-2">
                     <label className="text-xs">Base juridique du transfert</label>
                     <select value={t.base_juridique ?? ''} onChange={(e) => updateListItem<TransfertInternational>('transferts', i, 'base_juridique', e.target.value)}>
@@ -1269,9 +1242,7 @@ function Partie4SousTraitance({
                 </div>
               </div>
             ))}
-            <button className="btn btn-outline text-xs py-1.5 flex items-center gap-1" onClick={() => addToList<TransfertInternational>('transferts', { pays_destination: '' })}>
-              <Plus className="w-3 h-3" /> Ajouter un transfert
-            </button>
+            {/* Spec : "Ajouter un transfert" supprime — la liste pays se gere via multi-select */}
           </div>
         )}
       </div>

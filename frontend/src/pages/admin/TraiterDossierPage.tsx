@@ -12,7 +12,7 @@
  */
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Save, Send, MessageSquare, CheckCircle, XCircle, AlertTriangle, Award } from 'lucide-react';
+import { ArrowLeft, Save, Send, MessageSquare, CheckCircle, XCircle, AlertTriangle, Award, BookOpen, ChevronDown } from 'lucide-react';
 import * as adminApi from '@/api/admin.api';
 import Loading from '@/components/common/Loading';
 import { useAuth } from '@/hooks/useAuth';
@@ -20,6 +20,9 @@ import { hasMinRole } from '@/components/admin/AdminSidebar';
 import { ROUTES } from '@/utils/constants';
 import { cn } from '@/utils/cn';
 import type { Traitement } from '@/api/admin.api';
+import CommentairesAncres from '@/components/admin/CommentairesAncres';
+import RevisionsDiff from '@/components/admin/RevisionsDiff';
+import DossierAuditTrail from '@/components/admin/DossierAuditTrail';
 
 const RUBRIQUES = [
   { key: 'identification', label: 'Partie 1 — Identification de l\'entité' },
@@ -33,7 +36,8 @@ function getNiveauColor(niveau: string | null): string {
   if (!niveau) return 'badge';
   const low = niveau.toLowerCase();
   if (low.includes('non conforme')) return 'badge badge-encours';
-  if (low.includes('démarche') || low.includes('demarche')) return 'badge badge-achevee';
+  if (low.includes('partiellement') || low.includes('démarche') || low.includes('demarche'))
+    return 'badge badge-achevee';
   if (low.includes('conforme')) return 'badge badge-conforme';
   return 'badge';
 }
@@ -178,14 +182,30 @@ export default function TraiterDossierPage() {
         </div>
       )}
 
-      {/* Commentaires par rubrique (etapes 1 et 2) */}
+      {/* Historique des revisions + diff semantique (modele PR §6.2) */}
+      <RevisionsDiff entiteId={traitement.entite_id} />
+
+      {/* Audit trail global du dossier (manœuvre A) */}
+      <DossierAuditTrail entiteId={traitement.entite_id} />
+
+      {/* Commentaires ancres (modele PR) - source de verite */}
+      <CommentairesAncres
+        entiteId={traitement.entite_id}
+        readOnly={isReadOnly}
+      />
+
+      {/* Lecture des reponses du formulaire par rubrique (vue de reference).
+          Le champ commentaire ci-dessous est conserve pour retrocompat avec
+          les anciens dossiers ; les nouveaux commentaires se font via le
+          composant ancre ci-dessus. */}
       <div className="card mb-4">
         <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
           <MessageSquare className="w-5 h-5 text-[var(--artci-orange)]" />
-          Commentaires par rubrique
+          Réponses du formulaire (par rubrique)
         </h2>
         <p className="text-xs text-gray-500 mb-4">
-          Pour chaque rubrique, vous pouvez ajouter vos remarques après vérification du formulaire et des documents.
+          Vue lecture des réponses fournies par l'entreprise. Les commentaires sont à
+          ajouter dans le bloc « Commentaires ancrés » ci-dessus.
         </p>
         <div className="space-y-3">
           {RUBRIQUES.map((r) => {
@@ -221,19 +241,68 @@ export default function TraiterDossierPage() {
         </div>
       </div>
 
-      {/* Etape 4 : score manuel + niveau auto */}
+      {/* Resume feedbacks consolides : tous les commentaires saisis ci-dessus */}
+      {Object.values(commentaires).some((c) => c?.trim()) && (
+        <div className="card mb-4">
+          <details>
+            <summary className="cursor-pointer font-bold text-sm flex items-center gap-2 mb-2">
+              <MessageSquare className="w-4 h-4 text-[var(--artci-orange)]" />
+              Vos feedbacks consolidés
+              <ChevronDown className="w-3 h-3 ml-auto" />
+            </summary>
+            <div className="mt-3 space-y-3">
+              {RUBRIQUES.map((r) => {
+                const c = commentaires[r.key]?.trim();
+                if (!c) return null;
+                return (
+                  <div key={r.key} className="border-l-2 border-orange-300 pl-3">
+                    <p className="text-xs font-semibold text-gray-700 mb-1">{r.label}</p>
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{c}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </details>
+        </div>
+      )}
+
+      {/* Etape 4 : score manuel + niveau auto + grille des criteres */}
       <div className="card mb-4">
         <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
           <Award className="w-5 h-5 text-[var(--artci-green)]" />
           Score final et niveau de conformité
         </h2>
+
+        {/* Page dediee criteres de scoring : disposee en accordion ici */}
+        <details className="border border-gray-200 rounded mb-4">
+          <summary className="cursor-pointer p-3 hover:bg-gray-50 flex items-center gap-2 text-sm font-semibold text-gray-700">
+            <BookOpen className="w-4 h-4 text-[var(--artci-orange)]" />
+            Consulter la grille des critères de scoring
+          </summary>
+          <div className="p-3 border-t border-gray-100 bg-gray-50 text-xs text-gray-700 space-y-2">
+            <p className="font-semibold">Grille interne ARTCI (7 critères, total 100 points)</p>
+            <ul className="list-disc list-inside space-y-1">
+              <li><strong>Connaissance du cadre légal</strong> (10 pts) — connaissance Loi 2013-450, ARTCI, obligations RT.</li>
+              <li><strong>Désignation DPO</strong> (15 pts) — DPO habilité ARTCI, profil conforme Arrêté 511.</li>
+              <li><strong>Formalités préalables</strong> (15 pts) — déclaration/autorisation effectuée selon catégories de données.</li>
+              <li><strong>Registre des traitements</strong> (15 pts) — tenu, à jour, sous forme structurée.</li>
+              <li><strong>Information des personnes</strong> (10 pts) — mentions, droits, supports diffusés.</li>
+              <li><strong>Sous-traitance & transferts</strong> (15 pts) — contrats conformes, garanties, autorisations.</li>
+              <li><strong>Sécurité & formation</strong> (20 pts) — charte, mesures techniques+organisationnelles, formation, gestion violations.</li>
+            </ul>
+            <p className="pt-2 border-t border-gray-200">
+              <strong>Seuils :</strong> Score 100 = <em>Conforme</em> · 70-99 = <em>Partiellement conforme</em> · 0-70 = <em>Non conforme</em>.
+            </p>
+          </div>
+        </details>
+
         <p className="text-xs text-gray-500 mb-4">
           Le score automatique est <strong>une proposition</strong>. Vous pouvez le modifier selon votre jugement
           et la grille interne de l'ARTCI. Le niveau de conformité est calculé automatiquement :
           <br />
           • Score = 100 → <strong>Conforme</strong>
           <br />
-          • Score [70 – 99] → <strong>Démarche en cours</strong>
+          • Score [70 – 99] → <strong>Partiellement conforme</strong>
           <br />
           • Score [0 – 70[ → <strong>Non conforme</strong>
         </p>
@@ -251,7 +320,7 @@ export default function TraiterDossierPage() {
           <div>
             <p className="text-xs text-gray-500">Niveau de conformité</p>
             <span className={cn(getNiveauColor(traitement.niveau_conformite), 'text-base')}>
-              {scoreManuel >= 100 ? 'Conforme' : scoreManuel >= 70 ? 'Démarche en cours' : 'Non conforme'}
+              {scoreManuel >= 100 ? 'Conforme' : scoreManuel >= 70 ? 'Partiellement conforme' : 'Non conforme'}
             </span>
           </div>
           <div>
@@ -296,12 +365,12 @@ export default function TraiterDossierPage() {
         </div>
       )}
 
-      {/* Etape 7 : Validation N+1 (Admin / Super Admin) */}
+      {/* Etape 7 : Validation (Admin / Super Admin) */}
       {showValidation && (
         <div className="card border-l-4 border-[var(--artci-orange)]">
           <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-[var(--artci-orange)]" />
-            Validation N+1 (Admin)
+            Validation (Admin)
           </h2>
           <p className="text-sm text-gray-600 mb-4">
             Examiner le traitement de l'éditeur ci-dessus et décider d'approuver ou de retourner.

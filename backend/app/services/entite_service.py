@@ -240,12 +240,21 @@ class EntiteService:
         if not filters:
             return query
 
+        # Soft delete (manœuvre C) : par defaut, on cache les entites archivees.
+        # Pour les inclure : filters['include_archives']=True (admin uniquement).
+        if not filters.get('include_archives'):
+            query = query.filter(EntiteBase.archive == False)  # noqa: E712
+
         if filters.get('search'):
             search = f"%{filters['search']}%"
             query = query.filter(
                 db.or_(
                     EntiteBase.denomination.ilike(search),
-                    EntiteBase.numero_cc.ilike(search)
+                    EntiteBase.numero_cc.ilike(search),
+                    EntiteBase.ville.ilike(search),
+                    EntiteBase.region.ilike(search),
+                    EntiteBase.email.ilike(search),
+                    EntiteBase.adresse.ilike(search),
                 )
             )
         if filters.get('secteur_activite'):
@@ -278,6 +287,42 @@ class EntiteService:
         if filters.get('statut_workflow'):
             query = query.join(EntiteWorkflow).filter(
                 EntiteWorkflow.statut == StatutWorkflowEnum(filters['statut_workflow'])
+            )
+
+        # Spec : la liste "Entités" ne montre que les entités validées par
+        # admin/super-admin (après review de l'éditeur). On filtre via un EXISTS
+        # corrélé pour éviter tout conflit de jointure sur EntiteWorkflow.
+        if filters.get('validees_only'):
+            statuts_valides = [
+                StatutWorkflowEnum.conforme,
+                StatutWorkflowEnum.conforme_sous_reserve,
+                StatutWorkflowEnum.valide,
+                StatutWorkflowEnum.publie,
+            ]
+            query = query.filter(
+                EntiteWorkflow.query.filter(
+                    EntiteWorkflow.entite_id == EntiteBase.id,
+                    EntiteWorkflow.statut.in_(statuts_valides),
+                ).exists()
+            )
+
+        # Spec : un editeur ne voit que les entites qui lui sont assignees.
+        # On joint sur assignations_demandes pour filtrer agent_id.
+        if filters.get('assigned_to_user_id'):
+            from app.models import AssignationDemande
+            query = query.join(
+                AssignationDemande, AssignationDemande.entite_id == EntiteBase.id
+            ).filter(AssignationDemande.agent_id == filters['assigned_to_user_id']).distinct()
+
+        # Spec : exclure les brouillons (uniquement pour editeur)
+        if filters.get('exclude_brouillons'):
+            query = query.outerjoin(
+                EntiteWorkflow, EntiteWorkflow.entite_id == EntiteBase.id
+            ).filter(
+                EntiteWorkflow.statut.notin_([
+                    StatutWorkflowEnum.brouillon,
+                    StatutWorkflowEnum.brouillon_artci,
+                ])
             )
 
         return query

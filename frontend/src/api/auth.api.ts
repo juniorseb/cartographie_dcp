@@ -4,12 +4,47 @@ import type {
   LoginResponse, RegisterInput, LoginInput, VerifyOTPInput, CompteEntreprise
 } from '@/types/auth';
 
-export async function register(data: RegisterInput): Promise<CompteEntreprise> {
+/**
+ * POST /auth/register
+ * Si `documents` est fourni : envoi en multipart/form-data avec les fichiers
+ * (RCCM, DFE et autres). Sinon : envoi JSON simple.
+ */
+export async function register(
+  data: RegisterInput,
+  documents?: { rccm?: File; dfe?: File; autres?: File[] }
+): Promise<CompteEntreprise> {
+  const hasFiles = documents && (documents.rccm || documents.dfe || (documents.autres?.length ?? 0) > 0);
+
+  if (hasFiles) {
+    const formData = new FormData();
+    formData.append('payload', JSON.stringify(data));
+    if (documents?.rccm) formData.append('doc_rccm', documents.rccm);
+    if (documents?.dfe) formData.append('doc_dfe', documents.dfe);
+    documents?.autres?.forEach((f, i) => formData.append(`doc_autre_${i}`, f));
+    const response = await apiClient.post<ApiResponse<CompteEntreprise>>(
+      '/auth/register',
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    );
+    return response.data.data!;
+  }
+
   const response = await apiClient.post<ApiResponse<CompteEntreprise>>(
     '/auth/register',
     data
   );
   return response.data.data!;
+}
+
+/** GET /auth/verify-rl-email/:token — verification du lien magique RL */
+export async function verifyRLEmail(token: string): Promise<{ ok: boolean; message: string }> {
+  try {
+    const res = await apiClient.get<ApiResponse<unknown>>(`/auth/verify-rl-email/${token}`);
+    return { ok: true, message: res.data.message ?? 'Email vérifié.' };
+  } catch (e: unknown) {
+    const err = e as { response?: { data?: { message?: string } } };
+    return { ok: false, message: err?.response?.data?.message ?? 'Lien invalide ou expiré.' };
+  }
 }
 
 export async function verifyOTP(data: VerifyOTPInput): Promise<void> {

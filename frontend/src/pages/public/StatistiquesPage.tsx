@@ -1,4 +1,4 @@
-import { CheckCircle, Clock, Activity } from 'lucide-react';
+import { CheckCircle, Clock } from 'lucide-react';
 import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -32,8 +32,7 @@ export default function StatistiquesPage() {
 
   const summaryCards = [
     { label: 'Entités Conformes', value: stats.total_entites_conformes, icon: CheckCircle, color: 'var(--artci-green)', cardClass: 'card card-green' },
-    { label: 'Démarche Achevée', value: stats.total_demarche_achevee, icon: Clock, color: 'var(--artci-orange)', cardClass: 'card card-orange' },
-    { label: 'Démarche en Cours', value: stats.total_demarche_en_cours, icon: Activity, color: 'var(--status-encours)', cardClass: 'card' },
+    { label: 'Partiellement Conformes', value: stats.total_partiellement_conformes ?? 0, icon: Clock, color: 'var(--artci-orange)', cardClass: 'card card-orange' },
   ];
 
   return (
@@ -41,7 +40,7 @@ export default function StatistiquesPage() {
       <h1 className="text-2xl mb-6">Statistiques Publiques</h1>
 
       {/* Résumé */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
         {summaryCards.map(({ label, value, icon: Icon, color, cardClass }) => (
           <div key={label} className={cardClass}>
             <div className="flex items-center gap-4">

@@ -19,6 +19,11 @@ def _send(subject, recipients, body, html=None):
         return False
 
 
+def send_email(to, subject, body, html=None):
+    """Envoi generique d'un email transactionnel (texte + HTML optionnel)."""
+    return _send(subject, [to], body, html)
+
+
 def send_credentials_email(to, nom_complet, role, denomination, login_email, password):
     """Email contenant les acces de connexion (apres validation inscription)."""
     subject = "ARTCI DCP - Vos accès à la plateforme"

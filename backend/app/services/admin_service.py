@@ -28,87 +28,265 @@ from app.utils.pagination import paginate
 
 class AdminService:
 
+    # Statuts workflow consideres comme "non encore evalues" :
+    # un dossier dans ces etats N'A PAS de statut de conformite valable.
+    _BROUILLON_STATUSES = (
+        StatutWorkflowEnum.brouillon,
+        StatutWorkflowEnum.brouillon_artci,
+    )
+    # Statuts workflow consideres comme "soumis" (ARTCI peut/doit traiter).
+    _SOUMIS_STATUSES = (
+        StatutWorkflowEnum.soumis,
+        StatutWorkflowEnum.en_verification,
+        StatutWorkflowEnum.en_attente_complements,
+    )
+    # Statuts workflow consideres comme "termines" (decision rendue).
+    _TERMINES_STATUSES = (
+        StatutWorkflowEnum.conforme,
+        StatutWorkflowEnum.conforme_sous_reserve,
+        StatutWorkflowEnum.valide,
+        StatutWorkflowEnum.rejete,
+        StatutWorkflowEnum.publie,
+    )
+
+    @staticmethod
+    def _normalize_secteur(label):
+        """Normalise un libelle de secteur : trim + dedup des variantes communes
+        (ex: 'Telecommunications/TIC' / 'Télécommunications' / 'TIC' -> 'Télécommunications/TIC')."""
+        if not label:
+            return None
+        s = label.strip()
+        low = s.lower().replace('é', 'e').replace('è', 'e')
+        # Mapping de canonisation : variante -> canonique
+        canon_map = {
+            'telecommunications': 'Télécommunications/TIC',
+            'telecoms': 'Télécommunications/TIC',
+            'tic': 'Télécommunications/TIC',
+            'telecommunications/tic': 'Télécommunications/TIC',
+            'banque': 'Banque/Finance',
+            'finance': 'Banque/Finance',
+            'banque/finance': 'Banque/Finance',
+            'banque & finance': 'Banque/Finance',
+            'banque finance': 'Banque/Finance',
+            'sante': 'Santé',
+            'education': 'Éducation',
+        }
+        return canon_map.get(low, s)
+
+    @staticmethod
+    def _resolve_period(period):
+        """Retourne (date_debut, date_fin) selon une periode 'today'/'7d'/'30d'/'all'/None."""
+        from datetime import datetime, timezone, timedelta
+        if not period or period == 'all':
+            return None, None
+        now = datetime.now(timezone.utc)
+        if period == 'today':
+            return now.replace(hour=0, minute=0, second=0, microsecond=0), now
+        if period == '7d':
+            return now - timedelta(days=7), now
+        if period == '30d':
+            return now - timedelta(days=30), now
+        return None, None
+
     @staticmethod
     def get_dashboard_stats(filters=None):
-        """Statistiques admin avec filtres de période optionnels."""
+        """Statistiques admin avec filtres de période optionnels.
+
+        Si filters['scope_user_id'] est fourni (cas Editor), TOUS les comptages
+        sont restreints aux entites assignees a cet utilisateur. Cela protege
+        l'isolation cote Editor : il ne voit que ses dossiers, jamais les
+        statistiques globales.
+
+        Cle de coherence metier : la statistique de conformite N'INCLUT JAMAIS
+        les dossiers en brouillon (non encore soumis -> pas evalues).
+        """
+        from datetime import datetime, timezone, timedelta
         stats = {}
+        filters = filters or {}
+        scope_user_id = filters.get('scope_user_id')
+
+        # Resolution de la periode (today/7d/30d/all) ou date_debut/date_fin libre
+        period = filters.get('period')
+        date_debut = filters.get('date_debut')
+        date_fin = filters.get('date_fin')
+        if period and not (date_debut or date_fin):
+            date_debut, date_fin = AdminService._resolve_period(period)
+
+        # Sous-requete IDs des entites visibles par l'utilisateur
+        scoped_ids_subq = None
+        if scope_user_id:
+            scoped_ids_subq = (
+                db.session.query(AssignationDemande.entite_id)
+                .filter(AssignationDemande.agent_id == scope_user_id)
+                .subquery()
+            )
+
+        # Sous-requete IDs des entites NON-brouillon (= effectivement soumises ARTCI)
+        non_brouillon_subq = (
+            db.session.query(EntiteWorkflow.entite_id)
+            .filter(EntiteWorkflow.statut.notin_(AdminService._BROUILLON_STATUSES))
+            .subquery()
+        )
 
         base_query = db.session.query(EntiteBase)
-        if filters and filters.get('date_debut'):
-            base_query = base_query.filter(EntiteBase.createdAt >= filters['date_debut'])
-        if filters and filters.get('date_fin'):
-            base_query = base_query.filter(EntiteBase.createdAt <= filters['date_fin'])
+        if date_debut:
+            base_query = base_query.filter(EntiteBase.createdAt >= date_debut)
+        if date_fin:
+            base_query = base_query.filter(EntiteBase.createdAt <= date_fin)
+        if scoped_ids_subq is not None:
+            base_query = base_query.filter(EntiteBase.id.in_(scoped_ids_subq))
 
         stats['total_entites'] = base_query.count()
+        # Combien parmi total_entites ne sont pas en brouillon (= base de calcul conformite)
+        stats['total_evaluables'] = base_query.filter(
+            EntiteBase.id.in_(non_brouillon_subq)
+        ).count()
 
-        # Par statut workflow
-        wf_counts = db.session.query(
+        # Par statut workflow (TOUS statuts, y compris brouillons)
+        wf_query = db.session.query(
             EntiteWorkflow.statut, func.count(EntiteWorkflow.entite_id)
-        ).group_by(EntiteWorkflow.statut).all()
-        stats['par_statut_workflow'] = {s.value: c for s, c in wf_counts}
+        )
+        if scoped_ids_subq is not None:
+            wf_query = wf_query.filter(EntiteWorkflow.entite_id.in_(scoped_ids_subq))
+        stats['par_statut_workflow'] = {
+            s.value: c for s, c in wf_query.group_by(EntiteWorkflow.statut).all()
+        }
 
-        # Par statut conformité
-        conf_counts = db.session.query(
+        # Par statut conformite : EXCLURE les brouillons (un brouillon n'est jamais
+        # "non conforme" : il n'a pas encore ete evalue).
+        conf_query = db.session.query(
             EntiteConformite.statut_conformite,
             func.count(EntiteConformite.entite_id)
         ).filter(
-            EntiteConformite.statut_conformite.isnot(None)
-        ).group_by(EntiteConformite.statut_conformite).all()
-        stats['par_statut_conformite'] = {s.value: c for s, c in conf_counts}
+            EntiteConformite.statut_conformite.isnot(None),
+            EntiteConformite.entite_id.in_(non_brouillon_subq),
+        )
+        if scoped_ids_subq is not None:
+            conf_query = conf_query.filter(EntiteConformite.entite_id.in_(scoped_ids_subq))
+        stats['par_statut_conformite'] = {
+            s.value: c for s, c in conf_query.group_by(EntiteConformite.statut_conformite).all()
+        }
 
-        # Par secteur
-        secteur_counts = db.session.query(
-            EntiteBase.secteur_activite, func.count(EntiteBase.id)
-        ).group_by(EntiteBase.secteur_activite).all()
-        stats['par_secteur'] = {s: c for s, c in secteur_counts if s}
+        # Par secteur (avec normalisation pour eviter les doublons d'ortho)
+        sec_query = db.session.query(EntiteBase.secteur_activite)
+        if scoped_ids_subq is not None:
+            sec_query = sec_query.filter(EntiteBase.id.in_(scoped_ids_subq))
+        secteurs_normalises = {}
+        for (raw_sec,) in sec_query.all():
+            normalized = AdminService._normalize_secteur(raw_sec)
+            if normalized:
+                secteurs_normalises[normalized] = secteurs_normalises.get(normalized, 0) + 1
+        stats['par_secteur'] = secteurs_normalises
 
         # Par région
-        region_counts = db.session.query(
-            EntiteBase.region, func.count(EntiteBase.id)
-        ).group_by(EntiteBase.region).all()
-        stats['par_region'] = {r: c for r, c in region_counts if r}
+        reg_query = db.session.query(EntiteBase.region, func.count(EntiteBase.id))
+        if scoped_ids_subq is not None:
+            reg_query = reg_query.filter(EntiteBase.id.in_(scoped_ids_subq))
+        stats['par_region'] = {r: c for r, c in reg_query.group_by(EntiteBase.region).all() if r}
 
         # Par origine
-        origine_counts = db.session.query(
-            EntiteBase.origine_saisie, func.count(EntiteBase.id)
-        ).group_by(EntiteBase.origine_saisie).all()
-        stats['par_origine'] = {o.value: c for o, c in origine_counts}
+        ori_query = db.session.query(EntiteBase.origine_saisie, func.count(EntiteBase.id))
+        if scoped_ids_subq is not None:
+            ori_query = ori_query.filter(EntiteBase.id.in_(scoped_ids_subq))
+        stats['par_origine'] = {o.value: c for o, c in ori_query.group_by(EntiteBase.origine_saisie).all()}
 
         # Demandes en cours / en retard
-        stats['demandes_en_cours'] = AssignationDemande.query.filter_by(
-            statut=StatutAssignationEnum.en_cours
-        ).count()
-        stats['demandes_en_retard'] = AssignationDemande.query.filter_by(
-            statut=StatutAssignationEnum.en_retard
-        ).count()
+        if scope_user_id:
+            stats['demandes_en_cours'] = AssignationDemande.query.filter_by(
+                statut=StatutAssignationEnum.en_cours, agent_id=scope_user_id,
+            ).count()
+            stats['demandes_en_retard'] = AssignationDemande.query.filter_by(
+                statut=StatutAssignationEnum.en_retard, agent_id=scope_user_id,
+            ).count()
+        else:
+            stats['demandes_en_cours'] = AssignationDemande.query.filter_by(
+                statut=StatutAssignationEnum.en_cours
+            ).count()
+            stats['demandes_en_retard'] = AssignationDemande.query.filter_by(
+                statut=StatutAssignationEnum.en_retard
+            ).count()
 
-        # Agents actifs
-        stats['agents_actifs'] = User.query.filter_by(is_active=True).count()
+        # Agents actifs : masque pour editor
+        stats['agents_actifs'] = (
+            0 if scope_user_id else User.query.filter_by(is_active=True).count()
+        )
 
-        # Alertes (wireframe dashboard)
+        # ----- KPI OPERATIONNELS (vision pilotage admin) -----
+        # 1. Dossiers soumis EN ATTENTE d'assignation (pas encore dans un panier)
+        assigned_ids = db.session.query(AssignationDemande.entite_id).distinct().subquery()
+        attente_q = (
+            db.session.query(EntiteBase.id)
+            .join(EntiteWorkflow, EntiteWorkflow.entite_id == EntiteBase.id)
+            .filter(
+                EntiteWorkflow.statut.in_(AdminService._SOUMIS_STATUSES),
+                ~EntiteBase.id.in_(assigned_ids),
+            )
+        )
+        if scoped_ids_subq is not None:
+            attente_q = attente_q.filter(EntiteBase.id.in_(scoped_ids_subq))
+        stats['kpi_en_attente_assignation'] = attente_q.count()
+
+        # 2. Dossiers assignes mais non traites (statut assignation = en_cours)
+        if scope_user_id:
+            stats['kpi_assignes_non_traites'] = AssignationDemande.query.filter_by(
+                statut=StatutAssignationEnum.en_cours, agent_id=scope_user_id,
+            ).count()
+        else:
+            stats['kpi_assignes_non_traites'] = AssignationDemande.query.filter_by(
+                statut=StatutAssignationEnum.en_cours
+            ).count()
+
+        # 3. Dossiers soumis depuis > 7 jours sans action (SLA depasse)
+        seuil_sla = datetime.now(timezone.utc) - timedelta(days=7)
+        sla_q = (
+            db.session.query(EntiteWorkflow.entite_id)
+            .filter(
+                EntiteWorkflow.statut.in_(AdminService._SOUMIS_STATUSES),
+                EntiteWorkflow.date_soumission.isnot(None),
+                EntiteWorkflow.date_soumission < seuil_sla,
+            )
+        )
+        if scoped_ids_subq is not None:
+            sla_q = sla_q.filter(EntiteWorkflow.entite_id.in_(scoped_ids_subq))
+        stats['kpi_sla_depasse_7j'] = sla_q.count()
+
+        # 4. Inscriptions entreprise en attente de validation
+        from app.models import CompteEntreprise
+        if scope_user_id:
+            # Editor n'a pas la main sur les inscriptions
+            stats['kpi_inscriptions_en_attente'] = 0
+        else:
+            stats['kpi_inscriptions_en_attente'] = CompteEntreprise.query.filter_by(
+                inscription_statut='pending'
+            ).count()
+
+        # Alertes
         from app.models import DPO, ConformiteAdministrative, SecuriteConformite
-        # Entités sans DPO
+        # Calcules uniquement sur les non-brouillons (sinon n'a pas de sens)
+        evaluables = base_query.filter(EntiteBase.id.in_(non_brouillon_subq))
         entites_avec_dpo = db.session.query(DPO.entite_id).distinct()
-        stats['alertes_sans_dpo'] = base_query.filter(
+        stats['alertes_sans_dpo'] = evaluables.filter(
             ~EntiteBase.id.in_(entites_avec_dpo)
         ).count()
-        # Entités sans déclaration ARTCI
         entites_avec_decl = db.session.query(
             ConformiteAdministrative.entite_id
-        ).filter(ConformiteAdministrative.declaration_artci == True).distinct()
-        stats['alertes_sans_declaration'] = base_query.filter(
+        ).filter(ConformiteAdministrative.declaration_artci == True).distinct()  # noqa: E712
+        stats['alertes_sans_declaration'] = evaluables.filter(
             ~EntiteBase.id.in_(entites_avec_decl)
         ).count()
-        # Violations non notifiées
-        stats['alertes_violations'] = db.session.query(SecuriteConformite).filter(
+        viol_query = db.session.query(SecuriteConformite).filter(
             SecuriteConformite.nombre_violations_12mois > 0,
-            SecuriteConformite.notification_violations == False
-        ).count()
+            SecuriteConformite.notification_violations == False  # noqa: E712
+        )
+        if scoped_ids_subq is not None:
+            viol_query = viol_query.filter(SecuriteConformite.entite_id.in_(scoped_ids_subq))
+        stats['alertes_violations'] = viol_query.count()
 
-        # Activité récente (5 derniers changements)
-        recent = HistoriqueStatut.query.order_by(
-            HistoriqueStatut.date_changement.desc()
-        ).limit(5).all()
+        # Activite recente (scopee aussi pour Editor)
+        recent_q = HistoriqueStatut.query
+        if scoped_ids_subq is not None:
+            recent_q = recent_q.filter(HistoriqueStatut.entite_id.in_(scoped_ids_subq))
+        recent = recent_q.order_by(HistoriqueStatut.date_changement.desc()).limit(5).all()
         stats['activite_recente'] = [{
             'entite_id': h.entite_id,
             'entite_denomination': h.entite.denomination if h.entite else '',
@@ -118,14 +296,133 @@ class AdminService:
             'date': h.date_changement.isoformat() if h.date_changement else None,
         } for h in recent]
 
+        # Periode reellement appliquee (echo pour le client)
+        stats['periode'] = {
+            'mode': period or 'all',
+            'date_debut': date_debut.isoformat() if hasattr(date_debut, 'isoformat') else date_debut,
+            'date_fin': date_fin.isoformat() if hasattr(date_fin, 'isoformat') else date_fin,
+        }
+
         return stats
 
     @staticmethod
-    def list_all_entites(filters=None, page=None, per_page=None):
-        """Liste toutes les entités (tous statuts) avec filtres."""
+    def list_all_entites(filters=None, page=None, per_page=None, sort='created'):
+        """Liste toutes les entités (tous statuts) avec filtres + tri.
+
+        sort :
+        - 'created' (defaut) : plus recemment creees en premier
+        - 'activite' : plus recemment modifiees en premier (utile en pilotage)
+        - 'denomination' : alphabetique
+        """
         query = EntiteService.build_entite_query(filters)
-        query = query.order_by(EntiteBase.createdAt.desc())
+        if sort == 'activite':
+            query = query.order_by(EntiteBase.updatedAt.desc())
+        elif sort == 'denomination':
+            query = query.order_by(EntiteBase.denomination.asc())
+        else:
+            query = query.order_by(EntiteBase.createdAt.desc())
         return paginate(query, EntiteListOutputSchema(), page=page, per_page=per_page)
+
+    @staticmethod
+    def get_editor_performance(user_id):
+        """
+        Suivi de performance personnel d'un editeur (sa charge de travail).
+        Donnees retournees :
+        - assignations totales / en cours / traitees / en retard
+        - delai moyen de traitement (jours)
+        - 5 derniers dossiers traites par l'editeur
+        - 5 dossiers actuellement en cours dans son panier (avec echeance)
+        """
+        from datetime import datetime, timezone
+
+        base = AssignationDemande.query.filter(
+            AssignationDemande.agent_id == user_id
+        )
+
+        total = base.count()
+        en_cours = base.filter(
+            AssignationDemande.statut == StatutAssignationEnum.en_cours
+        ).count()
+        en_retard = base.filter(
+            AssignationDemande.statut == StatutAssignationEnum.en_retard
+        ).count()
+        traitees = base.filter(
+            AssignationDemande.statut.in_([
+                StatutAssignationEnum.traite_attente_validation,
+                StatutAssignationEnum.valide,
+            ])
+        ).count()
+
+        # Delai moyen : moyenne en jours entre date_assignation et traite_le
+        # uniquement pour les assignations terminees (traite_le non NULL).
+        delai_subq = base.filter(
+            AssignationDemande.traite_le.isnot(None)
+        ).all()
+        if delai_subq:
+            deltas = [
+                (a.traite_le - a.date_assignation).total_seconds() / 86400.0
+                for a in delai_subq
+                if a.traite_le and a.date_assignation
+            ]
+            delai_moyen_jours = round(sum(deltas) / len(deltas), 1) if deltas else None
+        else:
+            delai_moyen_jours = None
+
+        # Taux de traitement
+        taux_traitement = (
+            round(100.0 * traitees / total, 1) if total > 0 else 0.0
+        )
+
+        # 5 derniers dossiers traites
+        derniers_traites = base.filter(
+            AssignationDemande.traite_le.isnot(None)
+        ).order_by(AssignationDemande.traite_le.desc()).limit(5).all()
+
+        # 5 dossiers en cours dans son panier (par echeance ascendante)
+        en_cours_dossiers = base.filter(
+            AssignationDemande.statut == StatutAssignationEnum.en_cours
+        ).order_by(
+            AssignationDemande.echeance.asc().nulls_last(),
+            AssignationDemande.date_assignation.asc(),
+        ).limit(5).all()
+
+        def _pack(a):
+            return {
+                'assignation_id': a.id,
+                'entite_id': a.entite_id,
+                'entite_denomination': a.entite.denomination if a.entite else None,
+                'date_assignation': a.date_assignation.isoformat() if a.date_assignation else None,
+                'echeance': a.echeance.isoformat() if a.echeance else None,
+                'traite_le': a.traite_le.isoformat() if a.traite_le else None,
+                'statut': a.statut.value if a.statut else None,
+            }
+
+        # Indicateur "echeance proche" : assignations en cours dont
+        # echeance <= today + 3j ou deja depassee
+        from datetime import date, timedelta
+        today = date.today()
+        bientot = base.filter(
+            AssignationDemande.statut == StatutAssignationEnum.en_cours,
+            AssignationDemande.echeance.isnot(None),
+            AssignationDemande.echeance <= today + timedelta(days=3),
+        ).count()
+
+        return {
+            'mode': 'editor',
+            'agent_id': user_id,
+            'compteurs': {
+                'total': total,
+                'en_cours': en_cours,
+                'traitees': traitees,
+                'en_retard': en_retard,
+                'echeance_proche': bientot,
+            },
+            'delai_moyen_traitement_jours': delai_moyen_jours,
+            'taux_traitement_pct': taux_traitement,
+            'derniers_traites': [_pack(a) for a in derniers_traites],
+            'panier_actuel': [_pack(a) for a in en_cours_dossiers],
+            'genere_le': datetime.now(timezone.utc).isoformat(),
+        }
 
     @staticmethod
     def get_entite_detail(entite_id):
@@ -493,13 +790,15 @@ class AdminService:
             raise ValueError('Entite non trouvee.')
         conformite = EntiteConformite.query.get(entite_id)
         statut = conformite.statut_conformite if conformite else None
+        # On accepte aussi les anciennes valeurs historiques par compat
         if statut not in (
             StatutConformiteEnum.conforme,
-            StatutConformiteEnum.demarche_en_cours,
             StatutConformiteEnum.partiellement_conforme,
+            StatutConformiteEnum.demarche_en_cours,
+            StatutConformiteEnum.demarche_achevee,
         ):
             raise ValueError(
-                "Seules les entites au statut 'Conforme' ou 'Demarche en cours' "
+                "Seules les entites 'Conforme' ou 'Partiellement conforme' "
                 'peuvent etre publiees.'
             )
         entite.publie_sur_carte = True
@@ -573,6 +872,15 @@ class AdminService:
             )
         )
         assignations = query.order_by(AssignationDemande.echeance.asc()).all()
+        return AssignationOutputSchema(many=True).dump(assignations)
+
+    @staticmethod
+    def list_all_assignations():
+        """Liste toutes les assignations (entité, agent, échéance, niveau de traitement).
+        Réservé admin / super-admin (vue globale de l'assignation)."""
+        assignations = AssignationDemande.query.order_by(
+            AssignationDemande.date_assignation.desc()
+        ).all()
         return AssignationOutputSchema(many=True).dump(assignations)
 
     @staticmethod
@@ -1064,9 +1372,59 @@ class AdminService:
     # --- Feedbacks listing ---
 
     @staticmethod
-    def list_feedbacks(page=None, per_page=None):
-        """Liste paginée de tous les feedbacks de vérification."""
-        query = FeedbackVerification.query.order_by(
-            FeedbackVerification.createdAt.desc()
-        )
+    def list_feedbacks(page=None, per_page=None, statut_echeance=None, scope_user_id=None):
+        """
+        Liste paginée des feedbacks de vérification.
+        statut_echeance : 'overdue' (depassee), 'today' (aujourd'hui),
+        'upcoming' (a venir), 'no_deadline' (sans), None = tous.
+        scope_user_id : si fourni (Editor), on filtre aux feedbacks des
+        entites assignees a cet utilisateur.
+        """
+        from datetime import date
+        from sqlalchemy import or_
+
+        query = FeedbackVerification.query
+
+        # Scope Editor : feedbacks des entites assignees uniquement
+        if scope_user_id:
+            scoped_ids = (
+                db.session.query(AssignationDemande.entite_id)
+                .filter(AssignationDemande.agent_id == scope_user_id)
+                .subquery()
+            )
+            query = query.filter(FeedbackVerification.entite_id.in_(scoped_ids))
+
+        if statut_echeance == 'overdue':
+            query = query.filter(
+                FeedbackVerification.delai_fourniture.isnot(None),
+                FeedbackVerification.delai_fourniture < date.today(),
+            ).order_by(FeedbackVerification.delai_fourniture.asc())
+        elif statut_echeance == 'today':
+            query = query.filter(
+                FeedbackVerification.delai_fourniture == date.today()
+            ).order_by(FeedbackVerification.createdAt.desc())
+        elif statut_echeance == 'upcoming':
+            query = query.filter(
+                FeedbackVerification.delai_fourniture.isnot(None),
+                FeedbackVerification.delai_fourniture > date.today(),
+            ).order_by(FeedbackVerification.delai_fourniture.asc())
+        elif statut_echeance == 'no_deadline':
+            query = query.filter(
+                FeedbackVerification.delai_fourniture.is_(None)
+            ).order_by(FeedbackVerification.createdAt.desc())
+        elif statut_echeance == 'with_deadline':
+            # Tous les feedbacks avec une echeance, ordonnes par urgence
+            query = query.filter(
+                FeedbackVerification.delai_fourniture.isnot(None)
+            ).order_by(FeedbackVerification.delai_fourniture.asc())
+        else:
+            # Pas de filtre : on garde l'ordre par date de feedback descendant
+            # mais on remonte aussi les overdue pour visibilite
+            query = query.order_by(
+                FeedbackVerification.delai_fourniture.asc().nulls_last(),
+                FeedbackVerification.createdAt.desc(),
+            )
+            # Suppress unused 'or_' import warning
+            _ = or_
+
         return paginate(query, FeedbackOutputSchema(), page=page, per_page=per_page)

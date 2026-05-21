@@ -79,11 +79,13 @@ export default function ContactPage() {
                 <Phone className="w-4 h-4 text-[var(--artci-orange)] flex-shrink-0 mt-0.5" />
                 <div>
                   <div className="font-semibold">Téléphone</div>
-                  <div className="text-gray-500">
+                  <div className="text-gray-600">
                     +225 27 20 34 43 73<br />
                     +225 27 20 34 43 74
                   </div>
-                  <div className="text-xs text-gray-400 mt-1">Fax : +225 27 20 34 43 75</div>
+                  <div className="text-sm text-gray-600 mt-1">
+                    <span className="font-medium">Fax :</span> +225 27 20 34 43 75
+                  </div>
                 </div>
               </div>
               <div className="flex items-start gap-3">

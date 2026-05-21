@@ -18,9 +18,22 @@ export interface AdminDashboardStats {
   demandes_en_retard: number;
   agents_actifs: number;
   total_entites: number;
+  // Nombre d'entites soumises (= base de calcul des stats de conformite)
+  total_evaluables: number;
   alertes_sans_dpo: number;
   alertes_sans_declaration: number;
   alertes_violations: number;
+  // KPI operationnels (vision pilotage)
+  kpi_en_attente_assignation: number;
+  kpi_assignes_non_traites: number;
+  kpi_sla_depasse_7j: number;
+  kpi_inscriptions_en_attente: number;
+  // Periode appliquee (echo du filtre)
+  periode?: {
+    mode: 'today' | '7d' | '30d' | 'all';
+    date_debut: string | null;
+    date_fin: string | null;
+  };
   activite_recente: Array<{
     entite_id: string;
     entite_denomination: string;
@@ -34,6 +47,61 @@ export interface AdminDashboardStats {
 export interface AdminStatsFilter {
   date_debut?: string;
   date_fin?: string;
+  period?: 'today' | '7d' | '30d' | 'all';
+}
+
+/** Mapping des libelles techniques (DB) vers libelles affiches a l'utilisateur. */
+export const STATUT_WORKFLOW_LABELS: Record<string, string> = {
+  brouillon: 'Brouillon (entreprise)',
+  brouillon_artci: 'Brouillon (saisie ARTCI)',
+  soumis: 'Soumis',
+  en_verification: 'En vérification',
+  en_attente_complements: 'En attente de compléments',
+  conforme: 'Conforme',
+  conforme_sous_reserve: 'Conforme sous réserve',
+  valide: 'Validé',
+  rejete: 'Rejeté',
+  publie: 'Publié',
+};
+
+export function labelStatutWorkflow(raw: string): string {
+  return STATUT_WORKFLOW_LABELS[raw] ?? raw;
+}
+
+// Suivi de performance personnel d'un editeur
+export interface EditorPerformanceItem {
+  assignation_id: string;
+  entite_id: string;
+  entite_denomination?: string | null;
+  date_assignation?: string | null;
+  echeance?: string | null;
+  traite_le?: string | null;
+  statut?: string | null;
+}
+
+export interface EditorPerformance {
+  mode: 'editor';
+  agent_id: string;
+  compteurs: {
+    total: number;
+    en_cours: number;
+    traitees: number;
+    en_retard: number;
+    echeance_proche: number;
+  };
+  delai_moyen_traitement_jours: number | null;
+  taux_traitement_pct: number;
+  derniers_traites: EditorPerformanceItem[];
+  panier_actuel: EditorPerformanceItem[];
+  genere_le?: string;
+}
+
+// Le dashboard renvoie soit AdminDashboardStats soit EditorPerformance
+// selon le role du user connecte
+export type DashboardResponse = AdminDashboardStats | EditorPerformance;
+
+export function isEditorDashboard(d: DashboardResponse): d is EditorPerformance {
+  return (d as EditorPerformance).mode === 'editor';
 }
 
 // ============================================================
@@ -49,6 +117,9 @@ export interface AdminEntiteFilter {
   statut_workflow?: string;
   statut_conformite?: string;
   origine_saisie?: string;
+  publie_sur_carte?: boolean;
+  /** Ne renvoyer que les entités validées (conforme/valide/publié). */
+  validees?: boolean;
   page?: number;
   per_page?: number;
 }
@@ -95,7 +166,10 @@ export interface AssignationItem {
   echeance?: string;
   commentaire?: string;
   date_traitement?: string;
+  date_assignation?: string;
   createdAt: string;
+  /** Agent imbriqué (renvoyé par le backend). */
+  agent?: { id: string; nom: string; prenom: string; role: string };
 }
 
 export interface AssignationCreateInput {
@@ -122,6 +196,26 @@ export interface FeedbackCreateInput {
   commentaires: string;
   elements_manquants?: string[];
   delai_fourniture?: string;
+}
+
+export type StatutEcheanceFeedback =
+  | 'overdue'
+  | 'today'
+  | 'upcoming'
+  | 'no_deadline'
+  | 'with_deadline';
+
+export interface FeedbackListItem {
+  id: string;
+  entite_id: string;
+  entite_denomination?: string;
+  agent_id: string;
+  agent?: { id: string; nom?: string; prenom?: string; email?: string };
+  date_feedback: string;
+  commentaires?: string;
+  elements_manquants?: string[];
+  delai_fourniture?: string;
+  createdAt: string;
 }
 
 // ============================================================

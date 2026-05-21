@@ -67,9 +67,10 @@ class EntrepriseService:
         score = conformite.score_conformite if conformite else None
 
         # Déterminer l'étape courante
-        if statut in ('brouillon', 'soumis'):
+        # Une fois l'enregistrement soumis, l'entité passe à l'étape 2 (Vérification).
+        if statut == 'brouillon':
             etape = 1
-        elif statut in ('en_verification', 'en_attente_complements', 'conforme_sous_reserve'):
+        elif statut in ('soumis', 'en_verification', 'en_attente_complements', 'conforme_sous_reserve'):
             etape = 2
         else:  # conforme, valide, publie, rejete
             etape = 3
@@ -292,6 +293,35 @@ class EntrepriseService:
             }
             for d in docs
         ]
+
+    @staticmethod
+    def get_tous_documents(compte_id):
+        """Liste l'ensemble des fichiers deposes par l'entreprise :
+        - documents d'inscription (RCCM, DFE, autres) stockes sur le compte
+        - documents joints de l'entite (rapports, documents DPO, autorisation, etc.)
+        """
+        resultat = []
+
+        # 1) Documents d'inscription (stockes en JSONB sur le compte)
+        compte = db.session.get(CompteEntreprise, compte_id)
+        if compte and compte.documents_inscription:
+            for i, d in enumerate(compte.documents_inscription):
+                resultat.append({
+                    'id': f'inscription-{i}',
+                    'source': 'inscription',
+                    'type_document': d.get('type'),
+                    'nom_fichier': d.get('nom_fichier'),
+                    'taille': d.get('taille'),
+                    'mime_type': d.get('mime_type'),
+                    'uploadedAt': d.get('uploadedAt'),
+                })
+
+        # 2) Documents joints de l'entite (tous types)
+        for d in EntrepriseService.list_documents(compte_id):
+            d['source'] = 'enregistrement'
+            resultat.append(d)
+
+        return resultat
 
     @staticmethod
     def get_mes_rapports(compte_id):

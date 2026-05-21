@@ -88,24 +88,42 @@ class ScoringService:
     @staticmethod
     def classifier(score):
         """
-        Déterminer le statut de conformité selon les seuils OFFICIELS
-        (réunion 07/05/2026 §6 et §8.9) :
+        Déterminer le statut de conformité selon les seuils OFFICIELS :
           - 100      : Conforme
-          - [70, 99] : Démarche en cours
+          - [70, 99] : Partiellement conforme
           - [0, 70[  : Non conforme
+        (les anciens libelles 'Demarche en cours' / 'Demarche achevee'
+        sont remplaces par 'Partiellement conforme'.)
         """
         if score >= 100:
             return StatutConformiteEnum.conforme
         elif score >= 70:
-            return StatutConformiteEnum.demarche_en_cours
+            return StatutConformiteEnum.partiellement_conforme
         else:
             return StatutConformiteEnum.non_conforme
+
+    @staticmethod
+    def compute_score_only(entite):
+        """Calcule le score sans rien persister.
+
+        IMPORTANT (modele PR §7.5) : ne PAS creer EntiteConformite sur un
+        dossier non encore evalue. Cette fonction est utilisable a tout moment
+        en lecture seule. La persistence du score se fait uniquement quand un
+        agent applique son scoring final (via DossierRevisionService).
+        """
+        return ScoringService.calculer_score(entite)
 
     @staticmethod
     def mettre_a_jour_score(entite):
         """
         Calculer et persister le score de conformité d'une entité.
         Crée le record EntiteConformite si absent.
+
+        DEPRECATED : utiliser compute_score_only() pour la lecture seule
+        et DossierRevisionService.appliquer_score_final() pour la persistence
+        cote agent (qui gere aussi l'auto-depublication).
+
+        Conserve pour compat ascendante.
         """
         score, statut = ScoringService.calculer_score(entite)
 

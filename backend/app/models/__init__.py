@@ -72,6 +72,17 @@ from app.models.formulaire_dcp import FormulaireDCP
 # Groupe 11 : Workflow Traiter (1 table)
 from app.models.traitement_dossier import TraitementDossier
 
+# Groupe 12 : Signalement d'erreur entreprise -> Super Admin (1 table)
+from app.models.signalements_erreur import SignalementErreur
+
+# Groupe 13 : Modele PR (versionning + commentaires ancres) - 2 tables
+from app.models.dossier_revisions import DossierRevision
+from app.models.commentaires_dossier import CommentaireDossier
+
+# Groupe 14 : L1 PR fondations - audit trail + grille externalisee - 3 tables
+from app.models.dossier_evenements import DossierEvenement
+from app.models.grille_scoring import GrilleScoring, GrilleCritere
+
 __all__ = [
     # Mixins
     'UUIDMixin', 'TimestampMixin',
@@ -94,4 +105,7 @@ __all__ = [
     'MesureSecurite', 'CertificationSecurite',
     'HistoriqueStatut', 'Renouvellement',
     'Notification', 'ContactMessage', 'FormulaireDCP', 'TraitementDossier',
+    'SignalementErreur',
+    'DossierRevision', 'CommentaireDossier',
+    'DossierEvenement', 'GrilleScoring', 'GrilleCritere',
 ]

@@ -6,6 +6,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { ROUTES } from '@/utils/constants';
 import logoArtci from '@/assets/logo_artci.png';
 
+// Spec : pas de toggle "Espace Entreprise" depuis l'espace admin (separation stricte)
+
 export default function AdminLoginPage() {
   const navigate = useNavigate();
   const { login, isLoading } = useAuth();
@@ -31,7 +33,7 @@ export default function AdminLoginPage() {
       <Link to="/" className="mb-8 flex items-center gap-3 no-underline">
         <img src={logoArtci} alt="ARTCI" className="w-12 h-12 object-contain" />
         <div>
-          <div className="font-bold text-lg text-[var(--artci-black)]">ARTCI</div>
+          <div className="font-bold text-lg text-[var(--artci-black)]">Cartographie DCP</div>
           <div className="text-sm text-gray-500">Administration</div>
         </div>
       </Link>
@@ -88,12 +90,6 @@ export default function AdminLoginPage() {
             )}
           </button>
         </form>
-
-        <p className="text-sm text-center mt-6 text-gray-500">
-          <Link to={ROUTES.LOGIN} className="text-[var(--artci-orange)] hover:underline">
-            Espace Entreprise
-          </Link>
-        </p>
       </div>
     </div>
   );

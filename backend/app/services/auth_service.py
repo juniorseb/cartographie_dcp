@@ -19,13 +19,23 @@ from app.utils.otp import create_otp, send_otp_email, verify_otp
 class AuthService:
 
     @staticmethod
-    def register_entreprise(data):
+    def register_entreprise(data, files=None):
         """
         Inscrire une nouvelle entreprise (3 sections : Entreprise, DG, DPO).
         Pas de mot de passe a l'inscription : le compte est cree inactif,
         l'ARTCI valide manuellement, puis genere et envoie un mot de passe
         par defaut au DG et au DPO (qui le changeront a la 1ere connexion).
+
+        files : MultiDict werkzeug (request.files) pouvant contenir :
+        - 'doc_rccm' : fichier RCCM obligatoire
+        - 'doc_dfe' : fichier DFE obligatoire
+        - 'doc_autre_<i>' : autres documents
         """
+        import os
+        import secrets
+        from werkzeug.utils import secure_filename
+        from datetime import timedelta
+
         # Email principal du compte = email du DG (referant)
         dg_email = data['dg_email']
         dpo_email = data['dpo_email']
@@ -38,8 +48,11 @@ class AuthService:
 
         # Mot de passe placeholder (jamais utilisable car compte inactif)
         # Sera remplace par un mot de passe genere a la validation
-        import secrets
         placeholder_password = secrets.token_urlsafe(32)
+
+        # Token de verification email RL (lien magique 72h)
+        rl_token = secrets.token_urlsafe(32)
+        rl_token_expires = datetime.now(timezone.utc) + timedelta(hours=72)
 
         compte = CompteEntreprise(
             email=dg_email,
@@ -69,9 +82,102 @@ class AuthService:
             # Pas d'acces_email_* : le DG et le DPO se connectent avec leur email respectif
             acces_email_referant=dg_email,
             acces_email_dpo=dpo_email,
+            # Verification email RL
+            rl_email_token=rl_token,
+            rl_email_token_expires_at=rl_token_expires,
+            rl_email_verified=False,
         )
         db.session.add(compte)
+        db.session.flush()
+
+        # Sauvegarde des documents administratifs (RCCM, DFE, autres)
+        if files:
+            upload_root = current_app.config.get(
+                'INSCRIPTION_UPLOAD_DIR',
+                os.path.join(current_app.instance_path, 'uploads', 'inscriptions')
+            )
+            target_dir = os.path.join(upload_root, compte.id)
+            os.makedirs(target_dir, exist_ok=True)
+            docs_meta = []
+
+            def _save(file_storage, type_doc):
+                if not file_storage or not file_storage.filename:
+                    return None
+                filename = secure_filename(file_storage.filename)
+                # On prefixe par le type pour eviter les collisions
+                disk_name = f"{type_doc}_{filename}"
+                disk_path = os.path.join(target_dir, disk_name)
+                file_storage.save(disk_path)
+                size = os.path.getsize(disk_path)
+                return {
+                    'type': type_doc,
+                    'nom_fichier': filename,
+                    'chemin_fichier': disk_path,
+                    'taille': size,
+                    'mime_type': file_storage.mimetype,
+                    'uploadedAt': datetime.now(timezone.utc).isoformat(),
+                }
+
+            for key in ('doc_rccm', 'doc_dfe'):
+                meta = _save(files.get(key), key)
+                if meta:
+                    docs_meta.append(meta)
+
+            for key in files:
+                if key.startswith('doc_autre_'):
+                    meta = _save(files.get(key), 'doc_autre')
+                    if meta:
+                        docs_meta.append(meta)
+
+            compte.documents_inscription = docs_meta
+
         db.session.commit()
+
+        # Envoi des mails de confirmation : RL (avec lien de verification) + Demandeur
+        try:
+            from app.utils.email_sender import send_email
+            base_url = current_app.config.get('FRONTEND_URL', 'http://localhost:5173')
+            verif_url = f"{base_url}/verification-rl?token={rl_token}"
+
+            # Mail au Representant legal : verification email + confirmation mandat
+            send_email(
+                to=dg_email,
+                subject="Vérifiez votre email - ARTCI",
+                body=(
+                    f"Bonjour {compte.dg_prenom} {compte.dg_nom},\n\n"
+                    f"Une demande d'inscription a été déposée sur la plateforme "
+                    f"Cartographie DCP de l'ARTCI au nom de l'entreprise "
+                    f"« {compte.denomination} » avec votre email comme email du Représentant légal.\n\n"
+                    f"Le Demandeur ({compte.dpo_prenom} {compte.dpo_nom}, {compte.dpo_email}) "
+                    f"a indiqué agir en votre nom.\n\n"
+                    f"Pour confirmer que cet email vous appartient et que vous mandatez "
+                    f"effectivement le Demandeur, cliquez sur le lien suivant "
+                    f"(valable 72 heures) :\n\n{verif_url}\n\n"
+                    f"Si vous n'êtes pas à l'origine de cette inscription, ignorez ce message "
+                    f"ou signalez-le à l'ARTCI.\n\n"
+                    f"Cordialement,\nL'équipe ARTCI"
+                ),
+            )
+
+            # Mail au Demandeur : accuse de reception
+            send_email(
+                to=dpo_email,
+                subject="Inscription enregistrée - ARTCI",
+                body=(
+                    f"Bonjour {compte.dpo_prenom} {compte.dpo_nom},\n\n"
+                    f"Votre demande d'inscription pour l'entreprise "
+                    f"« {compte.denomination} » a bien été reçue par l'ARTCI.\n\n"
+                    f"Le processus d'inscription est en cours. Un email de vérification "
+                    f"vient d'être envoyé au Représentant légal ({compte.dg_email}) pour "
+                    f"confirmer l'existence de l'entreprise et votre mandat.\n\n"
+                    f"Une fois la vérification effectuée par les équipes ARTCI, vous recevrez "
+                    f"avec le Représentant légal un email contenant vos accès personnels à la "
+                    f"plateforme.\n\n"
+                    f"Cordialement,\nL'équipe ARTCI"
+                ),
+            )
+        except Exception:
+            current_app.logger.exception("Envoi mails inscription RL/Demandeur echoue")
 
         # Notifier tous les admins+ via la table notifications (un par admin)
         try:
@@ -95,6 +201,22 @@ class AuthService:
             db.session.rollback()
 
         return compte, None
+
+    @staticmethod
+    def verify_rl_email_token(token):
+        """Verifier un token de verification d'email RL et marquer comme verifie."""
+        if not token:
+            return False, "Lien invalide."
+        compte = CompteEntreprise.query.filter_by(rl_email_token=token).first()
+        if not compte:
+            return False, "Lien invalide ou déjà utilisé."
+        if compte.rl_email_token_expires_at and compte.rl_email_token_expires_at < datetime.now(timezone.utc):
+            return False, "Lien expiré. Demandez à l'ARTCI un nouvel envoi."
+        compte.rl_email_verified = True
+        compte.rl_email_token = None
+        compte.rl_email_token_expires_at = None
+        db.session.commit()
+        return True, "Email du Représentant légal vérifié avec succès."
 
     @staticmethod
     def verify_otp_code(email, code, otp_type):

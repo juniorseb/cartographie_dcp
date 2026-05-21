@@ -3,6 +3,7 @@ Modèle CompteEntreprise - Comptes des entreprises déclarantes.
 """
 from app.extensions import db
 from app.models.base import UUIDMixin, TimestampMixin
+from sqlalchemy.dialects.postgresql import JSONB
 
 
 class CompteEntreprise(UUIDMixin, TimestampMixin, db.Model):
@@ -49,6 +50,15 @@ class CompteEntreprise(UUIDMixin, TimestampMixin, db.Model):
     # Section 3 - Acces (referant + DPO)
     acces_email_referant = db.Column(db.String(255))
     acces_email_dpo = db.Column(db.String(255))
+
+    # Documents administratifs deposes a l'inscription (RCCM, DFE, autres).
+    # Liste de {type, nom_fichier, chemin_fichier, taille, mime_type, uploadedAt}.
+    documents_inscription = db.Column(JSONB, nullable=False, server_default='[]', default=list)
+
+    # Verification email du Representant legal (lien magique)
+    rl_email_verified = db.Column(db.Boolean, nullable=False, default=False)
+    rl_email_token = db.Column(db.String(64), index=True)
+    rl_email_token_expires_at = db.Column(db.DateTime(timezone=True))
 
     # Relationships
     entites = db.relationship('EntiteBase', back_populates='compte_entreprise', lazy='dynamic')

@@ -38,7 +38,7 @@ export default function ValidationN1Page() {
     <div>
       <h1 className="text-2xl mb-6 flex items-center gap-3">
         <CheckSquare className="w-7 h-7 text-[var(--artci-green)]" />
-        Validation N+1
+        Validation
       </h1>
 
       {!queue || queue.length === 0 ? (

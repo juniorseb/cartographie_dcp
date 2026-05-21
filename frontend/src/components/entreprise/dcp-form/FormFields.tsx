@@ -54,12 +54,14 @@ export function CheckboxGroup<T extends string>({
   values = [],
   onChange,
   columns = 1,
+  required = false,
 }: {
   legend: string;
   options: Option<T>[];
   values?: T[];
   onChange: (v: T[]) => void;
   columns?: 1 | 2 | 3;
+  required?: boolean;
 }) {
   const toggle = (v: T) => {
     if (values.includes(v)) {
@@ -73,7 +75,9 @@ export function CheckboxGroup<T extends string>({
       : 'space-y-1';
   return (
     <fieldset className="mb-4">
-      <legend className="text-sm font-semibold text-gray-800 mb-2">{legend}</legend>
+      <legend className="text-sm font-semibold text-gray-800 mb-2">
+        {legend}{required && <span className="text-red-500"> *</span>}
+      </legend>
       <div className={colClass}>
         {options.map((opt) => (
           <label key={opt.value} className="flex items-start gap-2 text-sm cursor-pointer">
@@ -88,6 +92,44 @@ export function CheckboxGroup<T extends string>({
         ))}
       </div>
     </fieldset>
+  );
+}
+
+// Liste deroulante (select) avec label
+export function SelectField({
+  label,
+  value,
+  onChange,
+  options,
+  required = false,
+  placeholder = 'Sélectionnez…',
+  disabled = false,
+}: {
+  label: string;
+  value?: string;
+  onChange: (v: string) => void;
+  options: string[];
+  required?: boolean;
+  placeholder?: string;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="form-group">
+      <label className="text-sm font-semibold">
+        {label}{required && <span className="text-red-500"> *</span>}
+      </label>
+      <select
+        value={value ?? ''}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        className="w-full"
+      >
+        <option value="">{placeholder}</option>
+        {options.map((opt) => (
+          <option key={opt} value={opt}>{opt}</option>
+        ))}
+      </select>
+    </div>
   );
 }
 
@@ -159,7 +201,7 @@ export function FormSection({
   children: React.ReactNode;
 }) {
   return (
-    <fieldset className="border border-gray-300 px-5 pt-3 pb-5 mb-6">
+    <fieldset className="border border-gray-200 bg-white rounded-lg px-5 sm:px-7 pt-3 pb-6 mb-6 shadow-sm">
       <legend className="px-3 font-bold text-base text-[var(--artci-orange)] mx-auto">
         {title}
       </legend>

@@ -20,8 +20,16 @@ class EntiteConformite(db.Model):
         db.String(36), db.ForeignKey('entites_base.id'), primary_key=True
     )
     score_conformite = db.Column(db.Integer)
+    # Note : values_callable garantit que SQLAlchemy ecrit la .value de l'enum
+    # ('Conforme', 'Non conforme', ...) plutot que son .name (snake_case).
+    # Sans cela, les ecritures echouent car les valeurs en BDD sont les .value.
     statut_conformite = db.Column(
-        db.Enum(StatutConformiteEnum, name='statut_conformite_enum'), index=True
+        db.Enum(
+            StatutConformiteEnum,
+            name='statut_conformite_enum',
+            values_callable=lambda enum_cls: [m.value for m in enum_cls],
+        ),
+        index=True,
     )
     a_dpo = db.Column(db.Boolean)
     type_dpo = db.Column(db.Enum(TypeDPOEnum, name='type_dpo_enum'))
@@ -31,6 +39,13 @@ class EntiteConformite(db.Model):
     # Activations des formalites (controlees par l'ARTCI selon le retour donne)
     formalite_autorisation_active = db.Column(db.Boolean, nullable=False, default=False)
     formalite_declaration_active = db.Column(db.Boolean, nullable=False, default=False)
+
+    # Reference grille de scoring utilisee pour calculer ce score (versioning).
+    # Permet le re-audit historique : un score de 2026 reste interpretable meme
+    # si la grille a evolue depuis.
+    grille_version_id = db.Column(
+        db.String(36), db.ForeignKey('grille_scoring.id'), nullable=True,
+    )
 
     # Relationship
     entite = db.relationship('EntiteBase', back_populates='conformite')

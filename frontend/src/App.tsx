@@ -22,6 +22,7 @@ const RegisterPage = lazy(() => import('@/pages/auth/RegisterPage'));
 const VerifyOTPPage = lazy(() => import('@/pages/auth/VerifyOTPPage'));
 const ForgotPasswordPage = lazy(() => import('@/pages/auth/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('@/pages/auth/ResetPasswordPage'));
+const VerifyRLEmailPage = lazy(() => import('@/pages/auth/VerifyRLEmailPage'));
 
 // Lazy loading des pages entreprise
 const DashboardPage = lazy(() => import('@/pages/entreprise/DashboardPage'));
@@ -54,6 +55,10 @@ const LogsPage = lazy(() => import('@/pages/admin/LogsPage'));
 const StatistiquesAdminPage = lazy(() => import('@/pages/admin/StatistiquesAdminPage'));
 const ProfilAdminPage = lazy(() => import('@/pages/admin/ProfilAdminPage'));
 const FormalitesAdminPage = lazy(() => import('@/pages/admin/RenouvellementAdminPage'));
+const EntitesAPublierPage = lazy(() => import('@/pages/admin/EntitesAPublierPage'));
+const EcheancesFeedbacksPage = lazy(() => import('@/pages/admin/EcheancesFeedbacksPage'));
+const SignalementsAdminPage = lazy(() => import('@/pages/admin/SignalementsAdminPage'));
+const SignalerErreurPage = lazy(() => import('@/pages/entreprise/SignalerErreurPage'));
 const ValidationRapportsPage = lazy(() => import('@/pages/admin/ValidationRapportsPage'));
 const NotificationsPage = lazy(() => import('@/pages/admin/NotificationsPage'));
 const DemandesAutoPage = lazy(() => import('@/pages/admin/DemandesAutoPage'));
@@ -88,6 +93,7 @@ export default function App() {
             <Route path="verification-otp" element={<VerifyOTPPage />} />
             <Route path="mot-de-passe-oublie" element={<ForgotPasswordPage />} />
             <Route path="reinitialiser-mot-de-passe" element={<ResetPasswordPage />} />
+            <Route path="verification-rl" element={<VerifyRLEmailPage />} />
           </Route>
 
           {/* Routes entreprise (protégées) */}
@@ -110,6 +116,7 @@ export default function App() {
             <Route path="entreprise/formalites/autorisation/transferts" element={<AutorisationTransfertsPage />} />
             <Route path="entreprise/profil" element={<ProfilPage />} />
             <Route path="entreprise/changer-mot-de-passe" element={<ChangePasswordPage />} />
+            <Route path="entreprise/signaler-erreur" element={<SignalerErreurPage />} />
             {/* Redirections compat anciennes URLs */}
             <Route path="entreprise/demande" element={<Navigate to="/entreprise/mon-enregistrement" replace />} />
             <Route path="entreprise/demande/:id" element={<Navigate to="/entreprise/mon-enregistrement" replace />} />
@@ -131,6 +138,7 @@ export default function App() {
             <Route path="admin" element={<AdminDashboardPage />} />
             <Route path="admin/entites" element={<EntitesAdminPage />} />
             <Route path="admin/entites/nouveau" element={<EntiteCreatePage />} />
+            <Route path="admin/entites/:id/saisie" element={<EntiteCreatePage />} />
             <Route path="admin/entites/:id" element={<EntiteDetailAdminPage />} />
             <Route path="admin/panier" element={<PanierPage />} />
             <Route path="admin/traiter/:entiteId" element={<TraiterDossierPage />} />
@@ -146,6 +154,9 @@ export default function App() {
             <Route path="admin/statistiques" element={<StatistiquesAdminPage />} />
             <Route path="admin/profil" element={<ProfilAdminPage />} />
             <Route path="admin/formalites" element={<FormalitesAdminPage />} />
+            <Route path="admin/entites-a-publier" element={<EntitesAPublierPage />} />
+            <Route path="admin/echeances-feedbacks" element={<EcheancesFeedbacksPage />} />
+            <Route path="admin/signalements" element={<SignalementsAdminPage />} />
             {/* Redirections compat anciennes URLs admin */}
             <Route path="admin/rapprochements" element={<Navigate to="/admin" replace />} />
             <Route path="admin/renouvellements" element={<Navigate to="/admin/formalites" replace />} />

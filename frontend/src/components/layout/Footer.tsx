@@ -11,9 +11,6 @@ export default function Footer() {
           <Link to={ROUTES.CONTACT} className="text-gray-300 hover:text-white no-underline">Contact</Link>
         </div>
       </div>
-      <div className="max-w-7xl mx-auto px-4 mt-2 text-center text-xs text-gray-400">
-        Conforme à la Loi N°2013-450 relative à la protection des données personnelles
-      </div>
     </footer>
   );
 }

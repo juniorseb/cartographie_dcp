@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, FileText, FolderOpen, Bell,
-  RefreshCw, X, ChevronDown, ChevronRight,
+  RefreshCw, X, ChevronDown, ChevronRight, AlertTriangle,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
+import { useApi } from '@/hooks/useApi';
+import * as entrepriseApi from '@/api/entreprise.api';
 import { ROUTES } from '@/utils/constants';
 
 interface SidebarChild {
@@ -22,15 +24,11 @@ interface SidebarLink {
 
 const sidebarLinks: SidebarLink[] = [
   { to: ROUTES.ENTREPRISE_DASHBOARD, label: 'Tableau de bord', icon: LayoutDashboard, end: true },
-  {
-    label: 'Demande',
-    icon: FileText,
-    children: [
-      { to: ROUTES.ENTREPRISE_ENREGISTREMENT, label: 'Mon enregistrement' },
-    ],
-  },
+  // Entree directe (plus de regroupement "Demande" qui n'apportait rien)
+  { to: ROUTES.ENTREPRISE_ENREGISTREMENT, label: 'Mon enregistrement', icon: FileText },
   { to: ROUTES.ENTREPRISE_DOSSIER, label: 'Mon dossier', icon: FolderOpen },
   { to: ROUTES.ENTREPRISE_NOTIFICATIONS, label: 'Notifications', icon: Bell },
+  { to: ROUTES.ENTREPRISE_SIGNALER_ERREUR, label: 'Signaler une erreur', icon: AlertTriangle },
   {
     label: 'Formalités',
     icon: RefreshCw,
@@ -62,6 +60,10 @@ interface EntrepriseSidebarProps {
 
 export default function EntrepriseSidebar({ mobileOpen, onClose }: EntrepriseSidebarProps) {
   const location = useLocation();
+
+  // Compteur de notifications non lues (retours ARTCI) affiché en badge
+  const { data: feedbacks } = useApi(() => entrepriseApi.getFeedbacks(), []);
+  const unreadCount = (feedbacks ?? []).filter((f) => !f.is_read).length;
 
   // Auto-ouvrir les parents dont un enfant est actif
   const initialExpanded: Record<string, boolean> = {};
@@ -120,7 +122,12 @@ export default function EntrepriseSidebar({ mobileOpen, onClose }: EntrepriseSid
                   }
                 >
                   <Icon className="w-4 h-4 flex-shrink-0" />
-                  {label}
+                  <span className="flex-1">{label}</span>
+                  {to === ROUTES.ENTREPRISE_NOTIFICATIONS && unreadCount > 0 && (
+                    <span className="ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[11px] font-bold">
+                      {unreadCount}
+                    </span>
+                  )}
                 </NavLink>
               );
             }

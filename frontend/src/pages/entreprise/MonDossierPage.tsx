@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowLeft, FileText, MapPin, Shield, Users, Lock, Globe,
-  FolderOpen, FileCheck, Clock, Upload, CheckCircle, XCircle,
+  FolderOpen, FileCheck, Clock, Upload, CheckCircle, XCircle, Files,
 } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import * as entrepriseApi from '@/api/entreprise.api';
@@ -15,20 +15,23 @@ import { cn } from '@/utils/cn';
 import type { DossierComplet } from '@/types/entreprise';
 import type { DPODocType, DocumentJointItem } from '@/api/entreprise.api';
 
-type Tab = 'identite' | 'rapports' | 'journal' | 'dpo';
+// Ordre des onglets : le Journal d'événements est placé APRÈS le Dossier DPO.
+type Tab = 'identite' | 'rapports' | 'documents' | 'dpo' | 'journal';
 
 const TAB_LABELS: Record<Tab, string> = {
   identite: 'Mon identité',
   rapports: 'Mes Rapports',
-  journal: "Journal d'événements",
+  documents: 'Mes documents',
   dpo: 'Dossier DPO',
+  journal: "Journal d'événements",
 };
 
 const TAB_ICONS: Record<Tab, typeof FileText> = {
   identite: FileText,
   rapports: FileCheck,
-  journal: Clock,
+  documents: Files,
   dpo: Lock,
+  journal: Clock,
 };
 
 function InfoRow({ label, value }: { label: string; value: string | number | boolean | null | undefined }) {
@@ -106,8 +109,9 @@ export default function MonDossierPage() {
 
         {tab === 'identite' && <IdentiteTab dossier={dossier} />}
         {tab === 'rapports' && <RapportsTab />}
-        {tab === 'journal' && <JournalTab />}
+        {tab === 'documents' && <DocumentsTab />}
         {tab === 'dpo' && <DPOTab />}
+        {tab === 'journal' && <JournalTab />}
       </div>
     </div>
   );
@@ -284,6 +288,90 @@ function RapportsTab() {
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+const DOC_TYPE_LABELS: Record<string, string> = {
+  // Inscription
+  doc_rccm: 'RCCM (Registre du commerce)',
+  doc_dfe: 'DFE (Déclaration fiscale)',
+  doc_autre: 'Autre document',
+  // Enregistrement / dossier
+  rapport_activite: "Rapport d'activité",
+  rapport_audit: "Rapport d'audit",
+  autorisation: "Autorisation ARTCI",
+  cni: "Carte nationale d'identité",
+  registre_commerce: 'Registre du commerce',
+  statuts: 'Statuts',
+  attestation_fiscale: 'Attestation fiscale',
+  dpo_cv: 'CV du DPO',
+  dpo_casier_judiciaire: 'Casier judiciaire du DPO',
+  dpo_cni: 'CNI du DPO',
+  dpo_extrait_naissance: 'Extrait de naissance du DPO',
+};
+
+const SOURCE_LABELS: Record<string, string> = {
+  inscription: "Documents d'inscription",
+  enregistrement: 'Documents de mon enregistrement',
+};
+
+/** Regroupe tous les fichiers déposés (inscription + enregistrement) en un seul endroit. */
+function DocumentsTab() {
+  const { data: documents, isLoading, error, refetch } = useApi(
+    () => entrepriseApi.getMesDocuments(),
+    []
+  );
+
+  if (isLoading) return <Loading text="Chargement..." />;
+  if (error) return <ErrorDisplay message={error} onRetry={refetch} />;
+
+  if (!documents || documents.length === 0) {
+    return (
+      <div>
+        <p className="text-sm text-gray-500 mb-4">
+          Retrouvez ici l'ensemble des fichiers déposés lors de votre inscription et de votre enregistrement.
+        </p>
+        <EmptyState title="Aucun document" description="Aucun fichier n'a encore été déposé." />
+      </div>
+    );
+  }
+
+  // Regroupement par source (inscription d'abord, puis enregistrement)
+  const ordered: ('inscription' | 'enregistrement')[] = ['inscription', 'enregistrement'];
+
+  return (
+    <div>
+      <p className="text-sm text-gray-500 mb-4">
+        Retrouvez ici l'ensemble des fichiers déposés lors de votre inscription et de votre enregistrement.
+      </p>
+      <div className="space-y-6">
+        {ordered.map((src) => {
+          const group = documents.filter((d) => d.source === src);
+          if (group.length === 0) return null;
+          return (
+            <div key={src}>
+              <h4 className="text-sm font-bold text-gray-700 mb-2">{SOURCE_LABELS[src]}</h4>
+              <div className="space-y-3">
+                {group.map((d) => (
+                  <div key={d.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <FileCheck className="w-5 h-5 text-[var(--artci-green)] flex-shrink-0" />
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold truncate">{d.nom_fichier}</div>
+                        <div className="text-xs text-gray-500">
+                          {DOC_TYPE_LABELS[d.type_document] ?? d.type_document}
+                          {d.uploadedAt && ` • ${formatDate(d.uploadedAt)}`}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

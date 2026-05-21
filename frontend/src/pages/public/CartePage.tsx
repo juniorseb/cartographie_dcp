@@ -40,8 +40,7 @@ const REGIONS = [
 
 interface StatutFilter {
   conforme: boolean;
-  achevee: boolean;
-  en_cours: boolean;
+  partiellement: boolean;
 }
 
 export default function CartePage() {
@@ -51,8 +50,7 @@ export default function CartePage() {
   const [region, setRegion] = useState('');
   const [statuts, setStatuts] = useState<StatutFilter>({
     conforme: true,
-    achevee: false,
-    en_cours: false,
+    partiellement: true,
   });
 
   // Mobile states
@@ -69,12 +67,17 @@ export default function CartePage() {
     setDebounceTimer(timer);
   };
 
-  // Build statut_conformite param
+  // Build statut_conformite param.
+  // Pour 'Partiellement conforme', on envoie aussi les anciens libelles
+  // (rows historiques) afin de ne pas perdre de fiches publiees.
   const buildStatutParam = useCallback((): string | undefined => {
     const selected: string[] = [];
     if (statuts.conforme) selected.push('Conforme');
-    if (statuts.achevee) selected.push('Démarche achevée');
-    if (statuts.en_cours) selected.push('Démarche en cours');
+    if (statuts.partiellement) {
+      selected.push('Partiellement conforme');
+      selected.push('Démarche achevée');
+      selected.push('Démarche en cours');
+    }
     return selected.length > 0 ? selected.join(',') : undefined;
   }, [statuts]);
 
@@ -99,28 +102,26 @@ export default function CartePage() {
     secteur,
     region,
     statuts.conforme,
-    statuts.achevee,
-    statuts.en_cours,
+    statuts.partiellement,
   ]);
 
   const handleStatutChange = (key: keyof StatutFilter) => {
     setStatuts((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const hasStatutSelected = statuts.conforme || statuts.achevee || statuts.en_cours;
+  const hasStatutSelected = statuts.conforme || statuts.partiellement;
 
   // Count active filters
   const activeFilterCount =
     (statuts.conforme ? 1 : 0) +
-    (statuts.achevee ? 1 : 0) +
-    (statuts.en_cours ? 1 : 0) +
+    (statuts.partiellement ? 1 : 0) +
     (secteur ? 1 : 0) +
     (region ? 1 : 0) +
     (search ? 1 : 0);
 
   // Reset filters
   const resetFilters = () => {
-    setStatuts({ conforme: true, achevee: false, en_cours: false });
+    setStatuts({ conforme: true, partiellement: true });
     setSecteur('');
     setRegion('');
     setSearchInput('');
@@ -195,30 +196,22 @@ export default function CartePage() {
               type="checkbox"
               checked={statuts.conforme}
               onChange={() => handleStatutChange('conforme')}
-              className={`accent-[#228B22] ${isMobile ? 'w-5 h-5' : 'w-4 h-4'}`}
+              className={isMobile ? 'w-5 h-5' : 'w-4 h-4'}
             />
-            <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#228B22]" />
-            <span className={isMobile ? 'text-base' : 'text-sm'}>Conforme</span>
+            <span className={`text-black ${isMobile ? 'text-base' : 'text-sm'}`}>
+              Conforme
+            </span>
           </label>
           <label className={`flex items-center gap-3 cursor-pointer ${isMobile ? 'min-h-[44px]' : ''}`}>
             <input
               type="checkbox"
-              checked={statuts.achevee}
-              onChange={() => handleStatutChange('achevee')}
-              className={`accent-[#FF8C00] ${isMobile ? 'w-5 h-5' : 'w-4 h-4'}`}
+              checked={statuts.partiellement}
+              onChange={() => handleStatutChange('partiellement')}
+              className={isMobile ? 'w-5 h-5' : 'w-4 h-4'}
             />
-            <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#FF8C00]" />
-            <span className={isMobile ? 'text-base' : 'text-sm'}>Démarche achevée</span>
-          </label>
-          <label className={`flex items-center gap-3 cursor-pointer ${isMobile ? 'min-h-[44px]' : ''}`}>
-            <input
-              type="checkbox"
-              checked={statuts.en_cours}
-              onChange={() => handleStatutChange('en_cours')}
-              className={`accent-[#4A90E2] ${isMobile ? 'w-5 h-5' : 'w-4 h-4'}`}
-            />
-            <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#4A90E2]" />
-            <span className={isMobile ? 'text-base' : 'text-sm'}>Démarche en cours</span>
+            <span className={`text-black ${isMobile ? 'text-base' : 'text-sm'}`}>
+              Partiellement conforme
+            </span>
           </label>
         </div>
       </div>
@@ -287,8 +280,9 @@ export default function CartePage() {
 
       {/* ===== ZONE PRINCIPALE ===== */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Mini-stats : horizontal scroll on mobile, grid on desktop */}
-        <div className="lg:grid lg:grid-cols-3 lg:gap-5 lg:px-5 lg:py-4">
+        {/* Mini-stats : 2 cards alignees sur les 2 statuts publiables.
+            Mobile : scroll horizontal. Desktop : grid 2 colonnes. */}
+        <div className="lg:grid lg:grid-cols-2 lg:gap-5 lg:px-5 lg:py-4">
           {/* Mobile: horizontal scroll */}
           <div className="lg:hidden overflow-x-auto scrollbar-hide">
             <div className="flex gap-3 px-4 py-3" style={{ minWidth: 'max-content' }}>
@@ -298,22 +292,18 @@ export default function CartePage() {
                 </div>
               ) : (
                 <>
-                  <div className="flex-shrink-0 w-[130px] bg-white rounded-lg shadow-md p-3 border-l-[3px] border-[#228B22]">
+                  <div className="flex-shrink-0 w-[160px] bg-white rounded-lg shadow-md p-3 border-l-[3px] border-[#228B22]">
                     <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-0.5">Conformes</p>
                     <p className="text-2xl font-bold text-black">
                       {formatNumber(statsData?.total_entites_conformes ?? 0)}
                     </p>
                   </div>
-                  <div className="flex-shrink-0 w-[130px] bg-white rounded-lg shadow-md p-3 border-l-[3px] border-[#FF8C00]">
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-0.5">Achevée</p>
-                    <p className="text-2xl font-bold text-black">
-                      {formatNumber(statsData?.total_demarche_achevee ?? 0)}
+                  <div className="flex-shrink-0 w-[160px] bg-white rounded-lg shadow-md p-3 border-l-[3px] border-[#FF8C00]">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-0.5">
+                      Partiellement conformes
                     </p>
-                  </div>
-                  <div className="flex-shrink-0 w-[130px] bg-white rounded-lg shadow-md p-3 border-l-[3px] border-[#4A90E2]">
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-0.5">En Cours</p>
                     <p className="text-2xl font-bold text-black">
-                      {formatNumber(statsData?.total_demarche_en_cours ?? 0)}
+                      {formatNumber(statsData?.total_partiellement_conformes ?? 0)}
                     </p>
                   </div>
                 </>
@@ -321,10 +311,10 @@ export default function CartePage() {
             </div>
           </div>
 
-          {/* Desktop: grid */}
+          {/* Desktop: grid 2 colonnes */}
           <div className="hidden lg:contents">
             {statsLoading ? (
-              <div className="col-span-3 flex justify-center py-4">
+              <div className="col-span-2 flex justify-center py-4">
                 <Loading size="sm" />
               </div>
             ) : (
@@ -339,18 +329,10 @@ export default function CartePage() {
                 </div>
                 <div className="bg-white rounded-lg shadow-md p-5 border-l-4 border-[#FF8C00]">
                   <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
-                    D&eacute;marche Achev&eacute;e
+                    Partiellement Conformes
                   </p>
                   <p className="text-3xl font-bold text-black">
-                    {formatNumber(statsData?.total_demarche_achevee ?? 0)}
-                  </p>
-                </div>
-                <div className="bg-white rounded-lg shadow-md p-5 border-l-4 border-[#4A90E2]">
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
-                    D&eacute;marche en Cours
-                  </p>
-                  <p className="text-3xl font-bold text-black">
-                    {formatNumber(statsData?.total_demarche_en_cours ?? 0)}
+                    {formatNumber(statsData?.total_partiellement_conformes ?? 0)}
                   </p>
                 </div>
               </>

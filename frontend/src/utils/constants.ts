@@ -45,6 +45,9 @@ export const ROUTES = {
   ADMIN_LOGS: '/admin/logs',
   ADMIN_STATISTIQUES: '/admin/statistiques',
   ADMIN_FORMALITES: '/admin/formalites',
+  ADMIN_ENTITES_A_PUBLIER: '/admin/entites-a-publier',
+  ADMIN_ECHEANCES_FEEDBACKS: '/admin/echeances-feedbacks',
+  ADMIN_SIGNALEMENTS: '/admin/signalements',
   ADMIN_RAPPORTS_VALIDATION: '/admin/rapports-validation',
   ADMIN_NOTIFICATIONS: '/admin/notifications',
   ADMIN_DEMANDES_AUTO: '/admin/demandes-auto',
@@ -59,15 +62,19 @@ export const ROUTES = {
   CONTACT: '/contact',
   // Entreprise extras (Journal d'evenements + Audits sont dans Mon Dossier)
   ENTREPRISE_AUDITS: '/entreprise/audits',
+  ENTREPRISE_SIGNALER_ERREUR: '/entreprise/signaler-erreur',
 } as const;
 
-/** Labels des statuts de conformité */
+/** Labels des statuts de conformité.
+ *  Officiel : Conforme (100) / Partiellement conforme [70-99] / Non conforme [0-70[.
+ *  Les anciens libelles 'Demarche en cours' / 'Demarche achevee' sont
+ *  mappes vers 'Partiellement conforme' pour les rows historiques. */
 export const STATUT_CONFORMITE_LABELS: Record<StatutConformite, string> = {
   'Conforme': 'Conforme',
   'Partiellement conforme': 'Partiellement conforme',
   'Non conforme': 'Non conforme',
   'Démarche achevée': 'Partiellement conforme',
-  'Démarche en cours': 'Non conforme',
+  'Démarche en cours': 'Partiellement conforme',
 };
 
 /** Classes CSS des badges par statut */
@@ -76,7 +83,7 @@ export const STATUT_CONFORMITE_BADGE: Record<StatutConformite, string> = {
   'Partiellement conforme': 'badge badge-achevee',
   'Non conforme': 'badge badge-encours',
   'Démarche achevée': 'badge badge-achevee',
-  'Démarche en cours': 'badge badge-encours',
+  'Démarche en cours': 'badge badge-achevee',
 };
 
 /** Couleurs des statuts (pour les graphiques) */
@@ -85,7 +92,7 @@ export const STATUT_COLORS: Record<StatutConformite, string> = {
   'Partiellement conforme': '#FF8C00',
   'Non conforme': '#DC143C',
   'Démarche achevée': '#FF8C00',
-  'Démarche en cours': '#DC143C',
+  'Démarche en cours': '#FF8C00',
 };
 
 /** Centre de la carte : Abidjan, Côte d'Ivoire */

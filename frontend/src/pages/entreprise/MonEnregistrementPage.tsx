@@ -4,17 +4,34 @@
  *
  * Toutes les questions, options et libellés correspondent EXACTEMENT au
  * document Word officiel "QUESTIONNAIRE DE RECENSEMENT DCP.docx".
+ *
+ * MODE DUAL :
+ * - mode='entreprise' (defaut) : utilise via /entreprise/mon-enregistrement
+ *   par le Demandeur ou Representant legal. Soumission a l'ARTCI.
+ * - mode='admin' : utilise via /admin/entites/nouveau ou /admin/entites/:id
+ *   par un agent ARTCI (saisie ARTCI / edition). Pas de bouton "soumettre"
+ *   (l'agent ARTCI ne soumet pas a soi-meme), juste "enregistrer".
+ *   La cible est l'entiteId fourni (ou nouvelle creation si absent).
  */
 import { useState, useEffect, useCallback } from 'react';
-import { Save, Send, AlertTriangle, Lock } from 'lucide-react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Save, Send, AlertTriangle, Lock, ChevronLeft, ChevronRight, CheckCircle2, ListChecks, ShieldAlert, Eye } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
+import { useAuth } from '@/hooks/useAuth';
 import * as entrepriseApi from '@/api/entreprise.api';
+import * as adminApi from '@/api/admin.api';
 import Loading from '@/components/common/Loading';
 import {
-  FormSection, RadioGroup, CheckboxGroup, TextField, TextArea,
+  FormSection, RadioGroup, CheckboxGroup, TextField, TextArea, SelectField,
 } from '@/components/entreprise/dcp-form/FormFields';
 import CategorieDonneesRow from '@/components/entreprise/dcp-form/CategorieDonneesRow';
+import FormaliteCalculee, { determinerFormalite } from '@/components/entreprise/dcp-form/FormaliteCalculee';
+import PaysSelect from '@/components/entreprise/dcp-form/PaysSelect';
+import LocalisationPicker from '@/components/entreprise/dcp-form/LocalisationPicker';
+import { useFormProgress } from '@/components/entreprise/dcp-form/useFormProgress';
+import CommentairesARTCI from '@/components/entreprise/CommentairesARTCI';
 import { CATEGORIES_DONNEES_CONFIG } from '@/components/entreprise/dcp-form/categories-donnees-config';
+import { REGIONS_CI, communesForRegion, SECTEURS_ACTIVITE } from '@/components/entreprise/dcp-form/ci-localites';
 import {
   emptyFormulaireDCP, type FormulaireDCP,
   type StadeDemarche,
@@ -25,17 +42,146 @@ import {
   type InfoCommuniquee,
   type CommentInformer,
   type ClauseObligatoire,
-  type BaseJuridiqueTransfert,
   type GarantieTransfert,
   type CategorieDonneesDetail,
   type ActiviteTraitementDCP,
   type MesureTechnique, type MesureOrganisationnelle,
 } from '@/types/formulaire-dcp';
 
-// Statuts pour lesquels le formulaire est en LECTURE SEULE
+// Statuts pour lesquels le formulaire est en LECTURE SEULE (cote entreprise uniquement)
 const STATUTS_LECTURE_SEULE = ['soumis', 'en_verification'];
 
-export default function MonEnregistrementPage() {
+// Definition des 6 etapes (5 parties du Word + 1 recapitulatif)
+const STEPS = [
+  { num: 1, key: 'identification', label: 'Identification' },
+  { num: 2, key: 'cadre_juridique', label: 'Cadre juridique' },
+  { num: 3, key: 'registre', label: 'Registre & traitements' },
+  { num: 4, key: 'sous_traitance_transferts', label: 'Sous-traitance & transferts' },
+  { num: 5, key: 'securite', label: 'Sécurité & formation' },
+  { num: 6, key: 'recap', label: 'Récapitulatif' },
+] as const;
+type StepNum = 1 | 2 | 3 | 4 | 5 | 6;
+
+/** Valide les champs obligatoires d'une etape. Retourne '' si OK. */
+function validateStep(step: StepNum, form: FormulaireDCP): string {
+  const id = form.identification ?? {};
+  const cj = form.cadre_juridique ?? {};
+  const reg = form.registre ?? {};
+  const st = form.sous_traitance_transferts ?? {};
+  const sec = form.securite ?? {};
+
+  if (step === 1) {
+    if (!id.statut_juridique) return 'Le statut juridique est obligatoire.';
+    if (id.statut_juridique === 'pm_droit_prive' || id.statut_juridique === 'pm_droit_public') {
+      const pm = id.personne_morale ?? {};
+      if (!pm.denomination_officielle?.trim()) return 'La dénomination officielle est obligatoire.';
+      if (!pm.raison_sociale?.trim()) return 'La raison sociale est obligatoire.';
+      if (!pm.numero_cc?.trim()) return "Le N° CC de l'entité est obligatoire.";
+      if (!pm.region) return 'La région est obligatoire.';
+      if (!pm.commune) return 'La commune est obligatoire.';
+      if (!pm.ville?.trim()) return 'La ville / localité est obligatoire.';
+      if (!pm.adresse_siege?.trim()) return "L'adresse complète du siège est obligatoire.";
+    }
+    if (id.statut_juridique === 'personne_physique') {
+      const pp = id.personne_physique ?? {};
+      if (!pp.nom_prenom?.trim()) return 'Le nom et prénom sont obligatoires.';
+      if (!pp.fonction?.trim()) return 'La fonction est obligatoire.';
+      if (!pp.region) return 'La région est obligatoire.';
+      if (!pp.commune) return 'La commune est obligatoire.';
+      if (!pp.ville?.trim()) return 'La ville / localité est obligatoire.';
+      if (!pp.adresse?.trim()) return "L'adresse complète est obligatoire.";
+    }
+    if (!id.secteurs_activite?.length) return "Sélectionnez au moins un secteur d'activité.";
+    if (id.secteurs_activite.includes('Autre') && !id.secteur_autre?.trim()) {
+      return 'Précisez le secteur « Autre ».';
+    }
+    if (!id.volume_donnees) return 'Le volume de données est obligatoire.';
+    if (!id.responsable_legal?.nom_prenom?.trim()) return 'Le nom du Responsable légal est obligatoire.';
+    if (!id.responsable_legal?.fonction?.trim()) return 'La fonction du Responsable légal est obligatoire.';
+    if (!id.responsable_legal?.email?.trim()) return "L'email du Responsable légal est obligatoire.";
+    if (!id.responsable_legal?.telephone?.trim()) return 'Le téléphone du Responsable légal est obligatoire.';
+    if (typeof id.localisation?.latitude !== 'number' || typeof id.localisation?.longitude !== 'number') {
+      return 'La localisation géographique (pointage sur carte) est obligatoire.';
+    }
+    return '';
+  }
+
+  if (step === 2) {
+    if (!cj.connaissance_loi_2013) return 'Question Loi 2013-450 obligatoire.';
+    if (!cj.connaissance_obligations) return 'Question Obligations légales obligatoire.';
+    if (!cj.connaissance_artci) return "Question rôle ARTCI obligatoire.";
+    if (!cj.dpo_habilite) return "Question DPO habilité obligatoire.";
+    if (cj.dpo_habilite === 'oui') {
+      if (!cj.dpo_type) return 'Précisez si le DPO est interne ou externe.';
+      if (cj.dpo_type === 'externe' && !cj.dpo_externe_type) {
+        return 'Précisez si le DPO externe est une personne physique ou morale.';
+      }
+      if (!cj.dpo_courrier_habilitation_uploaded) {
+        return "Le courrier d'habilitation du DPO est obligatoire.";
+      }
+    }
+    return '';
+  }
+
+  if (step === 3) {
+    // Questions deplacees depuis le cadre juridique
+    if (!cj.distinction_decl_aut) return 'Question distinction Déclaration/Autorisation obligatoire.';
+    if (!reg.activites_traitement?.length) return 'Cochez au moins une activité de traitement.';
+    if (!reg.registre_tenu) return 'Question registre des traitements obligatoire.';
+    if (!reg.categories_personnes?.length) return 'Cochez au moins une catégorie de personnes.';
+    if (!reg.categories_donnees || Object.keys(reg.categories_donnees).length === 0) {
+      return 'Au moins une catégorie de données doit être renseignée.';
+    }
+    if (!st.suppression_anonymisation) return "Question suppression/anonymisation obligatoire.";
+    if (!reg.finalites?.length) return 'Cochez au moins une finalité de traitement.';
+    if (!cj.formalites_effectuees) return 'Question formalités effectuées obligatoire.';
+    if (!reg.bases_legales?.length) return 'Cochez au moins une base légale.';
+    if (!reg.mode_traitement) return 'Question mode de traitement obligatoire.';
+    if (!reg.info_personnes_collecte) return 'Question information des personnes obligatoire.';
+    if (!reg.reutilisation_donnees) return 'Question réutilisation des données obligatoire.';
+    return '';
+  }
+
+  if (step === 4) {
+    if (!st.recours_sous_traitants) return 'Question recours à sous-traitants obligatoire.';
+    if (!st.transfert_hors_cedeao) return 'Question transfert hors CEDEAO obligatoire.';
+    if (st.transfert_hors_cedeao === 'oui' && (!st.pays_transferts || st.pays_transferts.length === 0)) {
+      return 'Sélectionnez au moins un pays de destination du transfert.';
+    }
+    return '';
+  }
+
+  if (step === 5) {
+    if (!sec.politique_securite) return 'Question charte de protection des données obligatoire.';
+    if (sec.politique_securite === 'oui_formalisee' && !sec.charte_uploaded) {
+      return 'Upload de la charte obligatoire.';
+    }
+    if (!sec.mesures_techniques_list?.length) return 'Cochez au moins une mesure technique.';
+    if (!sec.mesures_organisationnelles_list?.length) return 'Cochez au moins une mesure organisationnelle.';
+    if (!sec.violation_12mois) return 'Question violations 12 mois obligatoire.';
+    if (!sec.registre_violations) return 'Question registre des violations obligatoire.';
+    if (!sec.procedures_violation) return 'Question procédures de violation obligatoire.';
+    if (!sec.personnel_sensibilise) return 'Question sensibilisation personnel obligatoire.';
+    if (!st.protection_supports) return 'Question protection des supports obligatoire.';
+    return '';
+  }
+
+  return '';
+}
+
+interface MonEnregistrementPageProps {
+  /** Mode d'utilisation. Defaut: 'entreprise'. */
+  mode?: 'entreprise' | 'admin';
+}
+
+export default function MonEnregistrementPage({ mode = 'entreprise' }: MonEnregistrementPageProps) {
+  const isAdminMode = mode === 'admin';
+  const { compte } = useAuth();
+  const params = useParams<{ id?: string }>();
+  const navigate = useNavigate();
+  // En mode admin, l'entite cible est dans l'URL (ou null pour creation)
+  const [adminEntiteId, setAdminEntiteId] = useState<string | null>(params.id ?? null);
+
   const [form, setForm] = useState<FormulaireDCP>(emptyFormulaireDCP());
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -43,16 +189,60 @@ export default function MonEnregistrementPage() {
   const [error, setError] = useState('');
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [statutWorkflow, setStatutWorkflow] = useState<string | null>(null);
+  // Version courante du formulaire (verrouillage optimiste manœuvre B)
+  const [formVersion, setFormVersion] = useState<number>(0);
+  // Etape courante du stepper (1..6)
+  const [currentStep, setCurrentStep] = useState<StepNum>(1);
 
-  const { data, isLoading } = useApi(() => entrepriseApi.getFormulaireDCP(), []);
-  // Charger aussi le statut workflow pour determiner si le formulaire est en lecture seule
-  const { data: dossier } = useApi(() => entrepriseApi.getMonDossier(), []);
+  // Loader cote entreprise
+  const { data: entrepriseData, isLoading: entrepriseLoading } = useApi(
+    () => isAdminMode ? Promise.resolve(null) : entrepriseApi.getFormulaireDCP(),
+    [isAdminMode],
+  );
+  const { data: dossier } = useApi(
+    () => isAdminMode ? Promise.resolve(null) : entrepriseApi.getMonDossier(),
+    [isAdminMode],
+  );
+
+  // Loader cote admin (si entiteId fourni)
+  const { data: adminData, isLoading: adminLoading } = useApi(
+    () => (isAdminMode && adminEntiteId)
+      ? adminApi.adminGetFormulaireDCP(adminEntiteId)
+      : Promise.resolve(null),
+    [isAdminMode, adminEntiteId],
+  );
+
+  const isLoading = entrepriseLoading || adminLoading;
 
   useEffect(() => {
-    if (data?.reponses && Object.keys(data.reponses).length > 0) {
-      setForm({ ...emptyFormulaireDCP(), ...(data.reponses as Partial<FormulaireDCP>) });
+    const data = isAdminMode ? adminData : entrepriseData;
+    const hasReponses = data?.reponses && Object.keys(data.reponses).length > 0;
+    if (hasReponses) {
+      setForm({ ...emptyFormulaireDCP(), ...(data!.reponses as Partial<FormulaireDCP>) });
+    } else if (!isAdminMode && compte) {
+      // Preremplissage : nouveau dossier d'une entreprise deja inscrite.
+      // On reprend les infos connues du compte (denomination, N° CC, localisation...).
+      setForm((prev) => ({
+        ...prev,
+        identification: {
+          ...prev.identification,
+          statut_juridique: prev.identification.statut_juridique ?? 'pm_droit_prive',
+          personne_morale: {
+            ...prev.identification.personne_morale,
+            denomination_officielle: prev.identification.personne_morale?.denomination_officielle || compte.denomination || '',
+            raison_sociale: prev.identification.personne_morale?.raison_sociale || compte.denomination || '',
+            numero_cc: prev.identification.personne_morale?.numero_cc || compte.numero_cc || '',
+            adresse_siege: prev.identification.personne_morale?.adresse_siege || compte.adresse || '',
+            ville: prev.identification.personne_morale?.ville || compte.ville || '',
+            region: prev.identification.personne_morale?.region || compte.region || '',
+          },
+        },
+      }));
     }
-  }, [data]);
+    if (data?.version !== undefined) {
+      setFormVersion(data.version);
+    }
+  }, [adminData, entrepriseData, isAdminMode, compte]);
 
   useEffect(() => {
     if (dossier?.workflow?.statut) {
@@ -60,7 +250,10 @@ export default function MonEnregistrementPage() {
     }
   }, [dossier]);
 
-  const isReadOnly = statutWorkflow !== null && STATUTS_LECTURE_SEULE.includes(statutWorkflow);
+  // En mode admin, jamais de lecture seule (l'agent peut toujours editer)
+  const isReadOnly = !isAdminMode
+    && statutWorkflow !== null
+    && STATUTS_LECTURE_SEULE.includes(statutWorkflow);
 
   const updatePart = useCallback(<K extends keyof FormulaireDCP>(key: K, patch: Partial<FormulaireDCP[K]>) => {
     setForm((prev) => ({ ...prev, [key]: { ...(prev[key] as object), ...patch } } as FormulaireDCP));
@@ -79,27 +272,126 @@ export default function MonEnregistrementPage() {
     }));
   }, []);
 
+  function extractApiError(err: unknown, fallback: string): string {
+    const e = err as { response?: { status?: number; data?: { message?: string; error?: string } } };
+    return e?.response?.data?.message ?? e?.response?.data?.error ?? fallback;
+  }
+
   async function handleSave() {
     setSaving(true); setError(''); setSuccess('');
     try {
-      await entrepriseApi.saveFormulaireDCP(form as unknown as Record<string, unknown>);
-      setSuccess('Brouillon sauvegardé.');
-    } catch {
-      setError("Erreur lors de la sauvegarde.");
+      const reponses = form as unknown as Record<string, unknown>;
+      if (isAdminMode) {
+        if (adminEntiteId) {
+          const res = await adminApi.adminSaveFormulaireDCP(adminEntiteId, reponses, formVersion);
+          setFormVersion(res.version ?? formVersion + 1);
+          setSuccess('Formulaire sauvegardé.');
+        } else {
+          // Premiere sauvegarde en mode admin saisie_artci : on cree l'entite
+          const created = await adminApi.adminCreateSaisieArtci({ reponses });
+          setAdminEntiteId(created.id);
+          setFormVersion(created.version ?? 1);
+          setSuccess(`Entité créée (N° CC ${created.numero_cc}). Continuez à compléter le formulaire.`);
+          // Mettre a jour l'URL pour permettre la re-edition
+          navigate(`/admin/entites/${created.id}/saisie`, { replace: true });
+        }
+      } else {
+        const res = await entrepriseApi.saveFormulaireDCP(reponses, formVersion);
+        setFormVersion(res.version ?? formVersion + 1);
+        setSuccess('Brouillon sauvegardé.');
+      }
+    } catch (err) {
+      setError(extractApiError(err, "Erreur lors de la sauvegarde."));
     } finally { setSaving(false); }
   }
 
+  /** Sauvegarde silencieuse en arriere-plan (avant de passer a l'etape suivante). */
+  async function saveDraftSilent(): Promise<void> {
+    try {
+      const reponses = form as unknown as Record<string, unknown>;
+      if (isAdminMode) {
+        if (adminEntiteId) {
+          const res = await adminApi.adminSaveFormulaireDCP(adminEntiteId, reponses, formVersion);
+          setFormVersion(res.version ?? formVersion + 1);
+        } else {
+          const created = await adminApi.adminCreateSaisieArtci({ reponses });
+          setAdminEntiteId(created.id);
+          setFormVersion(created.version ?? 1);
+          navigate(`/admin/entites/${created.id}/saisie`, { replace: true });
+        }
+      } else {
+        const res = await entrepriseApi.saveFormulaireDCP(reponses, formVersion);
+        setFormVersion(res.version ?? formVersion + 1);
+      }
+    } catch {
+      // silent : on n'interrompt pas le passage d'etape
+    }
+  }
+
+  async function goNext() {
+    setError(''); setSuccess('');
+    // Validation des champs obligatoires de l'etape courante
+    if (currentStep <= 5) {
+      const err = validateStep(currentStep, form);
+      if (err) {
+        setError(err);
+        // scroll en haut pour voir le message
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+    }
+    // Sauvegarde brouillon en arriere-plan
+    await saveDraftSilent();
+    if (currentStep < 6) {
+      setCurrentStep((currentStep + 1) as StepNum);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+
+  function goPrev() {
+    setError(''); setSuccess('');
+    if (currentStep > 1) {
+      setCurrentStep((currentStep - 1) as StepNum);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+
   async function handleSubmit() {
+    // En mode admin, pas de soumission a soi-meme : on sauvegarde et on retourne au panier.
+    if (isAdminMode) {
+      await handleSave();
+      return;
+    }
+    // Verifie toutes les etapes 1..5 avant soumission finale
+    for (const step of [1, 2, 3, 4, 5] as StepNum[]) {
+      const err = validateStep(step, form);
+      if (err) {
+        setError(`Étape ${step} incomplète : ${err}`);
+        setCurrentStep(step);
+        setShowSubmitConfirm(false);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+    }
     setSubmitting(true); setError(''); setSuccess(''); setShowSubmitConfirm(false);
     try {
-      await entrepriseApi.saveFormulaireDCP(form as unknown as Record<string, unknown>);
+      const saveRes = await entrepriseApi.saveFormulaireDCP(
+        form as unknown as Record<string, unknown>,
+        formVersion,
+      );
+      setFormVersion(saveRes.version ?? formVersion + 1);
       await entrepriseApi.soumettreFormulaireDCP();
       setSuccess('Dossier soumis à l\'ARTCI avec succès. Vous serez notifié(e) après traitement.');
       setStatutWorkflow('soumis');
-    } catch {
-      setError("Erreur lors de la soumission.");
+    } catch (err) {
+      // Le backend renvoie un message specifique si commentaires open non traites,
+      // ou si conflit de version. On affiche le message tel quel.
+      setError(extractApiError(err, "Erreur lors de la soumission."));
     } finally { setSubmitting(false); }
   }
+
+  // Hooks AVANT tout early return (rules of hooks)
+  const progress = useFormProgress(form);
 
   if (isLoading) return <Loading fullPage text="Chargement du formulaire..." />;
 
@@ -112,22 +404,90 @@ export default function MonEnregistrementPage() {
   return (
     <div className="max-w-5xl mx-auto pb-20">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-2">Mon enregistrement</h1>
-        <p className="text-sm text-gray-600">
-          QUESTIONNAIRE DE RECENSEMENT ET D'ÉVALUATION DE LA CONFORMITÉ À LA LOI N°2013-450 RELATIVE À LA
-          PROTECTION DES DONNÉES À CARACTÈRE PERSONNEL EN CÔTE D'IVOIRE
-        </p>
+        <h1 className="text-2xl font-bold text-[var(--artci-orange)]">
+          {isAdminMode
+            ? (adminEntiteId ? "Édition d'une entité" : 'Nouveau recensement (saisie ARTCI)')
+            : 'Mon enregistrement'}
+        </h1>
       </div>
 
-      <div className="alert alert-info mb-6 text-sm">
-        Ce questionnaire a pour finalité d'établir un registre des entités procédant au traitement
-        des données à caractère personnel et d'évaluer leur niveau de conformité.
-        Conformément à l'article 45 de la loi N°2013-450, toute entrave à l'action de l'Autorité
-        de protection des données est passible de sanctions pénales.
+      {!isAdminMode && (
+        <div className="alert alert-info mb-6 text-sm">
+          Ce questionnaire a pour finalité d'établir un registre des entités procédant au traitement
+          des données à caractère personnel et d'évaluer leur niveau de conformité.
+          Conformément à l'article 45 de la loi N°2013-450, toute entrave à l'action de l'Autorité
+          de protection des données est passible de sanctions pénales.
+        </div>
+      )}
+
+      {isAdminMode && (
+        <div className="alert alert-warning mb-6 text-sm flex items-start gap-2">
+          <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+          <div>
+            <strong>Saisie ARTCI</strong> — Vous êtes en train de remplir le questionnaire pour
+            le compte d'une entreprise. L'entité sera marquée <code>origine_saisie = saisie_artci</code>.
+            {!adminEntiteId && (
+              <span> La première sauvegarde créera l'entité dans la base.</span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* STEPPER : 6 etapes (Partie 1..5 + Recap) avec progression visuelle */}
+      <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6 sticky top-0 z-10 shadow-sm">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm font-semibold text-gray-700">
+            Étape {currentStep} sur {STEPS.length}
+          </span>
+          <span className="text-xs text-gray-500">
+            Progression globale : <strong className="text-[var(--artci-orange)]">{progress.percent}%</strong>
+            <span className="ml-1">({progress.filled}/{progress.total} questions)</span>
+          </span>
+        </div>
+        <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto">
+          {STEPS.map((s, idx) => {
+            const isCurrent = currentStep === s.num;
+            const isDone = currentStep > s.num;
+            return (
+              <div key={s.num} className="flex items-center flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={() => { setCurrentStep(s.num as StepNum); setError(''); setSuccess(''); }}
+                  className={`flex flex-col items-center gap-1 px-2 py-1 rounded transition-colors ${
+                    isCurrent ? 'bg-[var(--artci-orange)] text-white'
+                    : isDone ? 'text-[var(--artci-green)] hover:bg-green-50'
+                    : 'text-gray-400 hover:bg-gray-50'
+                  }`}
+                >
+                  <span className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${
+                    isCurrent ? 'bg-white text-[var(--artci-orange)]'
+                    : isDone ? 'bg-[var(--artci-green)] text-white'
+                    : 'bg-gray-200 text-gray-500'
+                  }`}>
+                    {isDone ? <CheckCircle2 className="w-4 h-4" /> : s.num}
+                  </span>
+                  <span className="text-[10px] font-semibold whitespace-nowrap hidden sm:block">{s.label}</span>
+                </button>
+                {idx < STEPS.length - 1 && (
+                  <div className={`h-0.5 w-4 sm:w-8 mx-1 ${isDone ? 'bg-[var(--artci-green)]' : 'bg-gray-200'}`} />
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <div className="w-full h-1 bg-gray-100 rounded-full overflow-hidden mt-3">
+          <div
+            className="h-full bg-[var(--artci-orange)] transition-all duration-300"
+            style={{ width: `${progress.percent}%` }}
+          />
+        </div>
       </div>
 
       {error && <div className="alert alert-danger mb-4">{error}</div>}
       {success && <div className="alert alert-success mb-4">{success}</div>}
+
+      {/* Commentaires ARTCI ancres (modele PR) - cote ENTREPRISE uniquement */}
+      {!isAdminMode && <CommentairesARTCI />}
 
       {/* Bandeau lecture seule si dossier soumis / en verification */}
       {isReadOnly && (
@@ -146,6 +506,7 @@ export default function MonEnregistrementPage() {
       <div className={isReadOnly ? 'opacity-60 pointer-events-none' : ''}>
 
       {/* ============================ PARTIE 1 ============================ */}
+      {currentStep === 1 && (
       <FormSection title="PARTIE 1 : IDENTIFICATION DE L'ENTITÉ">
 
         <RadioGroup
@@ -164,26 +525,29 @@ export default function MonEnregistrementPage() {
           <fieldset className="border border-gray-200 p-4 mb-4">
             <legend className="text-xs font-bold text-gray-700 px-2">PERSONNE MORALE</legend>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <TextField label="Dénomination officielle"
+              <TextField label="Dénomination officielle" required
                 value={id.personne_morale?.denomination_officielle}
                 onChange={(v) => updatePart('identification', { personne_morale: { ...id.personne_morale, denomination_officielle: v } })} />
-              <TextField label="Raison sociale"
+              <TextField label="Raison sociale" required
                 value={id.personne_morale?.raison_sociale}
                 onChange={(v) => updatePart('identification', { personne_morale: { ...id.personne_morale, raison_sociale: v } })} />
               <TextField label="N° CC" required
                 value={id.personne_morale?.numero_cc}
                 onChange={(v) => updatePart('identification', { personne_morale: { ...id.personne_morale, numero_cc: v } })} />
-              <TextField label="Ville"
+              <SelectField label="Région" required
+                options={REGIONS_CI}
+                value={id.personne_morale?.region}
+                onChange={(v) => updatePart('identification', { personne_morale: { ...id.personne_morale, region: v, commune: '' } })} />
+              <SelectField label="Commune" required
+                options={communesForRegion(id.personne_morale?.region)}
+                value={id.personne_morale?.commune}
+                onChange={(v) => updatePart('identification', { personne_morale: { ...id.personne_morale, commune: v } })}
+                placeholder={id.personne_morale?.region ? 'Sélectionnez…' : "Choisissez d'abord la région"} />
+              <TextField label="Ville / Localité" required
                 value={id.personne_morale?.ville}
                 onChange={(v) => updatePart('identification', { personne_morale: { ...id.personne_morale, ville: v } })} />
-              <TextField label="Commune"
-                value={id.personne_morale?.commune}
-                onChange={(v) => updatePart('identification', { personne_morale: { ...id.personne_morale, commune: v } })} />
-              <TextField label="Région"
-                value={id.personne_morale?.region}
-                onChange={(v) => updatePart('identification', { personne_morale: { ...id.personne_morale, region: v } })} />
             </div>
-            <TextArea label="Adresse complète du siège" rows={2}
+            <TextArea label="Adresse complète du siège" rows={2} required
               value={id.personne_morale?.adresse_siege}
               onChange={(v) => updatePart('identification', { personne_morale: { ...id.personne_morale, adresse_siege: v } })} />
           </fieldset>
@@ -193,49 +557,48 @@ export default function MonEnregistrementPage() {
           <fieldset className="border border-gray-200 p-4 mb-4">
             <legend className="text-xs font-bold text-gray-700 px-2">PERSONNE PHYSIQUE</legend>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <TextField label="Nom & prénom(s)"
+              <TextField label="Nom & prénom(s)" required
                 value={id.personne_physique?.nom_prenom}
                 onChange={(v) => updatePart('identification', { personne_physique: { ...id.personne_physique, nom_prenom: v } })} />
-              <TextField label="Fonction"
+              <TextField label="Fonction" required
                 value={id.personne_physique?.fonction}
                 onChange={(v) => updatePart('identification', { personne_physique: { ...id.personne_physique, fonction: v } })} />
-              <TextField label="Ville"
+              <SelectField label="Région" required
+                options={REGIONS_CI}
+                value={id.personne_physique?.region}
+                onChange={(v) => updatePart('identification', { personne_physique: { ...id.personne_physique, region: v, commune: '' } })} />
+              <SelectField label="Commune" required
+                options={communesForRegion(id.personne_physique?.region)}
+                value={id.personne_physique?.commune}
+                onChange={(v) => updatePart('identification', { personne_physique: { ...id.personne_physique, commune: v } })}
+                placeholder={id.personne_physique?.region ? 'Sélectionnez…' : "Choisissez d'abord la région"} />
+              <TextField label="Ville / Localité" required
                 value={id.personne_physique?.ville}
                 onChange={(v) => updatePart('identification', { personne_physique: { ...id.personne_physique, ville: v } })} />
-              <TextField label="Commune"
-                value={id.personne_physique?.commune}
-                onChange={(v) => updatePart('identification', { personne_physique: { ...id.personne_physique, commune: v } })} />
-              <TextField label="Région"
-                value={id.personne_physique?.region}
-                onChange={(v) => updatePart('identification', { personne_physique: { ...id.personne_physique, region: v } })} />
             </div>
-            <TextArea label="Adresse complète du siège" rows={2}
+            <TextArea label="Adresse complète du siège" rows={2} required
               value={id.personne_physique?.adresse}
               onChange={(v) => updatePart('identification', { personne_physique: { ...id.personne_physique, adresse: v } })} />
           </fieldset>
         )}
 
-        <RadioGroup
-          legend="Secteur d'activité"
-          options={[
-            { value: 'tic', label: 'Télécommunications / TIC' },
-            { value: 'banque_finance_assurance', label: 'Banque / Finance / Assurance' },
-            { value: 'sante', label: 'Santé' },
-            { value: 'education', label: 'Éducation' },
-            { value: 'commerce_services', label: 'Commerce / Services' },
-            { value: 'autre', label: 'Autre' },
-          ]}
-          value={id.secteur_activite}
-          onChange={(v) => updatePart('identification', { secteur_activite: v })}
+        {/* Secteur(s) d'activite en multi-selection */}
+        <CheckboxGroup
+          legend="Secteur(s) d'activité (cochez tous ceux applicables) *"
+          columns={2}
+          options={SECTEURS_ACTIVITE.map((s) => ({ value: s, label: s }))}
+          values={id.secteurs_activite ?? []}
+          onChange={(v) => updatePart('identification', { secteurs_activite: v })}
         />
-        {id.secteur_activite === 'autre' && (
-          <TextField label="Préciser"
+        {id.secteurs_activite?.includes('Autre') && (
+          <TextField label="Préciser le secteur « Autre »" required
             value={id.secteur_autre}
             onChange={(v) => updatePart('identification', { secteur_autre: v })} />
         )}
 
         <RadioGroup
           legend="Volume approximatif de données personnelles traitées :"
+          required
           options={[
             { value: 'moins_1000', label: 'Moins de 1 000 personnes concernées' },
             { value: '1000_10000', label: '1 000 à 10 000 personnes' },
@@ -246,30 +609,40 @@ export default function MonEnregistrementPage() {
           onChange={(v) => updatePart('identification', { volume_donnees: v })}
         />
 
+        {/* Pointage carte interactive (spec : remplacer la saisie texte de lat/lng) */}
+        <LocalisationPicker
+          value={id.localisation}
+          onChange={(v) => updatePart('identification', { localisation: v })}
+          disabled={isReadOnly}
+        />
+
         <fieldset className="border border-gray-200 p-4">
           <legend className="text-xs font-bold text-gray-700 px-2">Responsable légal de l'organisation</legend>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <TextField label="Nom et prénom(s)"
+            <TextField label="Nom et prénom(s)" required
               value={id.responsable_legal?.nom_prenom}
               onChange={(v) => updatePart('identification', { responsable_legal: { ...id.responsable_legal, nom_prenom: v } })} />
-            <TextField label="Fonction"
+            <TextField label="Fonction" required
               value={id.responsable_legal?.fonction}
               onChange={(v) => updatePart('identification', { responsable_legal: { ...id.responsable_legal, fonction: v } })} />
-            <TextField label="Email" type="email"
+            <TextField label="Email" type="email" required
               value={id.responsable_legal?.email}
               onChange={(v) => updatePart('identification', { responsable_legal: { ...id.responsable_legal, email: v } })} />
-            <TextField label="Tél." type="tel"
+            <TextField label="Tél." type="tel" required
               value={id.responsable_legal?.telephone}
               onChange={(v) => updatePart('identification', { responsable_legal: { ...id.responsable_legal, telephone: v } })} />
           </div>
         </fieldset>
       </FormSection>
+      )}
 
       {/* ============================ PARTIE 2 ============================ */}
+      {currentStep === 2 && (
       <FormSection title="PARTIE 2 : CONNAISSANCE DU CADRE JURIDIQUE ET CONFORMITÉ ADMINISTRATIVE">
 
         <RadioGroup
           legend="Connaissez-vous l'existence de la loi N°2013-450 du 19 juin 2013 relative à la protection des données à caractère personnel ?"
+          required
           inline
           options={[{ value: 'oui', label: 'Oui' }, { value: 'non', label: 'Non' }]}
           value={cj.connaissance_loi_2013}
@@ -278,6 +651,7 @@ export default function MonEnregistrementPage() {
 
         <RadioGroup
           legend="Avez-vous connaissance de vos obligations légales en tant que responsable de traitement ?"
+          required
           inline
           options={[{ value: 'oui', label: 'Oui' }, { value: 'non', label: 'Non' }]}
           value={cj.connaissance_obligations}
@@ -286,6 +660,7 @@ export default function MonEnregistrementPage() {
 
         <RadioGroup
           legend="Avez-vous connaissance du rôle et des pouvoirs de l'ARTCI (Autorité de Régulation des Télécommunications/TIC) en matière de protection des données ?"
+          required
           inline
           options={[
             { value: 'oui', label: 'Oui' },
@@ -296,9 +671,10 @@ export default function MonEnregistrementPage() {
           onChange={(v) => updatePart('cadre_juridique', { connaissance_artci: v })}
         />
 
-        {/* Q5 reformulee : "Avez-vous un DPO habilite par l'ARTCI ?" */}
+        {/* Q5 reformulee */}
         <RadioGroup
-          legend="Avez-vous un DPO habilité par l'ARTCI ?"
+          legend="Avez-vous un correspondant à la protection des données personnelles (DPO) ?"
+          required
           inline
           options={[
             { value: 'oui', label: 'Oui' },
@@ -432,38 +808,41 @@ export default function MonEnregistrementPage() {
 
             {/* Upload obligatoire courrier d'habilitation ARTCI */}
             <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded">
-              <p className="text-xs font-semibold text-gray-800 mb-2">
+              <p className="text-xs font-semibold text-gray-800 mb-1">
                 Upload du courrier d'habilitation émis par l'ARTCI <span className="text-red-500">*</span>
               </p>
+              <p className="text-[11px] text-gray-500 mb-2">Format accepté : PDF uniquement — taille max 5 Mo.</p>
               <input
                 type="file"
-                accept=".pdf,.jpg,.jpeg,.png"
-                onChange={(e) => updatePart('cadre_juridique', {
-                  dpo_courrier_habilitation_uploaded: !!e.target.files?.[0],
-                })}
+                accept="application/pdf"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f && f.size > 5 * 1024 * 1024) {
+                    setError('Le courrier d\'habilitation dépasse 5 Mo.');
+                    e.target.value = '';
+                    return;
+                  }
+                  updatePart('cadre_juridique', { dpo_courrier_habilitation_uploaded: !!f });
+                }}
                 className="text-xs"
               />
               {cj.dpo_courrier_habilitation_uploaded && (
-                <p className="text-xs text-green-600 mt-1">✓ Document sélectionné</p>
+                <p className="text-xs text-green-600 mt-1">✓ Document PDF sélectionné</p>
               )}
             </div>
-
-            <RadioGroup
-              legend="Le DPO a-t-il le profil requis selon l'Arrêté N° 511/MPTIC/CAB ?"
-              inline
-              options={[
-                { value: 'oui', label: 'Oui' },
-                { value: 'non', label: 'Non' },
-                { value: 'ne_sais_pas', label: 'Ne sais pas' },
-              ]}
-              value={cj.cpd_profil_requis}
-              onChange={(v) => updatePart('cadre_juridique', { cpd_profil_requis: v })}
-            />
           </fieldset>
         )}
+      </FormSection>
+      )}
 
+      {/* ============================ PARTIE 3 ============================ */}
+      {currentStep === 3 && (
+      <FormSection title="PARTIE 3 : REGISTRE ET CARTOGRAPHIE DES TRAITEMENTS">
+
+        {/* Questions deplacees depuis la Partie 2 (Cadre juridique) */}
         <RadioGroup
           legend="Savez-vous distinguer les traitements soumis à déclaration et ceux soumis à autorisation préalable ?"
+          required
           inline
           options={[
             { value: 'oui', label: 'Oui' },
@@ -474,89 +853,10 @@ export default function MonEnregistrementPage() {
           onChange={(v) => updatePart('cadre_juridique', { distinction_decl_aut: v })}
         />
 
-        {/* Note : la question "Avez-vous effectue les formalites necessaires..." a ete deplacee
-            apres les finalites et est maintenant CALCULEE AUTOMATIQUEMENT (cf. §3.5 et §3.7).
-            Le resultat (Autorisation prealable vs Declaration prealable) sera affiche
-            dans le recapitulatif final. */}
-
-        <RadioGroup
-          legend="Avez-vous effectué les formalités nécessaires auprès de l'ARTCI pour vos traitements de données ?"
-          options={[
-            { value: 'oui_tous', label: 'Oui, tous les traitements sont déclarés/autorisés' },
-            { value: 'non_aucune', label: "Non, aucune formalité n'a été effectuée" },
-            { value: 'en_cours', label: 'En cours' },
-          ]}
-          value={cj.formalites_effectuees}
-          onChange={(v) => updatePart('cadre_juridique', { formalites_effectuees: v })}
-        />
-
-        {cj.formalites_effectuees === 'en_cours' && (
-          <>
-            <CheckboxGroup
-              legend="Si une démarche est en cours, à quel stade êtes-vous ?"
-              options={[
-                { value: 'audit_initial', label: "Audit initial / Diagnostic de l'existant" },
-                { value: 'elaboration_registre', label: 'Élaboration du registre des traitements' },
-                { value: 'mesures_techniques_org', label: 'Mise en œuvre des mesures techniques et organisationnelles' },
-                { value: 'depot_declarations', label: "Dépôt des déclarations/demandes d'autorisation" },
-                { value: 'formation_personnel', label: 'Formation du personnel' },
-                { value: 'finalisation_suivi', label: 'Finalisation et suivi' },
-              ] satisfies { value: StadeDemarche; label: string }[] as { value: StadeDemarche; label: string }[]}
-              values={cj.stades_demarche ?? []}
-              onChange={(v) => updatePart('cadre_juridique', { stades_demarche: v })}
-            />
-            <RadioGroup
-              legend="Si une démarche est en cours, avez-vous bénéficié d'un accompagnement externe ?"
-              options={[
-                { value: 'oui', label: 'Oui (Cabinet conseil, Expert, DPO externe)' },
-                { value: 'non', label: 'Non' },
-              ]}
-              value={cj.accompagnement_externe}
-              onChange={(v) => updatePart('cadre_juridique', { accompagnement_externe: v })}
-            />
-            {cj.accompagnement_externe === 'oui' && (
-              <TextField label="Qui ?"
-                value={cj.accompagnement_qui}
-                onChange={(v) => updatePart('cadre_juridique', { accompagnement_qui: v })} />
-            )}
-          </>
-        )}
-
-        {cj.formalites_effectuees === 'non_aucune' && (
-          <>
-            <CheckboxGroup
-              legend="Si vous n'avez pas effectué de formalités, quelle en est la raison ?"
-              options={[
-                { value: 'ignorance_obligation', label: "Ignorance de l'obligation" },
-                { value: 'complexite_procedure', label: 'Complexité de la procédure' },
-                { value: 'cout_eleve', label: 'Coût trop élevé' },
-                { value: 'manque_temps_ressources', label: 'Manque de temps/ressources' },
-                { value: 'pense_exempte', label: 'Pense être exempté' },
-                { value: 'autre', label: 'Autre' },
-              ] satisfies { value: RaisonNonFormalites; label: string }[] as { value: RaisonNonFormalites; label: string }[]}
-              values={cj.raisons_non_formalites ?? []}
-              onChange={(v) => updatePart('cadre_juridique', { raisons_non_formalites: v })}
-            />
-            {cj.raisons_non_formalites?.includes('pense_exempte') && (
-              <TextField label="Préciser pourquoi"
-                value={cj.raison_exempte_precision}
-                onChange={(v) => updatePart('cadre_juridique', { raison_exempte_precision: v })} />
-            )}
-            {cj.raisons_non_formalites?.includes('autre') && (
-              <TextField label="Autre (préciser)"
-                value={cj.raison_autre_precision}
-                onChange={(v) => updatePart('cadre_juridique', { raison_autre_precision: v })} />
-            )}
-          </>
-        )}
-      </FormSection>
-
-      {/* ============================ PARTIE 3 ============================ */}
-      <FormSection title="PARTIE 3 : REGISTRE ET CARTOGRAPHIE DES TRAITEMENTS">
-
         {/* Spec 3.6.1 : 1ere question = activites de traitement DCP (multi-cases) */}
         <CheckboxGroup
           legend="Quelles activités de traitement de données à caractère personnel effectuez-vous ? (cocher toutes les options applicables)"
+          required
           columns={3}
           options={[
             { value: 'collecte', label: 'Collecte' },
@@ -584,42 +884,9 @@ export default function MonEnregistrementPage() {
           onChange={(v) => updatePart('registre', { activites_traitement: v as ActiviteTraitementDCP[] })}
         />
 
-        <RadioGroup
-          legend="Disposez-vous d'un registre des activités de traitement tenu à jour ?"
-          options={[
-            { value: 'oui_complet', label: 'Oui, complet et à jour' },
-            { value: 'oui_incomplet', label: 'Oui, mais incomplet ou obsolète' },
-            { value: 'en_cours', label: "En cours d'élaboration" },
-            { value: 'non', label: 'Non' },
-          ]}
-          value={reg.registre_tenu}
-          onChange={(v) => updatePart('registre', { registre_tenu: v })}
-        />
-
-        {(reg.registre_tenu === 'oui_complet' || reg.registre_tenu === 'oui_incomplet') && (
-          <>
-            <RadioGroup
-              legend="Si oui, sous quelle forme est tenu ce registre ?"
-              options={[
-                { value: 'papier', label: 'Papier' },
-                { value: 'tableur', label: 'Tableur (Excel, etc.)' },
-                { value: 'logiciel', label: 'Logiciel/plateforme dédiée' },
-                { value: 'base_donnees', label: 'Base de données' },
-                { value: 'autre', label: 'Autre' },
-              ]}
-              value={reg.forme_registre}
-              onChange={(v) => updatePart('registre', { forme_registre: v })}
-            />
-            {reg.forme_registre === 'autre' && (
-              <TextField label="Préciser"
-                value={reg.forme_registre_autre}
-                onChange={(v) => updatePart('registre', { forme_registre_autre: v })} />
-            )}
-          </>
-        )}
-
         <CheckboxGroup
           legend="Quelles catégories de personnes sont concernées par vos traitements ? (cocher toutes les options applicables)"
+          required
           columns={2}
           options={[
             { value: 'salaries_agents', label: 'Salariés/Agents' },
@@ -671,8 +938,24 @@ export default function MonEnregistrementPage() {
           />
         ))}
 
+        {/* Déplacée depuis la Partie 4 : suit directement les catégories de données */}
+        <RadioGroup
+          legend="À l'issue de la durée de conservation, procédez-vous à la suppression ou l'anonymisation des données ?"
+          required
+          options={[
+            { value: 'oui_suppression', label: 'Oui, suppression systématique' },
+            { value: 'oui_anonymisation', label: 'Oui, anonymisation' },
+            { value: 'oui_archivage_securise', label: 'Oui, archivage sécurisé avec accès restreint' },
+            { value: 'non_indefiniment', label: 'Non, les données sont conservées indéfiniment' },
+            { value: 'variable', label: 'Variable selon les cas' },
+          ]}
+          value={st.suppression_anonymisation}
+          onChange={(v) => updatePart('sous_traitance_transferts', { suppression_anonymisation: v })}
+        />
+
         <CheckboxGroup
           legend="Quelle est la finalité de ces traitements (but poursuivi) ?"
+          required
           options={[
             { value: 'gestion_administrative', label: 'Gestion administrative' },
             { value: 'gestion_rh', label: 'Gestion des ressources humaines' },
@@ -692,27 +975,162 @@ export default function MonEnregistrementPage() {
             onChange={(v) => updatePart('registre', { finalite_autre_precision: v })} />
         )}
 
+        {/* Formalité applicable calculée automatiquement (spec §3.5, §3.7) */}
+        <FormaliteCalculee form={form} />
+
+        {/* Question dynamique pilotée par la bannière (déclaration / autorisation préalable) */}
+        {(() => {
+          const formalite = determinerFormalite(form);
+          if (formalite.type === 'aucune') return null;
+          const libelleFormalite = formalite.type === 'autorisation_prealable'
+            ? "demande d'autorisation préalable"
+            : 'déclaration préalable';
+          return (
+            <>
+              <RadioGroup
+                legend={`Avez-vous effectué vos formalités de ${libelleFormalite} auprès de l'ARTCI ?`}
+                required
+                options={[
+                  { value: 'oui_tous', label: 'Oui' },
+                  { value: 'en_cours', label: 'En cours' },
+                  { value: 'non_aucune', label: 'Non' },
+                ]}
+                value={cj.formalites_effectuees}
+                onChange={(v) => updatePart('cadre_juridique', { formalites_effectuees: v })}
+              />
+
+              {cj.formalites_effectuees === 'oui_tous' && (
+                <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded">
+                  <p className="text-xs font-semibold text-gray-800 mb-1">
+                    Joindre le justificatif (récépissé de déclaration / autorisation de l'ARTCI) <span className="text-red-500">*</span>
+                  </p>
+                  <p className="text-[11px] text-gray-500 mb-2">Format accepté : PDF uniquement — taille max 5 Mo.</p>
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f && f.size > 5 * 1024 * 1024) {
+                        setError('Le justificatif dépasse 5 Mo.');
+                        e.target.value = '';
+                        return;
+                      }
+                      updatePart('cadre_juridique', { formalites_document_uploaded: !!f });
+                    }}
+                    className="text-xs"
+                  />
+                  {cj.formalites_document_uploaded && <p className="text-xs text-green-600 mt-1">✓ Document PDF sélectionné</p>}
+                </div>
+              )}
+
+              {cj.formalites_effectuees === 'en_cours' && (
+                <>
+                  <CheckboxGroup
+                    legend="À quel stade de la démarche êtes-vous ?"
+                    options={[
+                      { value: 'audit_initial', label: "Audit initial / Diagnostic de l'existant" },
+                      { value: 'elaboration_registre', label: 'Élaboration du registre des traitements' },
+                      { value: 'mesures_techniques_org', label: 'Mise en œuvre des mesures techniques et organisationnelles' },
+                      { value: 'depot_declarations', label: "Dépôt des déclarations/demandes d'autorisation" },
+                      { value: 'formation_personnel', label: 'Formation du personnel' },
+                      { value: 'finalisation_suivi', label: 'Finalisation et suivi' },
+                    ] satisfies { value: StadeDemarche; label: string }[] as { value: StadeDemarche; label: string }[]}
+                    values={cj.stades_demarche ?? []}
+                    onChange={(v) => updatePart('cadre_juridique', { stades_demarche: v })}
+                  />
+                  <RadioGroup
+                    legend="Avez-vous bénéficié d'un accompagnement externe ?"
+                    options={[
+                      { value: 'oui', label: 'Oui (Cabinet conseil, Expert, DPO externe)' },
+                      { value: 'non', label: 'Non' },
+                    ]}
+                    value={cj.accompagnement_externe}
+                    onChange={(v) => updatePart('cadre_juridique', { accompagnement_externe: v })}
+                  />
+                  {cj.accompagnement_externe === 'oui' && (
+                    <TextField label="Qui ?"
+                      value={cj.accompagnement_qui}
+                      onChange={(v) => updatePart('cadre_juridique', { accompagnement_qui: v })} />
+                  )}
+                </>
+              )}
+
+              {cj.formalites_effectuees === 'non_aucune' && (
+                <>
+                  <CheckboxGroup
+                    legend="Pour quelle raison ces formalités n'ont-elles pas été effectuées ?"
+                    options={[
+                      { value: 'ignorance_obligation', label: "Ignorance de l'obligation" },
+                      { value: 'complexite_procedure', label: 'Complexité de la procédure' },
+                      { value: 'cout_eleve', label: 'Coût trop élevé' },
+                      { value: 'manque_temps_ressources', label: 'Manque de temps/ressources' },
+                      { value: 'pense_exempte', label: 'Pense être exempté' },
+                      { value: 'autre', label: 'Autre' },
+                    ] satisfies { value: RaisonNonFormalites; label: string }[] as { value: RaisonNonFormalites; label: string }[]}
+                    values={cj.raisons_non_formalites ?? []}
+                    onChange={(v) => updatePart('cadre_juridique', { raisons_non_formalites: v })}
+                  />
+                  {cj.raisons_non_formalites?.includes('pense_exempte') && (
+                    <TextField label="Préciser pourquoi"
+                      value={cj.raison_exempte_precision}
+                      onChange={(v) => updatePart('cadre_juridique', { raison_exempte_precision: v })} />
+                  )}
+                  {cj.raisons_non_formalites?.includes('autre') && (
+                    <TextField label="Autre (préciser)"
+                      value={cj.raison_autre_precision}
+                      onChange={(v) => updatePart('cadre_juridique', { raison_autre_precision: v })} />
+                  )}
+                </>
+              )}
+            </>
+          );
+        })()}
+
+        {/* Déplacée : avant les bases légales, avec 3 options */}
         <RadioGroup
-          legend="Cette finalité est-elle explicite, déterminée et légitime ?"
-          inline
+          legend="Disposez-vous d'un registre des activités de traitement tenu à jour ?"
+          required
           options={[
             { value: 'oui', label: 'Oui' },
+            { value: 'en_cours', label: "En cours d'élaboration" },
             { value: 'non', label: 'Non' },
-            { value: 'a_preciser', label: 'À préciser' },
           ]}
-          value={reg.finalite_explicite}
-          onChange={(v) => updatePart('registre', { finalite_explicite: v })}
+          value={reg.registre_tenu}
+          onChange={(v) => updatePart('registre', { registre_tenu: v })}
         />
+
+        {reg.registre_tenu === 'oui' && (
+          <>
+            <RadioGroup
+              legend="Si oui, sous quelle forme est tenu ce registre ?"
+              options={[
+                { value: 'papier', label: 'Papier' },
+                { value: 'tableur', label: 'Tableur (Excel, etc.)' },
+                { value: 'logiciel', label: 'Logiciel/plateforme dédiée' },
+                { value: 'base_donnees', label: 'Base de données' },
+                { value: 'autre', label: 'Autre' },
+              ]}
+              value={reg.forme_registre}
+              onChange={(v) => updatePart('registre', { forme_registre: v })}
+            />
+            {reg.forme_registre === 'autre' && (
+              <TextField label="Préciser"
+                value={reg.forme_registre_autre}
+                onChange={(v) => updatePart('registre', { forme_registre_autre: v })} />
+            )}
+          </>
+        )}
 
         <CheckboxGroup
           legend="Base légale du traitement (cocher la ou les bases applicables) :"
+          required
           options={[
             { value: 'consentement', label: 'Consentement de la personne concernée' },
             { value: 'obligation_legale', label: 'Obligation légale imposant le traitement' },
             { value: 'execution_contrat', label: "Exécution d'un contrat auquel la personne est partie" },
             { value: 'interet_legitime', label: 'Intérêt légitime du responsable de traitement' },
             { value: 'mission_interet_public', label: "Mission d'intérêt public ou exercice de l'autorité publique" },
-            { value: 'sauvegarde_vie', label: 'Sauvegarde de la vie de la personne concernée' },
+            { value: 'sauvegarde_vie', label: "Sauvegarde de l'intérêt ou des droits et libertés fondamentaux de la personne concernée" },
           ] satisfies { value: BaseLegale; label: string }[] as { value: BaseLegale; label: string }[]}
           values={reg.bases_legales ?? []}
           onChange={(v) => updatePart('registre', { bases_legales: v })}
@@ -730,10 +1148,11 @@ export default function MonEnregistrementPage() {
 
         <RadioGroup
           legend="Mode de traitement :"
+          required
           options={[
             { value: 'automatise', label: 'Traitement automatisé (informatique)' },
             { value: 'manuel', label: 'Traitement manuel (papier)' },
-            { value: 'mixte', label: 'Traitement mixte (automatisé + manuel)' },
+            { value: 'mixte', label: 'Traitement mixte (informatique + papier)' },
           ]}
           value={reg.mode_traitement}
           onChange={(v) => updatePart('registre', { mode_traitement: v })}
@@ -741,6 +1160,7 @@ export default function MonEnregistrementPage() {
 
         <RadioGroup
           legend="Informez-vous les personnes concernées au moment de la collecte de leurs données ?"
+          required
           options={[
             { value: 'oui_systematiquement', label: 'Oui, systématiquement' },
             { value: 'parfois', label: 'Parfois' },
@@ -750,8 +1170,10 @@ export default function MonEnregistrementPage() {
           onChange={(v) => updatePart('registre', { info_personnes_collecte: v })}
         />
 
+        {(reg.info_personnes_collecte === 'oui_systematiquement' || reg.info_personnes_collecte === 'parfois') && (
+        <>
         <CheckboxGroup
-          legend="Quelles informations communiquez-vous ? (cocher toutes les informations fournies)"
+          legend="Quelles informations communiquez-vous aux personnes lors de la collecte de leurs données ? (cocher toutes les informations fournies)"
           columns={2}
           options={[
             { value: 'identite_responsable', label: 'Identité du responsable de traitement' },
@@ -789,21 +1211,27 @@ export default function MonEnregistrementPage() {
             value={reg.comment_informer_autre}
             onChange={(v) => updatePart('registre', { comment_informer_autre: v })} />
         )}
+        </>
+        )}
 
         <RadioGroup
           legend="Réutilisez-vous les données collectées pour des finalités autres que celles qui ont justifié leur collecte initiale ?"
+          required
           inline
           options={[{ value: 'oui', label: 'Oui' }, { value: 'non', label: 'Non' }]}
           value={reg.reutilisation_donnees}
           onChange={(v) => updatePart('registre', { reutilisation_donnees: v })}
         />
       </FormSection>
+      )}
 
       {/* ============================ PARTIE 4 ============================ */}
+      {currentStep === 4 && (
       <FormSection title="PARTIE 4 : SOUS-TRAITANCE, TRANSFERT DES DONNÉES">
 
         <RadioGroup
           legend="Avez-vous recours à des sous-traitants pour le traitement de données personnelles ?"
+          required
           inline
           options={[{ value: 'oui', label: 'Oui' }, { value: 'non', label: 'Non' }]}
           value={st.recours_sous_traitants}
@@ -812,46 +1240,55 @@ export default function MonEnregistrementPage() {
 
         {st.recours_sous_traitants === 'oui' && (
           <>
+            <TextField label="Si oui, précisez combien de sous-traitants" type="number"
+              value={st.nombre_sous_traitants}
+              onChange={(v) => updatePart('sous_traitance_transferts', { nombre_sous_traitants: v })} />
+
             <RadioGroup
-              legend="Avez-vous conclu des contrats de sous-traitance conformes à la loi avec chaque sous-traitant ?"
+              legend="Avez-vous conclu des contrats de sous-traitance avec chaque sous-traitant ?"
               options={[
-                { value: 'oui_tous', label: 'Oui, tous les sous-traitants' },
-                { value: 'oui_certains', label: 'Oui, certains seulement' },
+                { value: 'oui', label: 'Oui' },
                 { value: 'non', label: 'Non' },
               ]}
-              value={st.contrats_sous_traitance}
-              onChange={(v) => updatePart('sous_traitance_transferts', { contrats_sous_traitance: v })}
+              value={st.contrats_sous_traitance_existence}
+              onChange={(v) => updatePart('sous_traitance_transferts', { contrats_sous_traitance_existence: v })}
             />
-            {st.contrats_sous_traitance === 'oui_tous' && (
-              <TextField label="Combien" type="number"
-                value={st.contrats_nombre_tous}
-                onChange={(v) => updatePart('sous_traitance_transferts', { contrats_nombre_tous: v })} />
-            )}
-            {st.contrats_sous_traitance === 'oui_certains' && (
-              <TextField label="Combien" type="number"
-                value={st.contrats_nombre_certains}
-                onChange={(v) => updatePart('sous_traitance_transferts', { contrats_nombre_certains: v })} />
-            )}
 
-            <CheckboxGroup
-              legend="Ces contrats comportent-ils les clauses obligatoires suivantes ?"
-              options={[
-                { value: 'instruction_responsable', label: 'Obligation de traiter uniquement sur instruction du responsable' },
-                { value: 'confidentialite', label: 'Obligation de confidentialité' },
-                { value: 'mesures_securite', label: 'Mesures de sécurité' },
-                { value: 'possibilite_audit', label: "Possibilité d'audit" },
-                { value: 'sort_donnees_fin', label: 'Sort des données en fin de contrat (restitution ou destruction)' },
-                { value: 'interdiction_sous_traiter', label: 'Interdiction de sous-traiter sans autorisation' },
-                { value: 'toutes_clauses', label: 'Toutes les clauses ci-dessus' },
-              ] satisfies { value: ClauseObligatoire; label: string }[] as { value: ClauseObligatoire; label: string }[]}
-              values={st.clauses_obligatoires ?? []}
-              onChange={(v) => updatePart('sous_traitance_transferts', { clauses_obligatoires: v })}
-            />
+            {st.contrats_sous_traitance_existence === 'oui' && (
+              <>
+                <TextField label="Nombre de contrats de sous-traitance" type="number"
+                  value={st.nombre_contrats_sous_traitance}
+                  onChange={(v) => updatePart('sous_traitance_transferts', { nombre_contrats_sous_traitance: v })} />
+
+                <PaysSelect
+                  values={st.pays_sous_traitants ?? []}
+                  onChange={(v) => updatePart('sous_traitance_transferts', { pays_sous_traitants: v })}
+                  label="Pays de localisation des sous-traitants"
+                  placeholder="Rechercher un pays…"
+                />
+
+                <CheckboxGroup
+                  legend="Quelles clauses figurent dans ces contrats ? (cocher toutes les options applicables)"
+                  options={[
+                    { value: 'instruction_responsable', label: 'Obligation de traiter uniquement sur instruction du responsable' },
+                    { value: 'confidentialite', label: 'Obligation de confidentialité' },
+                    { value: 'mesures_securite', label: 'Mesures de sécurité' },
+                    { value: 'possibilite_audit', label: "Possibilité d'audit" },
+                    { value: 'sort_donnees_fin', label: 'Sort des données en fin de contrat (restitution ou destruction)' },
+                    { value: 'interdiction_sous_traiter', label: 'Interdiction de sous-traiter sans autorisation' },
+                    { value: 'toutes_clauses', label: 'Toutes les clauses ci-dessus' },
+                  ] satisfies { value: ClauseObligatoire; label: string }[] as { value: ClauseObligatoire; label: string }[]}
+                  values={st.clauses_obligatoires ?? []}
+                  onChange={(v) => updatePart('sous_traitance_transferts', { clauses_obligatoires: v })}
+                />
+              </>
+            )}
           </>
         )}
 
         <RadioGroup
           legend="Transférez-vous des données personnelles hors de l'espace CEDEAO ?"
+          required
           inline
           options={[{ value: 'oui', label: 'Oui' }, { value: 'non', label: 'Non' }]}
           value={st.transfert_hors_cedeao}
@@ -861,23 +1298,20 @@ export default function MonEnregistrementPage() {
         {st.transfert_hors_cedeao === 'oui' && (
           <fieldset className="border border-gray-200 p-4 mb-4">
             <legend className="text-xs font-bold text-gray-700 px-2">Si oui</legend>
-            {/* Spec 3.8 : multi-select pays de destination */}
-            <div className="form-group">
-              <label className="text-sm font-semibold">
-                Pays de destination (plusieurs possibles, un par ligne)
-              </label>
-              <textarea
-                rows={3}
-                value={(st.pays_transferts ?? []).join('\n')}
-                onChange={(e) => updatePart('sous_traitance_transferts', {
-                  pays_transferts: e.target.value.split('\n').map((p) => p.trim()).filter(Boolean),
-                })}
-                placeholder="France&#10;États-Unis&#10;Canada&#10;..."
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Saisissez un pays par ligne. {(st.pays_transferts ?? []).length} pays sélectionné(s).
+            <div className="flex items-start gap-2 p-3 mb-4 bg-orange-50 border border-orange-200 rounded">
+              <ShieldAlert className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-orange-800">
+                Tout transfert de données personnelles hors de l'espace CEDEAO est
+                <strong> soumis à autorisation préalable de l'ARTCI</strong> (Loi N°2013-450).
               </p>
             </div>
+            {/* Spec 3.8 : selecteur multi-pays avec liste codee (hors CEDEAO) */}
+            <PaysSelect
+              values={st.pays_transferts ?? []}
+              onChange={(v) => updatePart('sous_traitance_transferts', { pays_transferts: v })}
+              label="Pays de destination *"
+              placeholder="Rechercher un pays (hors CEDEAO)…"
+            />
             <TextField label="Objet/finalité du transfert"
               value={st.objet_transfert}
               onChange={(v) => updatePart('sous_traitance_transferts', { objet_transfert: v })} />
@@ -892,28 +1326,46 @@ export default function MonEnregistrementPage() {
               onChange={(v) => updatePart('sous_traitance_transferts', { autorisation_artci_transfert: v })}
             />
             {st.autorisation_artci_transfert === 'oui' && (
-              <TextField label="N° d'autorisation"
-                value={st.numero_autorisation_transfert}
-                onChange={(v) => updatePart('sous_traitance_transferts', { numero_autorisation_transfert: v })} />
+              <>
+                <TextField label="N° d'autorisation"
+                  value={st.numero_autorisation_transfert}
+                  onChange={(v) => updatePart('sous_traitance_transferts', { numero_autorisation_transfert: v })} />
+                <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded">
+                  <p className="text-xs font-semibold text-gray-800 mb-1">
+                    Joindre l'autorisation de transfert délivrée par l'ARTCI
+                  </p>
+                  <p className="text-[11px] text-gray-500 mb-2">Format accepté : PDF uniquement — taille max 5 Mo.</p>
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f && f.size > 5 * 1024 * 1024) {
+                        setError("L'autorisation dépasse 5 Mo.");
+                        e.target.value = '';
+                        return;
+                      }
+                      updatePart('sous_traitance_transferts', { autorisation_transfert_document_uploaded: !!f });
+                    }}
+                    className="text-xs"
+                  />
+                  {st.autorisation_transfert_document_uploaded && <p className="text-xs text-green-600 mt-1">✓ Document PDF sélectionné</p>}
+                </div>
+              </>
             )}
             <CheckboxGroup
-              legend="Sur quelle base juridique repose le transfert ?"
+              legend="Sur quelle base juridique repose le transfert ? (cocher la ou les bases applicables)"
               options={[
-                { value: 'consentement_expres', label: 'Consentement exprès de la personne' },
-                { value: 'execution_contrat', label: "Exécution d'un contrat" },
-                { value: 'motif_interet_public', label: "Motif d'intérêt public" },
-                { value: 'constatation_defense_droits', label: 'Constatation, exercice ou défense de droits en justice' },
-                { value: 'sauvegarde_vie', label: 'Sauvegarde de la vie de la personne' },
-                { value: 'garanties_appropriees', label: 'Garanties appropriées (préciser)' },
-              ] satisfies { value: BaseJuridiqueTransfert; label: string }[] as { value: BaseJuridiqueTransfert; label: string }[]}
+                { value: 'consentement', label: 'Consentement de la personne concernée' },
+                { value: 'obligation_legale', label: 'Obligation légale imposant le traitement' },
+                { value: 'execution_contrat', label: "Exécution d'un contrat auquel la personne est partie" },
+                { value: 'interet_legitime', label: 'Intérêt légitime du responsable de traitement' },
+                { value: 'mission_interet_public', label: "Mission d'intérêt public ou exercice de l'autorité publique" },
+                { value: 'sauvegarde_vie', label: "Sauvegarde de l'intérêt ou des droits et libertés fondamentaux de la personne concernée" },
+              ] satisfies { value: BaseLegale; label: string }[] as { value: BaseLegale; label: string }[]}
               values={st.bases_juridiques_transfert ?? []}
               onChange={(v) => updatePart('sous_traitance_transferts', { bases_juridiques_transfert: v })}
             />
-            {st.bases_juridiques_transfert?.includes('garanties_appropriees') && (
-              <TextField label="Préciser les garanties appropriées"
-                value={st.garanties_appropriees_precision}
-                onChange={(v) => updatePart('sous_traitance_transferts', { garanties_appropriees_precision: v })} />
-            )}
             <CheckboxGroup
               legend="Quelles garanties avez-vous mises en place pour sécuriser le transfert ?"
               options={[
@@ -936,37 +1388,17 @@ export default function MonEnregistrementPage() {
             )}
           </fieldset>
         )}
-
-        <RadioGroup
-          legend="À l'issue de la durée de conservation, procédez-vous à la suppression ou l'anonymisation des données ?"
-          options={[
-            { value: 'oui_suppression', label: 'Oui, suppression systématique' },
-            { value: 'oui_anonymisation', label: 'Oui, anonymisation' },
-            { value: 'oui_archivage_securise', label: 'Oui, archivage sécurisé avec accès restreint' },
-            { value: 'non_indefiniment', label: 'Non, les données sont conservées indéfiniment' },
-            { value: 'variable', label: 'Variable selon les cas' },
-          ]}
-          value={st.suppression_anonymisation}
-          onChange={(v) => updatePart('sous_traitance_transferts', { suppression_anonymisation: v })}
-        />
-
-        <RadioGroup
-          legend="Les supports de stockage envoyés en réparation ou à la destruction font-ils l'objet d'une procédure de protection (effacement sécurisé) ?"
-          options={[
-            { value: 'oui_documentee', label: 'Oui, procédure documentée' },
-            { value: 'non', label: 'Non' },
-            { value: 'non_applicable', label: 'Non applicable' },
-          ]}
-          value={st.protection_supports}
-          onChange={(v) => updatePart('sous_traitance_transferts', { protection_supports: v })}
-        />
       </FormSection>
+      )}
 
       {/* ============================ PARTIE 5 ============================ */}
+      {currentStep === 5 && (
       <FormSection title="PARTIE 5 : SÉCURITÉ ET FORMATION">
 
+        {/* Spec : toutes les questions de la Partie 5 sont obligatoires */}
         <RadioGroup
           legend="Avez-vous mis en place une charte de protection des données personnelles ?"
+          required
           options={[
             { value: 'oui_formalisee', label: 'Oui, formalisée et diffusée' },
             { value: 'non', label: 'Non' },
@@ -978,22 +1410,32 @@ export default function MonEnregistrementPage() {
         {/* Spec 3.9 : si Oui formalisee → upload obligatoire de la charte */}
         {sec.politique_securite === 'oui_formalisee' && (
           <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded">
-            <p className="text-xs font-semibold text-gray-800 mb-2">
+            <p className="text-xs font-semibold text-gray-800 mb-1">
               Upload de la Charte de protection des données <span className="text-red-500">*</span>
             </p>
+            <p className="text-[11px] text-gray-500 mb-2">Format accepté : PDF uniquement — taille max 5 Mo.</p>
             <input
               type="file"
-              accept=".pdf,.doc,.docx"
-              onChange={(e) => updatePart('securite', { charte_uploaded: !!e.target.files?.[0] })}
+              accept="application/pdf"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f && f.size > 5 * 1024 * 1024) {
+                  setError('La charte dépasse 5 Mo.');
+                  e.target.value = '';
+                  return;
+                }
+                updatePart('securite', { charte_uploaded: !!f });
+              }}
               className="text-xs"
             />
-            {sec.charte_uploaded && <p className="text-xs text-green-600 mt-1">✓ Document sélectionné</p>}
+            {sec.charte_uploaded && <p className="text-xs text-green-600 mt-1">✓ Document PDF sélectionné</p>}
           </div>
         )}
 
         {/* Spec 3.9 : Mesures techniques en multi-select */}
         <CheckboxGroup
           legend="Quelles mesures techniques de sécurité sont mises en place ? (cocher toutes les options applicables)"
+          required
           columns={2}
           options={[
             { value: 'mots_de_passe_forts', label: 'Mots de passe forts' },
@@ -1021,6 +1463,7 @@ export default function MonEnregistrementPage() {
         {/* Spec 3.9 : Mesures organisationnelles en multi-select */}
         <CheckboxGroup
           legend="Quelles mesures organisationnelles sont prévues ? (cocher toutes les options applicables)"
+          required
           columns={2}
           options={[
             { value: 'restriction_acces', label: "Restriction d'accès" },
@@ -1044,8 +1487,22 @@ export default function MonEnregistrementPage() {
             onChange={(v) => updatePart('securite', { mesures_organisationnelles_autre: v })} />
         )}
 
+        {/* Déplacée depuis la Partie 4 (Sous-traitance) — juste après les mesures organisationnelles */}
+        <RadioGroup
+          legend="Les supports de stockage envoyés en réparation ou à la destruction font-ils l'objet d'une procédure de protection (effacement sécurisé) ?"
+          required
+          options={[
+            { value: 'oui_documentee', label: 'Oui, procédure documentée' },
+            { value: 'non', label: 'Non' },
+            { value: 'non_applicable', label: 'Non applicable' },
+          ]}
+          value={st.protection_supports}
+          onChange={(v) => updatePart('sous_traitance_transferts', { protection_supports: v })}
+        />
+
         <RadioGroup
           legend="Avez-vous subi une violation de données personnelles (fuite, perte, accès non autorisé, etc.) au cours des 12 derniers mois ?"
+          required
           inline
           options={[
             { value: 'oui', label: 'Oui' },
@@ -1088,6 +1545,7 @@ export default function MonEnregistrementPage() {
 
         <RadioGroup
           legend="Tenez-vous un registre/inventaire des violations de données ?"
+          required
           inline
           options={[{ value: 'oui', label: 'Oui' }, { value: 'non', label: 'Non' }]}
           value={sec.registre_violations}
@@ -1096,10 +1554,9 @@ export default function MonEnregistrementPage() {
 
         <RadioGroup
           legend="Avez-vous défini des procédures de réaction et de remontée d'informations en cas de violation ?"
+          required
           options={[
             { value: 'oui_documentee_testee', label: 'Oui, procédure documentée et testée' },
-            { value: 'oui_documentee_non_testee', label: 'Oui, procédure documentée mais non testée' },
-            { value: 'informelle', label: 'Procédure informelle' },
             { value: 'non', label: 'Non' },
           ]}
           value={sec.procedures_violation}
@@ -1108,6 +1565,7 @@ export default function MonEnregistrementPage() {
 
         <RadioGroup
           legend="Les personnels sont-ils sensibilisés/formés à la protection des données ?"
+          required
           options={[
             { value: 'oui_formation_initiale', label: 'Oui, formation initiale obligatoire' },
             { value: 'oui_sensibilisation_periodique', label: 'Oui, sensibilisations périodiques' },
@@ -1118,76 +1576,310 @@ export default function MonEnregistrementPage() {
           onChange={(v) => updatePart('securite', { personnel_sensibilise: v })}
         />
 
-        {(sec.personnel_sensibilise === 'oui_formation_initiale'
-          || sec.personnel_sensibilise === 'oui_sensibilisation_periodique'
-          || sec.personnel_sensibilise === 'formation_ponctuelle') && (
+        {sec.personnel_sensibilise === 'oui_sensibilisation_periodique' && (
           <RadioGroup
-            legend="Si oui, quelle est la fréquence des formations ?"
+            legend="Précisez la période des sensibilisations :"
             inline
             options={[
-              { value: 'reguliere', label: 'Régulière' },
-              { value: 'ponctuelle', label: 'Ponctuelle' },
-              { value: 'aucune', label: 'Aucune' },
+              { value: 'journaliere', label: 'Journalière' },
+              { value: 'hebdomadaire', label: 'Hebdomadaire' },
+              { value: 'mensuelle', label: 'Mensuelle' },
             ]}
-            value={sec.frequence_formations}
-            onChange={(v) => updatePart('securite', { frequence_formations: v })}
+            value={sec.periode_sensibilisation}
+            onChange={(v) => updatePart('securite', { periode_sensibilisation: v })}
           />
         )}
       </FormSection>
+      )}
+
+      {/* ============================ PARTIE 6 : RECAPITULATIF ============================ */}
+      {currentStep === 6 && (
+        <RecapView form={form} onEdit={(step) => setCurrentStep(step as StepNum)} />
+      )}
 
       </div>
 
-      {/* ============================ ACTIONS ============================ */}
+      {/* ============================ ACTIONS NAVIGATION (Precedent / Suivant / Sauver / Soumettre) ============================ */}
       {!isReadOnly && (
-        <>
-          <div className="alert alert-warning mb-4 flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-            <div className="text-sm">
-              <strong>Vérifiez l'exactitude de toutes vos réponses avant de soumettre.</strong>
-              <br />
-              Une fois soumis, votre dossier sera examiné par les services de l'ARTCI.
-              <strong> Après envoi, il n'y aura plus de possibilité de modification.</strong>
-            </div>
-          </div>
+        <div className="bg-white border border-gray-200 rounded-lg p-4 mt-6 shadow-sm">
+          <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
+            {/* Bouton Precedent */}
+            <button
+              onClick={goPrev}
+              disabled={currentStep === 1}
+              className="btn btn-outline flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="w-4 h-4" /> Précédent
+            </button>
 
-          {showSubmitConfirm && (
-            <div className="alert alert-danger mb-4">
-              <strong>Confirmer la soumission définitive ?</strong>
-              <p className="text-sm my-2">
-                Cette action est irréversible. Vous ne pourrez plus modifier votre dossier
-                avant retour de l'ARTCI.
-              </p>
-              <div className="flex gap-2">
-                <button onClick={handleSubmit} disabled={submitting} className="btn btn-primary text-sm">
-                  Oui, soumettre définitivement
-                </button>
-                <button onClick={() => setShowSubmitConfirm(false)} className="btn btn-outline text-sm">
-                  Annuler
-                </button>
-              </div>
-            </div>
-          )}
-
-          <div className="flex flex-col sm:flex-row gap-3 justify-end">
+            {/* Bouton Sauvegarder brouillon (toujours dispo sauf en mode admin sans entiteId initial) */}
             <button
               onClick={handleSave}
               disabled={saving}
-              className="btn btn-outline flex items-center gap-2"
+              className="btn btn-outline flex items-center gap-2 text-[var(--artci-green)] border-[var(--artci-green)]"
             >
-              {saving ? <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> : <Save className="w-4 h-4" />}
-              Sauvegarder le brouillon
+              {saving ? (
+                <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} />
+              ) : <Save className="w-4 h-4" />}
+              {isAdminMode ? 'Enregistrer' : 'Sauvegarder le brouillon'}
             </button>
-            <button
-              onClick={() => setShowSubmitConfirm(true)}
-              disabled={submitting || showSubmitConfirm}
-              className="btn btn-primary flex items-center gap-2"
-            >
-              <Send className="w-4 h-4" />
-              Soumettre définitivement à l'ARTCI
-            </button>
+
+            {/* Bouton Suivant ou Soumettre */}
+            {currentStep < 6 ? (
+              <button
+                onClick={goNext}
+                className="btn btn-primary flex items-center gap-2"
+              >
+                Suivant <ChevronRight className="w-4 h-4" />
+              </button>
+            ) : (
+              !isAdminMode ? (
+                <button
+                  onClick={() => setShowSubmitConfirm(true)}
+                  disabled={submitting || showSubmitConfirm}
+                  className="btn btn-primary flex items-center gap-2"
+                >
+                  <Send className="w-4 h-4" />
+                  Soumettre définitivement
+                </button>
+              ) : (
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="btn btn-primary flex items-center gap-2"
+                >
+                  <CheckCircle2 className="w-4 h-4" /> Enregistrer
+                </button>
+              )
+            )}
           </div>
-        </>
+        </div>
       )}
+
+      {/* ============================ MODALE DE CONFIRMATION SOUMISSION ============================ */}
+      {showSubmitConfirm && !isAdminMode && !isReadOnly && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+          onClick={() => setShowSubmitConfirm(false)}
+        >
+          <div
+            className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3 mb-4">
+              <AlertTriangle className="w-7 h-7 text-red-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 mb-2">
+                  Confirmer la soumission
+                </h2>
+                <p className="text-sm text-gray-700 mb-2">
+                  Assurez-vous d'avoir vérifié <strong>toutes vos réponses</strong>.
+                </p>
+                <p className="text-sm text-red-700 font-semibold">
+                  ⚠ Cette action est irréversible. Après soumission, vous ne pourrez
+                  <strong> plus modifier votre dossier </strong>
+                  avant retour de l'ARTCI.
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-3 border-t border-gray-200">
+              <button
+                onClick={() => setShowSubmitConfirm(false)}
+                className="btn btn-outline flex items-center gap-2"
+              >
+                <Eye className="w-4 h-4" /> Vérifier à nouveau
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="btn btn-primary flex items-center gap-2"
+              >
+                {submitting ? (
+                  <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} />
+                ) : <Send className="w-4 h-4" />}
+                Soumettre
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// PARTIE 6 : RECAPITULATIF — vue lecture seule de toutes les reponses
+// ============================================================================
+export function RecapView({ form, onEdit }: { form: FormulaireDCP; onEdit: (step: number) => void }) {
+  const id = form.identification ?? {};
+  const cj = form.cadre_juridique ?? {};
+  const reg = form.registre ?? {};
+  const st = form.sous_traitance_transferts ?? {};
+  const sec = form.securite ?? {};
+
+  // Rend un code technique lisible : "oui_systematiquement" → "Oui systematiquement"
+  function prettify(s: string): string {
+    if (!s.trim()) return s;
+    const spaced = s.replace(/_/g, ' ').trim();
+    return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+  }
+
+  function fmt(v: unknown): string {
+    if (v === undefined || v === null) return '—';
+    if (typeof v === 'boolean') return v ? 'Oui' : 'Non';
+    if (Array.isArray(v)) return v.length === 0 ? '—' : v.map((x) => prettify(String(x))).join(', ');
+    if (typeof v === 'object') return JSON.stringify(v);
+    if (typeof v === 'string') return v.trim() ? prettify(v) : '—';
+    return String(v);
+  }
+
+  function Row({ label, value }: { label: string; value: unknown }) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2 border-b border-gray-100">
+        <span className="text-xs font-semibold text-gray-600 sm:col-span-1">{label}</span>
+        <span className="text-sm text-gray-900 sm:col-span-2 break-words">{fmt(value)}</span>
+      </div>
+    );
+  }
+
+  function SectionRecap({ titre, stepNum, children }: { titre: string; stepNum: number; children: React.ReactNode }) {
+    return (
+      <div className="bg-white border border-gray-200 rounded-lg mb-4 overflow-hidden">
+        <div className="flex items-center justify-between bg-gray-50 px-4 py-3 border-b border-gray-200">
+          <h3 className="font-bold text-sm text-[var(--artci-orange)]">{titre}</h3>
+          <button
+            onClick={() => onEdit(stepNum)}
+            className="text-xs text-[var(--artci-green)] hover:underline"
+          >
+            Modifier →
+          </button>
+        </div>
+        <div className="p-4">{children}</div>
+      </div>
+    );
+  }
+
+  const categoriesRenseignees = CATEGORIES_DONNEES_CONFIG
+    .filter((c) => (reg.categories_donnees as Record<string, { items_coches?: unknown[] }>)?.[c.key]?.items_coches?.length)
+    .map((c) => c.titre);
+  const categoriesRenseigneesStr = categoriesRenseignees.length === 0
+    ? '—'
+    : `${categoriesRenseignees.length} : ${categoriesRenseignees.join(', ')}`;
+
+  const formaliteType = determinerFormalite(form).type;
+  const formaliteLabel = formaliteType === 'autorisation_prealable' ? 'Autorisation préalable'
+    : formaliteType === 'declaration_prealable' ? 'Déclaration préalable'
+      : 'Aucune';
+
+  const statutLabel = id.statut_juridique === 'pm_droit_prive' ? 'Personne morale de droit privé'
+    : id.statut_juridique === 'pm_droit_public' ? 'Personne morale de droit public'
+      : id.statut_juridique === 'personne_physique' ? 'Personne physique'
+        : id.statut_juridique;
+
+  return (
+    <div>
+      <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6 flex items-start gap-3">
+        <ListChecks className="w-6 h-6 text-orange-600 flex-shrink-0 mt-0.5" />
+        <div>
+          <h2 className="text-lg font-bold text-orange-900 mb-1">Récapitulatif de votre dossier</h2>
+          <p className="text-sm text-orange-800">
+            Vérifiez attentivement l'ensemble de vos réponses ci-dessous avant de soumettre.
+            Vous pouvez cliquer sur « Modifier » dans chaque section pour revenir sur une partie.
+          </p>
+        </div>
+      </div>
+
+      <SectionRecap titre="Partie 1 — Identification de l'entité" stepNum={1}>
+        <Row label="Statut juridique" value={statutLabel} />
+        <Row label="Dénomination" value={id.personne_morale?.denomination_officielle ?? id.personne_physique?.nom_prenom} />
+        <Row label="N° CC" value={id.personne_morale?.numero_cc} />
+        <Row label="Ville / Région" value={`${id.personne_morale?.ville ?? id.personne_physique?.ville ?? '—'} / ${id.personne_morale?.region ?? id.personne_physique?.region ?? '—'}`} />
+        <Row label="Secteur(s) d'activité" value={id.secteurs_activite} />
+        <Row label="Volume de données" value={id.volume_donnees} />
+        <Row label="Responsable légal" value={`${id.responsable_legal?.nom_prenom ?? '—'} (${id.responsable_legal?.email ?? '—'})`} />
+        <Row label="Localisation GPS" value={
+          (typeof id.localisation?.latitude === 'number' && typeof id.localisation?.longitude === 'number')
+            ? `${id.localisation.latitude.toFixed(6)}, ${id.localisation.longitude.toFixed(6)}`
+            : '—'
+        } />
+      </SectionRecap>
+
+      <SectionRecap titre="Partie 2 — Cadre juridique" stepNum={2}>
+        <Row label="Connaissance Loi 2013-450" value={cj.connaissance_loi_2013} />
+        <Row label="Connaissance obligations" value={cj.connaissance_obligations} />
+        <Row label="Connaissance rôle ARTCI" value={cj.connaissance_artci} />
+        <Row label="DPO habilité ARTCI" value={cj.dpo_habilite} />
+        {cj.dpo_habilite === 'oui' && (
+          <>
+            <Row label="Type DPO" value={cj.dpo_type} />
+            {cj.dpo_type === 'externe' && <Row label="DPO externe" value={cj.dpo_externe_type} />}
+            <Row label="DPO (nom)" value={cj.dpo_physique?.nom_prenom ?? cj.dpo_morale?.nom_structure} />
+            <Row label="Courrier d'habilitation ARTCI" value={cj.dpo_courrier_habilitation_uploaded} />
+          </>
+        )}
+      </SectionRecap>
+
+      <SectionRecap titre="Partie 3 — Registre & cartographie des traitements" stepNum={3}>
+        <Row label="Distinction Déclaration/Autorisation" value={cj.distinction_decl_aut} />
+        <Row label="Activités de traitement" value={reg.activites_traitement} />
+        <Row label="Registre de traitement" value={reg.registre_tenu} />
+        <Row label="Catégories de personnes" value={reg.categories_personnes} />
+        <Row label="Catégories de données renseignées" value={categoriesRenseigneesStr} />
+        <Row label="Action après conservation" value={st.suppression_anonymisation} />
+        <Row label="Finalités" value={reg.finalites} />
+        <Row label="Formalité à effectuer" value={formaliteLabel} />
+        <Row label="Bases légales" value={reg.bases_legales} />
+        <Row label="Mode de traitement" value={reg.mode_traitement} />
+        <Row label="Information aux personnes concernées" value={reg.info_personnes_collecte} />
+        <Row label="Informations communiquées lors de la collecte" value={reg.infos_communiquees} />
+        <Row label="Réutilisation données" value={reg.reutilisation_donnees} />
+      </SectionRecap>
+
+      <SectionRecap titre="Partie 4 — Sous-traitance & transferts" stepNum={4}>
+        <Row label="Recours à sous-traitants" value={st.recours_sous_traitants} />
+        {st.recours_sous_traitants === 'oui' && (
+          <>
+            <Row label="Nombre de sous-traitants" value={st.nombre_sous_traitants} />
+            <Row label="Contrats de sous-traitance" value={st.contrats_sous_traitance_existence} />
+            {st.contrats_sous_traitance_existence === 'oui' && (
+              <>
+                <Row label="Nombre de contrats" value={st.nombre_contrats_sous_traitance} />
+                <Row label="Pays des sous-traitants" value={st.pays_sous_traitants} />
+                <Row label="Clauses des contrats" value={st.clauses_obligatoires} />
+              </>
+            )}
+          </>
+        )}
+        <Row label="Transfert hors CEDEAO" value={st.transfert_hors_cedeao} />
+        {st.transfert_hors_cedeao === 'oui' && (
+          <>
+            <Row label="Pays de transfert" value={st.pays_transferts} />
+            <Row label="Autorisation ARTCI transfert" value={st.autorisation_artci_transfert} />
+            <Row label="Bases juridiques transfert" value={st.bases_juridiques_transfert} />
+            <Row label="Garanties" value={st.garanties_transfert} />
+          </>
+        )}
+      </SectionRecap>
+
+      <SectionRecap titre="Partie 5 — Sécurité & formation" stepNum={5}>
+        <Row label="Charte protection des données" value={sec.politique_securite} />
+        <Row label="Protection des supports" value={st.protection_supports} />
+        {sec.politique_securite === 'oui_formalisee' && (
+          <Row label="Charte uploadée" value={sec.charte_uploaded} />
+        )}
+        <Row label="Mesures techniques" value={sec.mesures_techniques_list} />
+        <Row label="Mesures organisationnelles" value={sec.mesures_organisationnelles_list} />
+        <Row label="Violation (12 mois)" value={sec.violation_12mois} />
+        {sec.violation_12mois === 'oui' && (
+          <>
+            <Row label="Nombre violations" value={sec.nombre_violations} />
+            <Row label="Notification ARTCI" value={sec.notification_artci} />
+          </>
+        )}
+        <Row label="Registre violations" value={sec.registre_violations} />
+        <Row label="Procédures violation" value={sec.procedures_violation} />
+        <Row label="Personnel sensibilisé" value={sec.personnel_sensibilise} />
+      </SectionRecap>
     </div>
   );
 }

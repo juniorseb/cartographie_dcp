@@ -43,6 +43,107 @@ def list_entites():
     return success_response(result)
 
 
+@public_bp.route('/entites_publiees', methods=['GET'])
+def list_entites_publiees_anonymise():
+    """Endpoint public RGPD-safe (manœuvre E).
+
+    Projection MINIMALE : raison sociale, secteur, commune/region, statut,
+    date de publication, lat/lng pour la carte. AUCUN detail de cartographie,
+    aucun DPO, aucun sous-traitant, aucun transfert. Ce qu'un citoyen lambda
+    a besoin de voir pour verifier qu'une entreprise est declaree.
+
+    Filtres : ?secteur=...&region=...&statut=conforme|partiellement_conforme
+    Pagination : ?page=N&per_page=M (max 200)
+    """
+    from app.models import EntiteBase, EntiteConformite, EntiteWorkflow, EntiteLocalisation
+    from app.models.enums import StatutConformiteEnum, StatutWorkflowEnum
+    from sqlalchemy.orm import joinedload
+
+    secteur = request.args.get('secteur')
+    region = request.args.get('region')
+    statut_filter = request.args.get('statut')  # conforme | partiellement_conforme
+    page = max(1, request.args.get('page', 1, type=int))
+    per_page = min(200, max(1, request.args.get('per_page', 50, type=int)))
+
+    # Filtre de base : publiees, non archivees, statut conformite eligible
+    q = (
+        EntiteBase.query
+        .options(
+            joinedload(EntiteBase.conformite),
+            joinedload(EntiteBase.localisation),
+            joinedload(EntiteBase.workflow),
+        )
+        .filter(
+            EntiteBase.publie_sur_carte == True,  # noqa: E712
+            EntiteBase.archive == False,  # noqa: E712
+        )
+    )
+
+    # Filtres optionnels
+    if secteur:
+        q = q.filter(EntiteBase.secteur_activite == secteur)
+    if region:
+        q = q.filter(EntiteBase.region == region)
+
+    # Restriction statut conformite : uniquement Conforme ou Partiellement conforme.
+    # On inclut aussi les anciennes valeurs (demarche_en_cours/demarche_achevee)
+    # pour compat ascendante sur les rows historiques.
+    eligible_statuts = [
+        StatutConformiteEnum.conforme,
+        StatutConformiteEnum.partiellement_conforme,
+        StatutConformiteEnum.demarche_en_cours,
+        StatutConformiteEnum.demarche_achevee,
+    ]
+    if statut_filter == 'conforme':
+        eligible_statuts = [StatutConformiteEnum.conforme]
+    elif statut_filter == 'partiellement_conforme':
+        eligible_statuts = [
+            StatutConformiteEnum.partiellement_conforme,
+            StatutConformiteEnum.demarche_en_cours,
+            StatutConformiteEnum.demarche_achevee,
+        ]
+
+    q = q.join(EntiteConformite).filter(
+        EntiteConformite.statut_conformite.in_(eligible_statuts)
+    )
+
+    total = q.count()
+    items = (
+        q.order_by(EntiteBase.denomination.asc())
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+        .all()
+    )
+
+    # Projection minimale - ZERO donnee sensible
+    return success_response({
+        'items': [{
+            'id': e.id,
+            # Raison sociale uniquement (pas de noms personnes)
+            'denomination': e.denomination,
+            'secteur_activite': e.secteur_activite,
+            'ville': e.ville,
+            'region': e.region,
+            # Statut textuel (PAS le score chiffre)
+            'statut_conformite': (
+                e.conformite.statut_conformite.value
+                if e.conformite and e.conformite.statut_conformite else None
+            ),
+            'date_publication': (
+                e.workflow.date_publication.isoformat()
+                if e.workflow and e.workflow.date_publication else None
+            ),
+            # Geolocalisation pour la carte
+            'latitude': e.localisation.latitude if e.localisation else None,
+            'longitude': e.localisation.longitude if e.localisation else None,
+        } for e in items],
+        'total': total,
+        'page': page,
+        'per_page': per_page,
+        'pages': (total + per_page - 1) // per_page,
+    })
+
+
 @public_bp.route('/entites/<string:entite_id>', methods=['GET'])
 def get_entite_detail(entite_id):
     """Fiche détaillée publique d'une entité conforme."""

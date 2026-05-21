@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, FileText, Shield, Users, MapPin, Edit, Lock, Globe, BookOpen, UserCheck, ClipboardList, Award, FileDown, Upload, ClipboardCheck, RefreshCw, Eye, EyeOff } from 'lucide-react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft, FileText, Shield, Users, MapPin, Lock, Globe, BookOpen, UserCheck, ClipboardList, Award, FileDown, Upload, ClipboardCheck, Eye, EyeOff } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import * as adminApi from '@/api/admin.api';
 import Loading from '@/components/common/Loading';
@@ -8,9 +8,11 @@ import ErrorDisplay from '@/components/common/ErrorDisplay';
 import StatusBadge from '@/components/common/StatusBadge';
 import { useAuth } from '@/hooks/useAuth';
 import { hasMinRole } from '@/components/admin/AdminSidebar';
-import { ROUTES } from '@/utils/constants';
+import { ROUTES, STATUT_CONFORMITE_LABELS } from '@/utils/constants';
 import { formatDate } from '@/utils/format';
 import type { StatutConformite } from '@/types/enums';
+import { RecapView } from '@/pages/entreprise/MonEnregistrementPage';
+import { emptyFormulaireDCP, type FormulaireDCP } from '@/types/formulaire-dcp';
 
 function InfoRow({ label, value }: { label: string; value: string | number | boolean | null | undefined }) {
   const display = typeof value === 'boolean' ? (value ? 'Oui' : 'Non') : (value ?? '-');
@@ -35,6 +37,7 @@ function SectionCard({ title, icon: Icon, color, children }: { title: string; ic
 
 export default function EntiteDetailAdminPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const canEdit = user && hasMinRole(user.role, 'editor');
   const isSuperAdmin = user?.role === 'super_admin';
@@ -60,6 +63,13 @@ export default function EntiteDetailAdminPage() {
     () => adminApi.getEntiteDetail(id!),
     [id]
   );
+
+  // Réponses du questionnaire (pour afficher la fiche conforme au formulaire)
+  const { data: formulaireData } = useApi(() => adminApi.adminGetFormulaireDCP(id!), [id]);
+  const questionnaire: FormulaireDCP | null =
+    formulaireData?.reponses && Object.keys(formulaireData.reponses).length > 0
+      ? { ...emptyFormulaireDCP(), ...(formulaireData.reponses as Partial<FormulaireDCP>) }
+      : null;
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [uploadSuccess, setUploadSuccess] = useState('');
@@ -77,16 +87,6 @@ export default function EntiteDetailAdminPage() {
       setUploadError("Erreur lors du téléversement.");
     } finally {
       setUploading(false);
-    }
-  }
-
-  async function handleToggleFormalite(field: 'autorisation_active' | 'declaration_active', value: boolean) {
-    if (!id) return;
-    try {
-      await adminApi.updateFormalitesActivation(id, { [field]: value });
-      refetch();
-    } catch {
-      // erreur silencieuse
     }
   }
 
@@ -125,6 +125,10 @@ export default function EntiteDetailAdminPage() {
     );
   }
 
+  // Seules les entités conformes ou partiellement conformes peuvent être publiées sur la carte
+  const peutEtrePublie = entite.conformite?.statut_conformite === 'Conforme'
+    || entite.conformite?.statut_conformite === 'Partiellement conforme';
+
   return (
     <div className="max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
@@ -141,24 +145,23 @@ export default function EntiteDetailAdminPage() {
                 >
                   <EyeOff className="w-4 h-4" /> Dépublier
                 </button>
-              ) : (
+              ) : peutEtrePublie ? (
                 <button
                   onClick={handlePublier}
                   className="btn btn-secondary text-sm py-2 px-4 flex items-center gap-2"
-                  title="Publier sur la cartographie publique"
+                  title="Publier sur la cartographie publique (entités conformes ou partiellement conformes)"
                 >
                   <Eye className="w-4 h-4" /> Publier
                 </button>
+              ) : (
+                <span
+                  className="text-xs text-gray-400 italic"
+                  title="Seules les entités conformes ou partiellement conformes peuvent être publiées"
+                >
+                  Publication réservée aux entités conformes ou partiellement conformes
+                </span>
               )}
             </>
-          )}
-          {canEdit && (
-            <Link
-              to={`/admin/entites/${entite.id}`}
-              className="btn btn-outline text-sm py-2 px-4 flex items-center gap-2 no-underline"
-            >
-              <Edit className="w-4 h-4" /> Modifier
-            </Link>
           )}
           {isSuperAdmin && (
             <button
@@ -313,8 +316,13 @@ export default function EntiteDetailAdminPage() {
         {entite.conformite && (
           <SectionCard title="Conformité" icon={Shield} color="text-[var(--artci-green)]">
             <div className="space-y-3">
+              <InfoRow
+                label="Statut"
+                value={entite.conformite.statut_conformite
+                  ? (STATUT_CONFORMITE_LABELS[entite.conformite.statut_conformite as StatutConformite] ?? entite.conformite.statut_conformite)
+                  : '-'}
+              />
               <InfoRow label="Score" value={entite.conformite.score_conformite != null ? `${entite.conformite.score_conformite}/100` : '-'} />
-              <InfoRow label="Statut" value={entite.conformite.statut_conformite} />
               <InfoRow label="A un DPO" value={entite.conformite.a_dpo} />
               <InfoRow label="Type DPO" value={entite.conformite.type_dpo} />
               <InfoRow label="Effectif" value={entite.conformite.effectif_entreprise} />
@@ -322,6 +330,20 @@ export default function EntiteDetailAdminPage() {
               <InfoRow label="Délai conformité" value={entite.conformite.delai_mise_en_conformite ? formatDate(entite.conformite.delai_mise_en_conformite) : '-'} />
             </div>
           </SectionCard>
+        )}
+
+        {/* ── Réponses au questionnaire (fiche conforme au formulaire de l'entité) ── */}
+        {questionnaire && (
+          <div>
+            <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
+              <ClipboardList className="w-5 h-5 text-[var(--artci-orange)]" />
+              Réponses au questionnaire
+            </h3>
+            <RecapView
+              form={questionnaire}
+              onEdit={() => { if (canEdit) navigate(`/admin/entites/${id}/saisie`); }}
+            />
+          </div>
         )}
 
         {/* ── DPO ── */}
@@ -506,46 +528,6 @@ export default function EntiteDetailAdminPage() {
                   </div>
                 </div>
               ))}
-            </div>
-          </SectionCard>
-        )}
-
-        {/* ── Formalités (activation Autorisation / Déclaration) ── */}
-        {canEdit && hasMinRole(user!.role, 'admin') && (
-          <SectionCard title="Formalités de l'entreprise" icon={RefreshCw} color="text-[var(--artci-orange)]">
-            <p className="text-sm text-gray-500 mb-4">
-              Activez les onglets "Autorisation" et "Déclaration" côté entreprise selon le retour
-              donné à son dossier.
-            </p>
-            <div className="space-y-3">
-              <label className="flex items-center justify-between p-3 border border-gray-200 rounded-lg cursor-pointer">
-                <div>
-                  <div className="text-sm font-semibold">Autorisation</div>
-                  <div className="text-xs text-gray-500">
-                    Transferts de données, traitement de données sensibles, changement de DPO...
-                  </div>
-                </div>
-                <input
-                  type="checkbox"
-                  className="h-5 w-5"
-                  checked={entite.conformite?.formalite_autorisation_active === true}
-                  onChange={(e) => handleToggleFormalite('autorisation_active', e.target.checked)}
-                />
-              </label>
-              <label className="flex items-center justify-between p-3 border border-gray-200 rounded-lg cursor-pointer">
-                <div>
-                  <div className="text-sm font-semibold">Déclaration</div>
-                  <div className="text-xs text-gray-500">
-                    Déclarations à l'ARTCI selon le retour de votre dossier.
-                  </div>
-                </div>
-                <input
-                  type="checkbox"
-                  className="h-5 w-5"
-                  checked={entite.conformite?.formalite_declaration_active === true}
-                  onChange={(e) => handleToggleFormalite('declaration_active', e.target.checked)}
-                />
-              </label>
             </div>
           </SectionCard>
         )}
