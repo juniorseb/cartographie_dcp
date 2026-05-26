@@ -1,2 +1,0 @@
-release: flask db upgrade && (python seed.py || true)
-web: gunicorn run:app -c gunicorn.conf.py
