@@ -230,7 +230,15 @@ class EntiteService:
         """
         Construire une requête de base avec filtres optionnels.
         Retourne un objet query SQLAlchemy.
+
+        Tous les filtres qui touchent EntiteWorkflow / EntiteConformite /
+        AssignationDemande passent par des sous-requêtes EXISTS corrélées
+        plutôt que par des JOINs explicites — cela évite les conflits avec
+        les joinedload() ci-dessous et permet de combiner librement plusieurs
+        filtres (ex : statut_workflow + validees_only + exclude_brouillons)
+        sans générer de SQL ambigu.
         """
+        from sqlalchemy import select
         query = EntiteBase.query.options(
             joinedload(EntiteBase.conformite),
             joinedload(EntiteBase.workflow),
@@ -272,57 +280,77 @@ class EntiteService:
         if filters.get('publie_sur_carte') is not None:
             query = query.filter(EntiteBase.publie_sur_carte == filters['publie_sur_carte'])
 
-        # Filtres sur tables jointes
+        # Filtres sur tables jointes — EXISTS corrélé pour éviter les conflits
         if filters.get('statut_conformite'):
             from app.models.enums import StatutConformiteEnum
-            query = query.join(EntiteConformite).filter(
-                EntiteConformite.statut_conformite == StatutConformiteEnum(filters['statut_conformite'])
-            )
+            try:
+                statut_conf = StatutConformiteEnum(filters['statut_conformite'])
+            except ValueError:
+                # Valeur inconnue → on neutralise le filtre plutôt que de planter
+                statut_conf = None
+            if statut_conf is not None:
+                query = query.filter(
+                    select(1).select_from(EntiteConformite).where(
+                        EntiteConformite.entite_id == EntiteBase.id,
+                        EntiteConformite.statut_conformite == statut_conf,
+                    ).exists()
+                )
         if filters.get('volume_donnees'):
-            query = query.join(
-                EntiteConformite, EntiteConformite.entite_id == EntiteBase.id, isouter=True
-            ).filter(
-                EntiteConformite.volume_donnees_traitees == filters['volume_donnees']
+            query = query.filter(
+                select(1).select_from(EntiteConformite).where(
+                    EntiteConformite.entite_id == EntiteBase.id,
+                    EntiteConformite.volume_donnees_traitees == filters['volume_donnees'],
+                ).exists()
             )
         if filters.get('statut_workflow'):
-            query = query.join(EntiteWorkflow).filter(
-                EntiteWorkflow.statut == StatutWorkflowEnum(filters['statut_workflow'])
-            )
+            try:
+                statut_wf = StatutWorkflowEnum(filters['statut_workflow'])
+            except ValueError:
+                statut_wf = None
+            if statut_wf is not None:
+                query = query.filter(
+                    select(1).select_from(EntiteWorkflow).where(
+                        EntiteWorkflow.entite_id == EntiteBase.id,
+                        EntiteWorkflow.statut == statut_wf,
+                    ).exists()
+                )
 
         # Spec : la liste "Entités" ne montre que les entités validées par
-        # admin/super-admin (après review de l'éditeur). On filtre via un EXISTS
-        # corrélé pour éviter tout conflit de jointure sur EntiteWorkflow.
+        # admin/super-admin (après review de l'éditeur).
         if filters.get('validees_only'):
             statuts_valides = [
-                StatutWorkflowEnum.conforme,
                 StatutWorkflowEnum.conforme_sous_reserve,
                 StatutWorkflowEnum.valide,
                 StatutWorkflowEnum.publie,
             ]
             query = query.filter(
-                EntiteWorkflow.query.filter(
+                select(1).select_from(EntiteWorkflow).where(
                     EntiteWorkflow.entite_id == EntiteBase.id,
                     EntiteWorkflow.statut.in_(statuts_valides),
                 ).exists()
             )
 
         # Spec : un editeur ne voit que les entites qui lui sont assignees.
-        # On joint sur assignations_demandes pour filtrer agent_id.
         if filters.get('assigned_to_user_id'):
             from app.models import AssignationDemande
-            query = query.join(
-                AssignationDemande, AssignationDemande.entite_id == EntiteBase.id
-            ).filter(AssignationDemande.agent_id == filters['assigned_to_user_id']).distinct()
+            query = query.filter(
+                select(1).select_from(AssignationDemande).where(
+                    AssignationDemande.entite_id == EntiteBase.id,
+                    AssignationDemande.agent_id == filters['assigned_to_user_id'],
+                ).exists()
+            )
 
-        # Spec : exclure les brouillons (uniquement pour editeur)
+        # Spec : exclure les brouillons (uniquement pour editeur).
+        # Une entité sans workflow est aussi exclue (rien à montrer à l'editor).
         if filters.get('exclude_brouillons'):
-            query = query.outerjoin(
-                EntiteWorkflow, EntiteWorkflow.entite_id == EntiteBase.id
-            ).filter(
-                EntiteWorkflow.statut.notin_([
-                    StatutWorkflowEnum.brouillon,
-                    StatutWorkflowEnum.brouillon_artci,
-                ])
+            query = query.filter(
+                select(1).select_from(EntiteWorkflow).where(
+                    EntiteWorkflow.entite_id == EntiteBase.id,
+                    EntiteWorkflow.statut.notin_([
+                        StatutWorkflowEnum.brouillon,
+                        StatutWorkflowEnum.brouillon_artci,
+                    ]),
+                ).exists()
             )
 
         return query

@@ -110,7 +110,12 @@ export default function AdminDashboardPage() {
     + (conformiteData['Démarche en cours'] ?? 0);
   const nonConformes = conformiteData['Non conforme'] ?? 0;
   const totalEvaluables = globalStats.total_evaluables ?? 0;
-  const totalBrouillons = (globalStats.par_statut_workflow ?? {})['brouillon'] ?? 0;
+  // Brouillons = `brouillon` (entreprise) + `brouillon_artci` (saisie ARTCI).
+  // Sans la 2e cle, l'alerte de coherence ne s'affichait pas quand seul un
+  // brouillon ARTCI existait, et l'utilisateur voyait Total != somme conformite.
+  const totalBrouillons =
+    ((globalStats.par_statut_workflow ?? {})['brouillon'] ?? 0)
+    + ((globalStats.par_statut_workflow ?? {})['brouillon_artci'] ?? 0);
 
   // Workflow data avec libelles lisibles
   const workflowData = toChartData(globalStats.par_statut_workflow)

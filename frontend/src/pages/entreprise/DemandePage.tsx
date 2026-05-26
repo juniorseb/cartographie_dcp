@@ -25,7 +25,6 @@ const STATUTS_LECTURE_SEULE: StatutWorkflow[] = [
 // Statuts ayant deja un statut de conformite affecte par l'ARTCI
 // La modification est possible mais declenchera une realuation
 const STATUTS_AVEC_REEVALUATION: StatutWorkflow[] = [
-  'conforme',
   'conforme_sous_reserve',
   'valide',
   'rejete',

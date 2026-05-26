@@ -504,7 +504,7 @@ class EntiteFilterSchema(Schema):
     ]))
     statut_workflow = fields.String(validate=validate.OneOf([
         'brouillon', 'brouillon_artci', 'soumis', 'en_verification',
-        'en_attente_complements', 'conforme', 'conforme_sous_reserve',
+        'en_attente_complements', 'conforme_sous_reserve',
         'valide', 'rejete', 'publie'
     ]))
     origine_saisie = fields.String(validate=validate.OneOf([

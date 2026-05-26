@@ -182,8 +182,11 @@ class TraitementService:
             )
 
             if wf:
+                # Le statut workflow "conforme" a ete supprime : la conformite
+                # est portee par le statut_conformite (table conformite), pas
+                # par le workflow. A 100, le dossier est simplement "valide".
                 if score_final >= 100:
-                    wf.statut = StatutWorkflowEnum.conforme
+                    wf.statut = StatutWorkflowEnum.valide
                 elif score_final >= 70:
                     wf.statut = StatutWorkflowEnum.conforme_sous_reserve
                 else:

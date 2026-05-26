@@ -44,6 +44,7 @@ export default function NotificationsPage() {
     try {
       await adminApi.markNotificationRead(id);
       refetch();
+      window.dispatchEvent(new Event('notifications:updated'));
     } catch {
       // erreur silencieuse
     }
@@ -58,6 +59,7 @@ export default function NotificationsPage() {
         await adminApi.markNotificationRead(notif.id);
       }
       refetch();
+      window.dispatchEvent(new Event('notifications:updated'));
     } catch {
       // erreur silencieuse
     } finally {

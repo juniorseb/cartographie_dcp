@@ -1,6 +1,6 @@
 /**
  * Page dediee : Entites pretes a etre publiees sur la carte.
- * Filtre : statut_workflow = conforme/conforme_sous_reserve/valide ET publie_sur_carte = false.
+ * Filtre : statut_workflow = conforme_sous_reserve/valide ET publie_sur_carte = false.
  * Action : "Publier" en un clic depuis la liste.
  */
 import { useState, useCallback } from 'react';
@@ -16,7 +16,7 @@ import ErrorDisplay from '@/components/common/ErrorDisplay';
 import { ITEMS_PER_PAGE } from '@/utils/constants';
 import type { AdminEntiteFilter } from '@/types/admin';
 
-const STATUTS_PUBLIABLES = ['conforme', 'conforme_sous_reserve', 'valide'];
+const STATUTS_PUBLIABLES = ['conforme_sous_reserve', 'valide'];
 
 export default function EntitesAPublierPage() {
   const [search, setSearch] = useState('');
@@ -100,7 +100,6 @@ export default function EntitesAPublierPage() {
             className="w-full py-2.5"
           >
             <option value="">Tous statuts publiables</option>
-            <option value="conforme">Conforme</option>
             <option value="conforme_sous_reserve">Partiellement conforme</option>
             <option value="valide">Validé</option>
           </select>

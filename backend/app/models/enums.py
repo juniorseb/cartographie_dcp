@@ -21,13 +21,17 @@ class OrigineSaisieEnum(enum.Enum):
 
 
 class StatutWorkflowEnum(enum.Enum):
-    """Statut du workflow de traitement d'une entité."""
+    """Statut du workflow de traitement d'une entité.
+
+    Note : 'conforme' a ete retire — la conformite est portee par le statut
+    de conformite (table conformite), pas par le workflow. Un dossier dont
+    le traitement est termine a 100/100 reste simplement 'valide'.
+    """
     brouillon = 'brouillon'
     brouillon_artci = 'brouillon_artci'
     soumis = 'soumis'
     en_verification = 'en_verification'
     en_attente_complements = 'en_attente_complements'
-    conforme = 'conforme'
     conforme_sous_reserve = 'conforme_sous_reserve'
     valide = 'valide'
     rejete = 'rejete'

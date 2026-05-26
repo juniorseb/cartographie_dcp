@@ -135,8 +135,25 @@ export default function RegisterPage() {
         }
       );
       setSubmitted(true);
-    } catch {
-      setError("Erreur lors de l'inscription. Vérifiez que l'email du Représentant légal ou le numéro CC ne sont pas déjà utilisés.");
+    } catch (e: unknown) {
+      const err = e as {
+        response?: { status?: number; data?: { message?: string; errors?: Record<string, string[]> } };
+        message?: string;
+      };
+      const backendMsg = err?.response?.data?.message;
+      const fieldErrors = err?.response?.data?.errors;
+      if (fieldErrors && Object.keys(fieldErrors).length > 0) {
+        const details = Object.entries(fieldErrors)
+          .map(([field, msgs]) => `${field} : ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+          .join(' | ');
+        setError(`Erreur de validation — ${details}`);
+      } else if (backendMsg) {
+        setError(backendMsg);
+      } else if (!err?.response) {
+        setError("Impossible de joindre le serveur. Vérifiez votre connexion ou réessayez dans quelques instants.");
+      } else {
+        setError("Erreur lors de l'inscription. Vérifiez vos informations et réessayez.");
+      }
     } finally {
       setIsLoading(false);
     }

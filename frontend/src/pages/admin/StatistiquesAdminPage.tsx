@@ -6,6 +6,7 @@ import {
 } from 'recharts';
 import { useApi } from '@/hooks/useApi';
 import * as adminApi from '@/api/admin.api';
+import { downloadFile } from '@/api/client';
 import Loading from '@/components/common/Loading';
 import ErrorDisplay from '@/components/common/ErrorDisplay';
 import { formatNumber } from '@/utils/format';
@@ -20,6 +21,7 @@ function toChartData(record: Record<string, number>) {
 
 export default function StatistiquesAdminPage() {
   const [filters, setFilters] = useState<AdminStatsFilter>({});
+  const [exporting, setExporting] = useState(false);
 
   const fetchStats = useCallback(
     () => adminApi.getAdvancedStats(filters),
@@ -29,6 +31,20 @@ export default function StatistiquesAdminPage() {
 
   function updateFilter(key: keyof AdminStatsFilter, value: string) {
     setFilters((prev) => ({ ...prev, [key]: value || undefined }));
+  }
+
+  async function handleExport() {
+    setExporting(true);
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      await downloadFile('/admin/entites/export', `entites-${today}.xlsx`, { format: 'excel' });
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('Export entités a échoué', e);
+      alert("L'export a échoué. Veuillez réessayer.");
+    } finally {
+      setExporting(false);
+    }
   }
 
   if (isLoading) return <Loading fullPage text="Chargement des statistiques..." />;
@@ -52,9 +68,15 @@ export default function StatistiquesAdminPage() {
     <div>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <h1 className="text-2xl">Statistiques Avancées</h1>
-        <a href="/api/public/export?format=excel" className="btn btn-outline text-sm no-underline">
-          <Download className="w-4 h-4" /> Export Excel
-        </a>
+        <button
+          type="button"
+          onClick={handleExport}
+          disabled={exporting}
+          className="btn btn-outline text-sm flex items-center gap-2"
+        >
+          <Download className="w-4 h-4" />
+          {exporting ? 'Export en cours…' : 'Export Excel'}
+        </button>
       </div>
 
       {/* Filtres période */}

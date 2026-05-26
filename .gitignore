@@ -75,3 +75,6 @@ backend/uploads/inscriptions/
 logs/
 backend/app/nul
 nul
+
+.vercel
+.env*

@@ -12,21 +12,21 @@ from app.models.enums import (
     StatutWorkflowEnum, StatutConformiteEnum, StatutAssignationEnum
 )
 
-# Machine à états : transitions autorisées
+# Machine à états : transitions autorisées.
+# 'conforme' a ete supprime du workflow — un dossier a 100/100 va directement
+# en 'valide'. La conformite est portee par la table conformite (statut_conformite).
 ALLOWED_TRANSITIONS = {
     'brouillon': ['soumis'],
     'brouillon_artci': ['soumis'],
     'soumis': ['en_verification'],
-    'en_verification': ['en_attente_complements', 'conforme', 'conforme_sous_reserve', 'rejete'],
+    'en_verification': ['en_attente_complements', 'valide', 'conforme_sous_reserve', 'rejete'],
     'en_attente_complements': ['soumis'],
-    'conforme': ['valide'],
     'conforme_sous_reserve': ['valide', 'rejete'],
     'valide': ['publie'],
 }
 
 # Mapping workflow -> statut conformité (libelles unifies : Partiellement conforme)
 CONFORMITE_MAPPING = {
-    'conforme': StatutConformiteEnum.conforme,
     'valide': StatutConformiteEnum.conforme,
     'publie': StatutConformiteEnum.conforme,
     'conforme_sous_reserve': StatutConformiteEnum.partiellement_conforme,
@@ -65,7 +65,7 @@ class WorkflowService:
         now = datetime.now(timezone.utc)
         if new_statut_str == 'soumis':
             workflow.date_soumission = now
-        elif new_statut_str in ('conforme', 'conforme_sous_reserve', 'valide'):
+        elif new_statut_str in ('conforme_sous_reserve', 'valide'):
             workflow.date_validation = now
         elif new_statut_str == 'rejete':
             workflow.date_rejet = now
@@ -190,9 +190,11 @@ class WorkflowService:
             assignation.valide_par = validateur_id
             assignation.valide_le = now
 
-            # Transition workflow selon le cas
+            # Transition workflow : on passe directement a 'valide' (le statut
+            # workflow 'conforme' a ete supprime ; la conformite est portee
+            # par la table conformite, pas par le workflow).
             WorkflowService.transition_statut(
-                assignation.entite_id, 'conforme', validateur_id, commentaire
+                assignation.entite_id, 'valide', validateur_id, commentaire
             )
 
         elif action == 'renvoyer':

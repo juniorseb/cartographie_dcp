@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Database, Inbox, UserCheck, CheckSquare,
@@ -100,8 +101,20 @@ export default function AdminSidebar({ mobileOpen, onClose }: AdminSidebarProps)
   const userRole = user?.role ?? 'reader';
 
   // Compteur de notifications non lues affiché en badge sur le volet « Notifications »
-  const { data: notifications } = useApi(() => adminApi.getNotifications(), []);
+  const { data: notifications, refetch: refetchNotifications } = useApi(
+    () => adminApi.getNotifications(), []
+  );
   const unreadCount = (notifications ?? []).filter((n) => !n.lue).length;
+
+  // Quand la page Notifications marque une notif comme lue, elle dispatch
+  // un event 'notifications:updated' que la sidebar ecoute pour rafraichir
+  // son badge. Sans ca, le compteur reste fige tant que la sidebar n'est
+  // pas re-montee.
+  useEffect(() => {
+    const handler = () => refetchNotifications();
+    window.addEventListener('notifications:updated', handler);
+    return () => window.removeEventListener('notifications:updated', handler);
+  }, [refetchNotifications]);
 
   const visibleSections = sidebarSections
     .map((section) => ({

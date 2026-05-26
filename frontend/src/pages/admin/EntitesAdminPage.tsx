@@ -51,7 +51,6 @@ export default function EntitesAdminPage() {
         <div className="form-group mb-0">
           <select value={filters.statut_workflow ?? ''} onChange={(e) => updateFilter('statut_workflow', e.target.value)} className="w-full py-2.5">
             <option value="">Tous les statuts (validés)</option>
-            <option value="conforme">Conforme</option>
             <option value="conforme_sous_reserve">Conforme sous réserve</option>
             <option value="valide">Validé</option>
             <option value="publie">Publié</option>

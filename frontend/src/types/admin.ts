@@ -57,7 +57,6 @@ export const STATUT_WORKFLOW_LABELS: Record<string, string> = {
   soumis: 'Soumis',
   en_verification: 'En vérification',
   en_attente_complements: 'En attente de compléments',
-  conforme: 'Conforme',
   conforme_sous_reserve: 'Conforme sous réserve',
   valide: 'Validé',
   rejete: 'Rejeté',

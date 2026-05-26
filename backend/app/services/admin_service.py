@@ -42,7 +42,6 @@ class AdminService:
     )
     # Statuts workflow consideres comme "termines" (decision rendue).
     _TERMINES_STATUSES = (
-        StatutWorkflowEnum.conforme,
         StatutWorkflowEnum.conforme_sous_reserve,
         StatutWorkflowEnum.valide,
         StatutWorkflowEnum.rejete,
@@ -865,7 +864,6 @@ class AdminService:
                 EntiteWorkflow.statut == StatutWorkflowEnum.soumis,
                 EntiteWorkflow.statut == StatutWorkflowEnum.en_verification,
                 EntiteWorkflow.statut == StatutWorkflowEnum.en_attente_complements,
-                EntiteWorkflow.statut == StatutWorkflowEnum.conforme,
                 EntiteWorkflow.statut == StatutWorkflowEnum.conforme_sous_reserve,
                 EntiteWorkflow.statut == StatutWorkflowEnum.valide,
                 EntiteWorkflow.statut == StatutWorkflowEnum.publie,
@@ -915,9 +913,16 @@ class AdminService:
     # --- Gestion utilisateurs ---
 
     @staticmethod
-    def list_users(page=None, per_page=None):
-        """Liste paginée des utilisateurs ARTCI."""
-        query = User.query.order_by(User.createdAt.desc())
+    def list_users(page=None, per_page=None, caller_role=None):
+        """Liste paginée des utilisateurs ARTCI.
+
+        Un admin (role 'admin') ne voit pas les super_admin (separation
+        hierarchique : seul un super_admin peut gerer les super_admin).
+        """
+        query = User.query
+        if caller_role == 'admin':
+            query = query.filter(User.role != RoleEnum.super_admin)
+        query = query.order_by(User.createdAt.desc())
         return paginate(query, UserOutputSchema(), page=page, per_page=per_page)
 
     @staticmethod

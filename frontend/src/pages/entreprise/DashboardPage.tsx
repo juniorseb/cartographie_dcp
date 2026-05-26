@@ -9,7 +9,7 @@ import { ROUTES } from '@/utils/constants';
 
 // Statuts pendant lesquels le dossier est en cours d'examen ARTCI
 const STATUTS_EN_VERIFICATION = ['soumis', 'en_verification', 'en_attente_complements'];
-const STATUTS_TERMINES = ['conforme', 'conforme_sous_reserve', 'valide', 'publie'];
+const STATUTS_TERMINES = ['conforme_sous_reserve', 'valide', 'publie'];
 
 export default function DashboardPage() {
   const { data: dashboard, isLoading, error, refetch } = useApi(

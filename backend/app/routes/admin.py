@@ -117,6 +117,52 @@ def list_entites():
     return success_response(result)
 
 
+@admin_bp.route('/entites/export', methods=['GET'])
+@role_required('super_admin', 'admin', 'editor', 'reader')
+def export_entites():
+    """Export des entités (Excel/CSV/PDF) avec les mêmes filtres que la liste.
+    Editor : scope automatique aux entités qui lui sont assignées."""
+    from app.services.entite_service import EntiteService
+    from app.utils.export import prepare_export_data, export_to_excel, export_to_csv, export_to_pdf
+
+    format_type = request.args.get('format', 'excel')
+
+    filters = {
+        'search': request.args.get('search'),
+        'secteur_activite': request.args.get('secteur_activite'),
+        'ville': request.args.get('ville'),
+        'region': request.args.get('region'),
+        'forme_juridique': request.args.get('forme_juridique'),
+        'statut_workflow': request.args.get('statut_workflow'),
+        'statut_conformite': request.args.get('statut_conformite'),
+        'origine_saisie': request.args.get('origine_saisie'),
+    }
+    filters = {k: v for k, v in filters.items() if v}
+
+    publie_param = request.args.get('publie_sur_carte')
+    if publie_param is not None:
+        filters['publie_sur_carte'] = publie_param.lower() == 'true'
+
+    if request.args.get('validees') == 'true':
+        filters['validees_only'] = True
+
+    if g.current_user_role == 'editor':
+        filters['assigned_to_user_id'] = g.current_user_id
+        filters['exclude_brouillons'] = True
+
+    entites = EntiteService.build_entite_query(filters or None).all()
+    data = prepare_export_data(entites)
+
+    if format_type == 'csv':
+        return export_to_csv(data)
+    if format_type == 'pdf':
+        return export_to_pdf(data)
+    return export_to_excel(data)
+
+
+
+
+
 @admin_bp.route('/entites/<string:entite_id>', methods=['GET'])
 @role_required('super_admin', 'admin', 'editor', 'reader')
 def get_entite(entite_id):
@@ -573,10 +619,13 @@ def add_feedback():
 @admin_bp.route('/users', methods=['GET'])
 @admin_or_above
 def list_users():
-    """Liste paginée des utilisateurs ARTCI."""
+    """Liste paginée des utilisateurs ARTCI.
+    Un admin ne voit pas les super_admin (separation hierarchique)."""
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
-    result = AdminService.list_users(page=page, per_page=per_page)
+    result = AdminService.list_users(
+        page=page, per_page=per_page, caller_role=g.current_user_role,
+    )
     return success_response(result)
 
 

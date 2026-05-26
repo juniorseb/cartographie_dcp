@@ -307,7 +307,7 @@ def seed():
                 date_soumission=NOW - timedelta(days=5),
             ),
             EntiteWorkflow(
-                entite_id=eE.id, statut=StatutWorkflowEnum.conforme,
+                entite_id=eE.id, statut=StatutWorkflowEnum.valide,
                 date_soumission=NOW - timedelta(days=40),
                 date_validation=NOW - timedelta(days=25),
                 createdBy=admin.id, assignedTo=editor.id,
@@ -750,9 +750,9 @@ startxref
                              modifie_par=editor.id,
                              commentaire='Informations complémentaires demandées sur le DPO'),
             HistoriqueStatut(entite_id=eE.id, ancien_statut='en_verification',
-                             nouveau_statut='conforme',
+                             nouveau_statut='valide',
                              modifie_par=admin.id,
-                             commentaire='Dossier conforme'),
+                             commentaire='Dossier validé'),
         ]
         db.session.add_all(historiques)
         db.session.flush()

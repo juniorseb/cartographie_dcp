@@ -86,7 +86,6 @@ class Config:
         'soumis',
         'en_verification',
         'en_attente_complements',
-        'conforme',
         'conforme_sous_reserve',
         'valide',
         'rejete',

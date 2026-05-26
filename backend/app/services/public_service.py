@@ -2,9 +2,9 @@
 Service pour les requêtes publiques ARTCI DCP.
 Entités conformes uniquement, statistiques, export.
 """
-from sqlalchemy import func
+from sqlalchemy import func, select
 from app.extensions import db
-from app.models import EntiteBase, EntiteConformite, EntiteWorkflow
+from app.models import EntiteBase, EntiteConformite, EntiteWorkflow, EntiteLocalisation
 from app.models.enums import StatutConformiteEnum
 from app.schemas.entite import EntiteListOutputSchema, EntitePublicDetailSchema
 from app.services.entite_service import EntiteService
@@ -14,54 +14,70 @@ from app.utils.export import prepare_export_data, export_to_excel, export_to_csv
 
 class PublicService:
 
+    # Statuts publiables sur la cartographie publique (un dossier "Non conforme"
+    # n'est jamais expose).
+    _STATUTS_PUBLIABLES = [
+        StatutConformiteEnum.conforme,
+        StatutConformiteEnum.demarche_en_cours,
+        StatutConformiteEnum.partiellement_conforme,
+        StatutConformiteEnum.demarche_achevee,
+    ]
+
+    @staticmethod
+    def _build_publiable_query(filters=None, statut_filter=None):
+        """Construit la requete des entites visibles sur la carte publique.
+
+        Critères STRICTS — doivent matcher exactement la liste des marqueurs
+        affiches cote frontend :
+        1. `publie_sur_carte = True`
+        2. statut de conformite dans _STATUTS_PUBLIABLES (ou intersection avec
+           le filtre utilisateur)
+        3. coordonnees GPS presentes (lat ET lng non nulles) — sans coordonnees,
+           pas de marqueur, donc l'entite ne doit pas etre comptee non plus.
+        """
+        query = EntiteService.build_entite_query(filters)
+
+        query = query.filter(
+            EntiteBase.publie_sur_carte == True,  # noqa: E712
+            select(1).select_from(EntiteLocalisation).where(
+                EntiteLocalisation.entite_id == EntiteBase.id,
+                EntiteLocalisation.latitude.isnot(None),
+                EntiteLocalisation.longitude.isnot(None),
+            ).exists(),
+        )
+
+        # Statut conformite — intersection avec les publiables
+        if statut_filter:
+            statuts_to_apply = [s for s in statut_filter if s in PublicService._STATUTS_PUBLIABLES]
+            if not statuts_to_apply:
+                statuts_to_apply = PublicService._STATUTS_PUBLIABLES
+        else:
+            statuts_to_apply = PublicService._STATUTS_PUBLIABLES
+
+        query = query.filter(
+            select(1).select_from(EntiteConformite).where(
+                EntiteConformite.entite_id == EntiteBase.id,
+                EntiteConformite.statut_conformite.in_(statuts_to_apply),
+            ).exists()
+        )
+
+        return query
+
     @staticmethod
     def get_entites_conformes(filters=None, page=None, per_page=None):
-        """
-        Liste paginée des entités CONFORMES uniquement.
-        Filtre automatique : statut_conformite = 'Conforme' AND publie_sur_carte = True
-        """
-        # Parse statut_conformite filter
+        """Liste paginée des entités publiables sur la carte."""
         statut_filter = None
         if filters and filters.get('statut_conformite'):
-            statut_str = filters.pop('statut_conformite')  # Remove from filters so build_entite_query doesn't see it
-            statut_values = [s.strip() for s in statut_str.split(',')]
+            statut_str = filters.pop('statut_conformite')
             statut_filter = []
-            for sv in statut_values:
+            for sv in [s.strip() for s in statut_str.split(',')]:
                 try:
                     statut_filter.append(StatutConformiteEnum(sv))
                 except ValueError:
                     pass
 
-        query = EntiteService.build_entite_query(filters)
-
-        # Join conformite
-        query = query.join(
-            EntiteConformite, EntiteBase.id == EntiteConformite.entite_id
-        ).filter(
-            EntiteBase.publie_sur_carte == True  # noqa: E712
-        )
-
-        # Apply statut filter
-        # Spec : seules les entites "Conforme" et "Demarche en cours" sont publiables
-        # (les "Non conforme" ne sont pas publiees)
-        publiables = [
-            StatutConformiteEnum.conforme,
-            StatutConformiteEnum.demarche_en_cours,
-            StatutConformiteEnum.partiellement_conforme,
-        ]
-        if statut_filter:
-            # On ne garde que les statuts demandes ET publiables
-            statuts_to_apply = [s for s in statut_filter if s in publiables]
-            if statuts_to_apply:
-                query = query.filter(EntiteConformite.statut_conformite.in_(statuts_to_apply))
-            else:
-                query = query.filter(EntiteConformite.statut_conformite.in_(publiables))
-        else:
-            # Defaut : Conforme + Demarche en cours + Partiellement conforme
-            query = query.filter(EntiteConformite.statut_conformite.in_(publiables))
-
+        query = PublicService._build_publiable_query(filters, statut_filter)
         query = query.order_by(EntiteBase.denomination.asc())
-
         return paginate(query, EntiteListOutputSchema(), page=page, per_page=per_page)
 
     @staticmethod
@@ -83,59 +99,72 @@ class PublicService:
 
     @staticmethod
     def get_public_stats():
-        """
-        Statistiques agrégées publiques.
-        """
-        stats = {}
+        """Statistiques publiques.
 
-        # Comptage par statut conformité
+        Les compteurs doivent rester COHERENTS avec le nombre de marqueurs
+        affiches sur la carte. On ne compte donc que les entites :
+        - publiables (statut conformite dans _STATUTS_PUBLIABLES)
+        - publiees sur la carte (publie_sur_carte = True)
+        - geolocalisees (lat/lng non nulles)
+        - non archivees
+        """
+        stats = {
+            'total_entites_conformes': 0,
+            'total_partiellement_conformes': 0,
+            # Compat ascendante : anciens libelles maintenus a 0.
+            'total_demarche_achevee': 0,
+            'total_demarche_en_cours': 0,
+        }
+
+        # Sous-requete IDs des entites visibles sur la carte.
+        visibles_ids_subq = db.session.query(EntiteBase.id).filter(
+            EntiteBase.archive == False,  # noqa: E712
+            EntiteBase.publie_sur_carte == True,  # noqa: E712
+            select(1).select_from(EntiteLocalisation).where(
+                EntiteLocalisation.entite_id == EntiteBase.id,
+                EntiteLocalisation.latitude.isnot(None),
+                EntiteLocalisation.longitude.isnot(None),
+            ).exists(),
+        ).subquery()
+
+        # Comptage par statut conformite (restreint aux entites visibles ET publiables)
         conformite_counts = db.session.query(
             EntiteConformite.statut_conformite,
-            func.count(EntiteConformite.entite_id)
+            func.count(EntiteConformite.entite_id),
+        ).filter(
+            EntiteConformite.entite_id.in_(db.session.query(visibles_ids_subq)),
+            EntiteConformite.statut_conformite.in_(PublicService._STATUTS_PUBLIABLES),
         ).group_by(EntiteConformite.statut_conformite).all()
-
-        stats['total_entites_conformes'] = 0
-        stats['total_partiellement_conformes'] = 0
-        # Compat ascendante : on conserve les anciens libelles a 0 pour les
-        # clients deja deployes qui les consomment encore.
-        stats['total_demarche_achevee'] = 0
-        stats['total_demarche_en_cours'] = 0
 
         for statut, count in conformite_counts:
             if statut == StatutConformiteEnum.conforme:
                 stats['total_entites_conformes'] = count
-            elif statut == StatutConformiteEnum.partiellement_conforme:
-                stats['total_partiellement_conformes'] += count
-            elif statut == StatutConformiteEnum.demarche_achevee:
-                # Anciens dossiers historiques : on les agrege dans Partiellement
-                stats['total_partiellement_conformes'] += count
-            elif statut == StatutConformiteEnum.demarche_en_cours:
+            elif statut in (
+                StatutConformiteEnum.partiellement_conforme,
+                StatutConformiteEnum.demarche_achevee,
+                StatutConformiteEnum.demarche_en_cours,
+            ):
                 stats['total_partiellement_conformes'] += count
 
-        # Par secteur (conformes seulement)
+        # Repartitions geographiques — restreintes aux entites visibles.
         secteur_counts = db.session.query(
-            EntiteBase.secteur_activite,
-            func.count(EntiteBase.id)
-        ).join(EntiteConformite).filter(
-            EntiteConformite.statut_conformite == StatutConformiteEnum.conforme
+            EntiteBase.secteur_activite, func.count(EntiteBase.id),
+        ).filter(
+            EntiteBase.id.in_(db.session.query(visibles_ids_subq)),
         ).group_by(EntiteBase.secteur_activite).all()
         stats['par_secteur'] = {s: c for s, c in secteur_counts if s}
 
-        # Par région (conformes seulement)
         region_counts = db.session.query(
-            EntiteBase.region,
-            func.count(EntiteBase.id)
-        ).join(EntiteConformite).filter(
-            EntiteConformite.statut_conformite == StatutConformiteEnum.conforme
+            EntiteBase.region, func.count(EntiteBase.id),
+        ).filter(
+            EntiteBase.id.in_(db.session.query(visibles_ids_subq)),
         ).group_by(EntiteBase.region).all()
         stats['par_region'] = {r: c for r, c in region_counts if r}
 
-        # Par ville (conformes seulement)
         ville_counts = db.session.query(
-            EntiteBase.ville,
-            func.count(EntiteBase.id)
-        ).join(EntiteConformite).filter(
-            EntiteConformite.statut_conformite == StatutConformiteEnum.conforme
+            EntiteBase.ville, func.count(EntiteBase.id),
+        ).filter(
+            EntiteBase.id.in_(db.session.query(visibles_ids_subq)),
         ).group_by(EntiteBase.ville).all()
         stats['par_ville'] = {v: c for v, c in ville_counts if v}
 
@@ -143,17 +172,9 @@ class PublicService:
 
     @staticmethod
     def export_entites(format_type, filters=None):
-        """
-        Exporter les entités conformes en Excel, CSV ou PDF.
-        """
-        query = EntiteService.build_entite_query(filters)
-        query = query.join(
-            EntiteConformite, EntiteBase.id == EntiteConformite.entite_id
-        ).filter(
-            EntiteConformite.statut_conformite == StatutConformiteEnum.conforme,
-            EntiteBase.publie_sur_carte == True  # noqa: E712
-        ).order_by(EntiteBase.denomination.asc())
-
+        """Exporter les entités publiables (memes critères que la carte)."""
+        query = PublicService._build_publiable_query(filters)
+        query = query.order_by(EntiteBase.denomination.asc())
         entites = query.all()
         data = prepare_export_data(entites)
 
