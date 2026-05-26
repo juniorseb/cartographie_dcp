@@ -516,6 +516,9 @@ startxref
         # ── 7. Localisations (GPS Côte d'Ivoire) ────────────────────
         # Spec : les coordonnees GPS sont OBLIGATOIRES pour toute entite,
         # qu'elle soit publiee sur la carte ou pas (donnee d'identite).
+        # Les entites d'Abidjan sont reparties sur differents quartiers
+        # (Plateau / Cocody / Treichville / Marcory / Yopougon) pour eviter
+        # le chevauchement de marqueurs au zoom large.
         localisations = [
             EntiteLocalisation(entite_id=eA.id,
                                latitude=5.3220, longitude=-4.0165,
@@ -526,8 +529,8 @@ startxref
                                adresse_complete='Rue des Jardins, Cocody, Abidjan',
                                precision_gps='15m', methode_geolocalisation='GPS'),
             EntiteLocalisation(entite_id=eC.id,
-                               latitude=5.3180, longitude=-4.0210,
-                               adresse_complete='Avenue Terrasson de Fougères, Plateau, Abidjan',
+                               latitude=5.2980, longitude=-3.9870,
+                               adresse_complete='Zone 4, Marcory, Abidjan',
                                precision_gps='10m', methode_geolocalisation='GPS'),
             EntiteLocalisation(entite_id=eD.id,
                                latitude=5.3260, longitude=-4.0155,
@@ -546,16 +549,16 @@ startxref
                                adresse_complete='Zone Portuaire, Boulevard Maritime, San-Pédro',
                                precision_gps='30m', methode_geolocalisation='Adresse'),
             EntiteLocalisation(entite_id=eH.id,
-                               latitude=5.3235, longitude=-4.0175,
-                               adresse_complete='Immeuble Alliance, Boulevard de la République, Plateau, Abidjan',
+                               latitude=5.3360, longitude=-4.1080,
+                               adresse_complete='Immeuble Alliance, Boulevard Principal, Yopougon, Abidjan',
                                precision_gps='15m', methode_geolocalisation='Adresse'),
             EntiteLocalisation(entite_id=eI.id,
-                               latitude=5.3195, longitude=-4.0188,
-                               adresse_complete='Tour C Administrative, Plateau, Abidjan',
+                               latitude=5.2870, longitude=-4.0050,
+                               adresse_complete='Boulevard de Marseille, Treichville, Abidjan',
                                precision_gps='10m', methode_geolocalisation='GPS'),
             EntiteLocalisation(entite_id=eJ.id,
-                               latitude=5.3160, longitude=-4.0230,
-                               adresse_complete='Avenue du Général de Gaulle, Plateau, Abidjan',
+                               latitude=5.3550, longitude=-3.9830,
+                               adresse_complete='Rue du Lycée Technique, Cocody, Abidjan',
                                precision_gps='10m', methode_geolocalisation='GPS'),
         ]
         db.session.add_all(localisations)
