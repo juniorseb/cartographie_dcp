@@ -197,6 +197,10 @@ export type CategoriePersonnes = typeof CATEGORIES_PERSONNES[number];
 
 // Tableau categories de donnees
 export interface CategorieDonneesDetail {
+  /** Spec B11 : si l'entreprise ne traite pas cette categorie, elle coche
+   * « N/A » au sommet de la categorie. Cela degrise/cache tous les autres
+   * sous-champs (items, origine, duree, destinataires). */
+  non_applicable?: boolean;
   items_coches: string[];      // ex: ['nom_prenom','adresse_postale',...]
   item_autre?: string;
   origine: string[];            // ex: ['directement','indirectement']

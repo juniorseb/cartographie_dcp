@@ -30,6 +30,7 @@ const DashboardPage = lazy(() => import('@/pages/entreprise/DashboardPage'));
 const MonEnregistrementPage = lazy(() => import('@/pages/entreprise/MonEnregistrementPage'));
 const MonDossierPage = lazy(() => import('@/pages/entreprise/MonDossierPage'));
 const MesDocumentsPage = lazy(() => import('@/pages/entreprise/MesDocumentsPage'));
+const JournalEvenementsPage = lazy(() => import('@/pages/entreprise/JournalEvenementsPage'));
 const NotificationsEntreprisePage = lazy(() => import('@/pages/entreprise/FeedbacksPage'));
 const DeclarationCorrespondantPage = lazy(() => import('@/pages/entreprise/formalites/DeclarationCorrespondantPage'));
 const DeclarationTraitementPage = lazy(() => import('@/pages/entreprise/formalites/DeclarationTraitementPage'));
@@ -120,6 +121,7 @@ export default function App() {
             <Route path="entreprise/mon-enregistrement/:id" element={<MonEnregistrementPage />} />
             <Route path="entreprise/mon-dossier" element={<MonDossierPage />} />
             <Route path="entreprise/mes-documents" element={<MesDocumentsPage />} />
+            <Route path="entreprise/journal" element={<JournalEvenementsPage />} />
             <Route path="entreprise/notifications" element={<NotificationsEntreprisePage />} />
             <Route path="entreprise/formalites" element={<Navigate to="/entreprise/formalites/declaration/correspondant" replace />} />
             <Route path="entreprise/formalites/declaration/correspondant" element={<DeclarationCorrespondantPage />} />

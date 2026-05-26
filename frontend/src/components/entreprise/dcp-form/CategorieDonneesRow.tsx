@@ -52,10 +52,39 @@ export default function CategorieDonneesRow({
     update({ duree_unites: unites });
   }
 
+  const isNA = Boolean(data.non_applicable);
+
   return (
     <div className="border border-gray-200 p-4 mb-3 bg-gray-50 rounded">
-      <h4 className="font-bold text-sm uppercase mb-3 text-[var(--artci-green)]">{titre}</h4>
+      <div className="flex items-start justify-between gap-3 mb-3 flex-wrap">
+        <h4 className="font-bold text-sm uppercase text-[var(--artci-green)]">{titre}</h4>
+        {/* Spec B11 : toggle N/A pour la categorie entiere */}
+        <label className="flex items-center gap-2 text-xs cursor-pointer text-gray-700 bg-white border border-gray-300 rounded px-2 py-1">
+          <input
+            type="checkbox"
+            checked={isNA}
+            onChange={(e) => update({
+              non_applicable: e.target.checked,
+              // Quand l'utilisateur coche N/A on vide les autres champs pour
+              // eviter de garder des donnees fantomes (et qu'elles polluent
+              // l'algorithme determinerFormalite cote partie 3).
+              items_coches: e.target.checked ? [] : data.items_coches,
+              origine: e.target.checked ? [] : data.origine,
+              duree_unites: e.target.checked ? [] : data.duree_unites,
+              destinataires: e.target.checked ? '' : data.destinataires,
+              destinataires_non_applicable: e.target.checked ? true : data.destinataires_non_applicable,
+            })}
+          />
+          <span>N/A — cette catégorie ne s'applique pas</span>
+        </label>
+      </div>
 
+      {/* Sous-champs masques quand la categorie est marquee N/A */}
+      {isNA ? (
+        <p className="text-xs italic text-gray-500">
+          Cette catégorie de données n'est pas traitée par votre organisation.
+        </p>
+      ) : (
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         {/* Détail */}
         <div>
@@ -216,6 +245,7 @@ export default function CategorieDonneesRow({
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }
