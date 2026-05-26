@@ -36,6 +36,12 @@ const TYPE_LABELS: Record<string, string> = {
   dpo_casier_judiciaire: 'Casier judiciaire DPO',
   dpo_cni: 'CNI du DPO',
   dpo_extrait_naissance: 'Extrait de naissance DPO',
+  // Documents du formulaire DCP (uploads R2)
+  courrier_habilitation_dpo: "Courrier d'habilitation DPO (ARTCI)",
+  charte_protection: 'Charte de protection des données',
+  registre_violations: 'Registre des violations de données',
+  procedure_violation: 'Procédure de réaction aux violations',
+  autorisation_transfert: 'Autorisation de transfert hors CEDEAO',
   autre: 'Autre',
 };
 

@@ -1,4 +1,5 @@
-import { MessageSquare, Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { MessageSquare, Clock, AlertTriangle, CheckCircle2, Bell } from 'lucide-react';
+import { useState } from 'react';
 import { useApi } from '@/hooks/useApi';
 import * as entrepriseApi from '@/api/entreprise.api';
 import type { SignalementErreurItem } from '@/api/entreprise.api';
@@ -23,14 +24,31 @@ export default function FeedbacksPage() {
     () => entrepriseApi.listMesSignalements(),
     []
   );
+  // E5 : notifications globales (depublication auto, validations, etc.)
+  const { data: notifs, refetch: refetchNotifs } = useApi(
+    () => entrepriseApi.getEntrepriseNotifications(),
+    []
+  );
+  const [markingId, setMarkingId] = useState<string | null>(null);
+
+  async function handleMarkRead(id: string) {
+    setMarkingId(id);
+    try {
+      await entrepriseApi.markEntrepriseNotificationRead(id);
+      refetchNotifs();
+    } finally {
+      setMarkingId(null);
+    }
+  }
 
   if (isLoading || loadingSig) return <Loading fullPage text="Chargement des notifications..." />;
   if (error) return <ErrorDisplay message={error} onRetry={refetch} />;
 
   const hasFeedbacks = feedbacks && feedbacks.length > 0;
   const hasSignalements = signalements && signalements.length > 0;
+  const hasNotifs = notifs && notifs.length > 0;
 
-  if (!hasFeedbacks && !hasSignalements) {
+  if (!hasFeedbacks && !hasSignalements && !hasNotifs) {
     return (
       <div className="max-w-3xl mx-auto">
         <h1 className="text-2xl mb-6">Notifications</h1>
@@ -42,6 +60,41 @@ export default function FeedbacksPage() {
   return (
     <div className="max-w-3xl mx-auto">
       <h1 className="text-2xl mb-6">Notifications</h1>
+
+      {/* E5 : Notifications globales (depublications auto, validations, signalements traites...) */}
+      {hasNotifs && (
+        <div className="space-y-3 mb-8">
+          <h2 className="text-lg font-bold flex items-center gap-2">
+            <Bell className="w-5 h-5 text-[var(--artci-orange)]" />
+            Notifications récentes
+          </h2>
+          {notifs!.map((n) => (
+            <div key={n.id} className={`card ${!n.lue ? 'border-l-4 border-l-[var(--artci-orange)]' : 'opacity-80'}`}>
+              <div className="flex items-start justify-between gap-3 mb-1">
+                <p className="font-semibold text-sm">{n.titre}</p>
+                {!n.lue ? (
+                  <button
+                    type="button"
+                    onClick={() => handleMarkRead(n.id)}
+                    disabled={markingId === n.id}
+                    className="text-xs text-[var(--artci-green)] hover:underline flex-shrink-0"
+                  >
+                    Marquer comme lue
+                  </button>
+                ) : (
+                  <span className="text-[10px] text-gray-400 flex-shrink-0">Lue</span>
+                )}
+              </div>
+              <p className="text-sm text-gray-700 whitespace-pre-wrap">{n.message}</p>
+              {n.createdAt && (
+                <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
+                  <Clock className="w-3 h-3" /> {formatDateTime(n.createdAt)}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Retours de l'ARTCI */}
       {hasFeedbacks && (

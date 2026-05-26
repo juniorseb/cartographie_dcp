@@ -131,7 +131,8 @@ export interface Partie2CadreJuridique {
   dpo_physique?: DPOPhysique;        // interne OU externe physique
   dpo_morale?: DPOMorale;            // externe morale
   // Upload obligatoire du courrier d'habilitation (cote frontend, on stocke un nom de fichier ou un id)
-  dpo_courrier_habilitation_uploaded?: boolean;
+  dpo_courrier_habilitation_uploaded?: boolean;  // deprecie, legacy
+  dpo_courrier_habilitation_doc?: { r2_key: string; filename: string; size: number; mime_type: string; download_url?: string | null };
   cpd_profil_requis?: CpdProfilRequis;
   distinction_decl_aut?: DistinctionDeclAut;
   // Formalites_effectuees est maintenant CALCULE automatiquement (cf §3.7)
@@ -374,7 +375,8 @@ export interface Partie4SousTraitanceTransferts {
   autorisation_artci_transfert?: AutorisationArtciTransfert;
   numero_autorisation_transfert?: string;
   // Upload de l'autorisation de transfert si obtenue
-  autorisation_transfert_document_uploaded?: boolean;
+  autorisation_transfert_document_uploaded?: boolean;  // deprecie, legacy
+  autorisation_transfert_document_doc?: { r2_key: string; filename: string; size: number; mime_type: string; download_url?: string | null };
   // Reprend les mêmes éléments que les bases légales de traitement (Partie 3)
   bases_juridiques_transfert?: BaseLegale[];
   garanties_transfert?: GarantieTransfert[];
@@ -446,7 +448,8 @@ export interface Partie5Securite {
   // Charte de protection des donnees (anciennement "Politique de securite")
   politique_securite?: PolitiqueSecurite;
   // Si oui_formalisee : upload obligatoire du document charte
-  charte_uploaded?: boolean;
+  charte_uploaded?: boolean;  // deprecie, legacy
+  charte_doc?: { r2_key: string; filename: string; size: number; mime_type: string; download_url?: string | null };
   // Mesures multi-select (spec 3.9)
   mesures_techniques_list?: MesureTechnique[];
   mesures_techniques_autre?: string;
@@ -458,11 +461,14 @@ export interface Partie5Securite {
   notification_artci?: NotificationArtci72h;
   info_personnes_violation?: InfoPersonnesViolation;
   registre_violations?: 'oui' | 'non';
-  // B27 : upload du registre des violations si Oui
-  registre_violations_uploaded?: boolean;
+  // B27 : upload du registre des violations si Oui — stocke desormais r2_key + filename
+  // pour vraiment recuperer le fichier (et plus seulement un boolean).
+  registre_violations_uploaded?: boolean;  // deprecie, legacy
+  registre_violations_doc?: { r2_key: string; filename: string; size: number; mime_type: string; download_url?: string | null };
   procedures_violation?: ProcedureViolation;
   // B28 : upload du document de procedure si Oui (procédure documentée et testée)
-  procedures_violation_uploaded?: boolean;
+  procedures_violation_uploaded?: boolean;  // deprecie, legacy
+  procedures_violation_doc?: { r2_key: string; filename: string; size: number; mime_type: string; download_url?: string | null };
   // Formation
   personnel_sensibilise?: PersonnelSensibilise;
   frequence_formations?: FrequenceFormations;

@@ -948,11 +948,49 @@ def admin_get_formulaire_dcp(entite_id):
     if not entite:
         return error_response("Entité introuvable.", 404)
     form = FormulaireDCP.query.get(entite.id)
+
+    # Enrichissement : ajouter download_url R2 signee aux documents joints
+    # dans le formulaire (Charte, DPO, violations, etc.) pour que l'admin
+    # puisse les consulter directement depuis la vue treat/view.
+    reponses = dict(form.reponses) if form and form.reponses else {}
+    if reponses:
+        from app.utils.r2_storage import generate_download_url
+
+        def _enrich_doc(d):
+            """Ajoute download_url si on a un r2_key."""
+            if not isinstance(d, dict):
+                return d
+            r2_key = d.get('r2_key')
+            if not r2_key or d.get('download_url'):
+                return d
+            try:
+                d['download_url'] = generate_download_url(
+                    r2_key, expires_in=3600, filename=d.get('filename'),
+                )
+            except Exception:
+                d['download_url'] = None
+            return d
+
+        # Liste des champs *_doc connus dans le JSONB
+        DOC_FIELDS_BY_PART = {
+            'cadre_juridique': ['dpo_courrier_habilitation_doc'],
+            'securite': ['charte_doc', 'registre_violations_doc', 'procedures_violation_doc'],
+            'sous_traitance_transferts': ['autorisation_transfert_document_doc'],
+        }
+        for part_key, doc_fields in DOC_FIELDS_BY_PART.items():
+            part = reponses.get(part_key)
+            if not isinstance(part, dict):
+                continue
+            for field in doc_fields:
+                if field in part and isinstance(part[field], dict):
+                    part[field] = _enrich_doc(dict(part[field]))
+            reponses[part_key] = part
+
     return success_response({
         'entite_id': entite.id,
         'denomination': entite.denomination,
         'numero_cc': entite.numero_cc,
-        'reponses': form.reponses if form else {},
+        'reponses': reponses,
         'version': form.version if form else 0,
     })
 
@@ -1269,6 +1307,33 @@ def list_evenements(entite_id):
     })
 
 
+@admin_bp.route('/entites/<string:entite_id>/journal-evenements', methods=['GET'])
+@role_required('super_admin', 'admin', 'editor', 'reader')
+def get_journal_evenements_admin(entite_id):
+    """Journal agrege de tous les evenements lies a un dossier (vue admin/editeur).
+
+    Spec E2 : permet a l'editeur/admin de voir l'historique complet d'un dossier
+    qui lui est assigne : transitions workflow + retours admin + validations N+1 +
+    publications + signalements emis par l'entreprise.
+
+    Les editeurs ne voient que les dossiers qui leur sont assignes.
+    """
+    from app.services.entreprise_service import EntrepriseService
+
+    if g.current_user_role == 'editor':
+        from app.models import AssignationDemande
+        assigned = AssignationDemande.query.filter_by(
+            agent_id=g.current_user_id, entite_id=entite_id,
+        ).first()
+        if not assigned:
+            return error_response("Vous n'avez pas accès à cette entité.", 403)
+
+    items = EntrepriseService.get_journal_evenements_for_entite(
+        entite_id, viewer='admin',
+    )
+    return success_response(items)
+
+
 @admin_bp.route('/commentaires/<string:commentaire_id>/resoudre', methods=['POST'])
 @role_required('super_admin', 'admin', 'editor')
 def resoudre_commentaire(commentaire_id):
@@ -1408,10 +1473,12 @@ def list_signalements():
 @admin_bp.route('/signalements/<string:signalement_id>', methods=['PUT'])
 @role_required('super_admin')
 def repondre_signalement(signalement_id):
-    """Mettre a jour le statut d'un signalement et apporter une reponse."""
+    """Mettre a jour le statut d'un signalement et apporter une reponse.
+    Spec E5 : notifie l'entreprise quand un signalement est resolu/dismissed."""
     from datetime import datetime, timezone
     from app.extensions import db
-    from app.models import SignalementErreur
+    from app.models import SignalementErreur, Notification
+
     data = request.get_json() or {}
     statut = data.get('statut')
     if statut not in ('open', 'in_progress', 'resolved', 'dismissed'):
@@ -1419,12 +1486,38 @@ def repondre_signalement(signalement_id):
     signalement = SignalementErreur.query.get(signalement_id)
     if not signalement:
         return error_response('Signalement introuvable.', 404)
+
+    ancien_statut = signalement.statut
     signalement.statut = statut
     signalement.traite_par = g.current_user_id
     if 'reponse_admin' in data:
         signalement.reponse_admin = data['reponse_admin']
     if statut in ('resolved', 'dismissed'):
         signalement.date_traitement = datetime.now(timezone.utc)
+
+    # E5 : creer une notification cote entreprise si on bascule vers resolved/dismissed.
+    if (
+        statut in ('resolved', 'dismissed')
+        and ancien_statut != statut
+        and signalement.compte_id
+    ):
+        titre = (
+            "Votre signalement a été résolu" if statut == 'resolved'
+            else "Votre signalement a été clôturé"
+        )
+        msg = signalement.reponse_admin or (
+            "L'ARTCI a traité votre signalement. Consultez les détails dans vos notifications."
+        )
+        db.session.add(Notification(
+            destinataire_type='entreprise',
+            destinataire_id=signalement.compte_id,
+            type='signalement_traite',
+            titre=titre,
+            message=msg,
+            entite_id=signalement.entite_id,
+            lue=False,
+        ))
+
     db.session.commit()
     return success_response(
         {'id': signalement.id, 'statut': signalement.statut},

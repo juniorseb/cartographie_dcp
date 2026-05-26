@@ -24,6 +24,36 @@ def send_email(to, subject, body, html=None):
     return _send(subject, [to], body, html)
 
 
+def send_notification_email(to, nom_complet, titre, message, action_url=None, action_label='Ouvrir la plateforme'):
+    """Email de notification transactionnel (re-soumission, signalement, validation N+1...).
+
+    Ne bloque jamais le flux applicatif : toute erreur SMTP est silenced
+    (log warning) et le booleen retourne sert uniquement de diagnostic.
+    """
+    subject = f"ARTCI DCP - {titre}"
+    body = (
+        f"Bonjour {nom_complet},\n\n"
+        f"{message}\n\n"
+    )
+    if action_url:
+        body += f"{action_label} : {action_url}\n\n"
+    body += "Cordialement,\nL'équipe ARTCI."
+
+    html_parts = [
+        f"<p>Bonjour <strong>{nom_complet}</strong>,</p>",
+        f"<p>{message}</p>",
+    ]
+    if action_url:
+        html_parts.append(
+            f"<p><a href='{action_url}' style='display:inline-block;padding:10px 18px;"
+            f"background:#ff6a00;color:#fff;text-decoration:none;border-radius:6px;'>"
+            f"{action_label}</a></p>"
+        )
+    html_parts.append("<p>Cordialement,<br>L'équipe ARTCI.</p>")
+    html = ''.join(html_parts)
+    return _send(subject, [to], body, html)
+
+
 def send_credentials_email(to, nom_complet, role, denomination, login_email, password):
     """Email contenant les acces de connexion (apres validation inscription)."""
     subject = "ARTCI DCP - Vos accès à la plateforme"

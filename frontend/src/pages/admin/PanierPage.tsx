@@ -91,7 +91,30 @@ export default function PanierPage() {
                   <div key={n.entite_id} className="card border-l-4 border-l-[var(--artci-orange)]">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold">{n.entite_denomination ?? n.entite_id}</p>
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <p className="font-semibold">{n.entite_denomination ?? n.entite_id}</p>
+                          {/* Score auto = proposition algorithme — l'entité n'a
+                              pas encore de statut de conformité car elle n'est
+                              pas encore traitée. */}
+                          {n.score_potentiel !== null && n.score_potentiel !== undefined && (
+                            <span
+                              className="badge text-xs font-bold"
+                              style={{
+                                backgroundColor:
+                                  n.score_potentiel >= 100 ? 'rgba(34, 139, 34, 0.15)' :
+                                  n.score_potentiel >= 70 ? 'rgba(255, 140, 0, 0.15)' :
+                                  'rgba(220, 20, 60, 0.15)',
+                                color:
+                                  n.score_potentiel >= 100 ? '#228B22' :
+                                  n.score_potentiel >= 70 ? '#FF8C00' :
+                                  '#DC143C',
+                              }}
+                              title="Score automatique proposé par l'algorithme — à confirmer par l'éditeur"
+                            >
+                              Score auto : {n.score_potentiel}/100
+                            </span>
+                          )}
+                        </div>
                         <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-gray-500">
                           <span>N° CC {n.entite_numero_cc ?? '-'}</span>
                           {n.entite_ville && <span>• {n.entite_ville}</span>}

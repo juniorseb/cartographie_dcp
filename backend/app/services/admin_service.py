@@ -930,18 +930,25 @@ class AdminService:
                 .order_by(EntiteWorkflow.date_soumission.asc().nulls_last())
                 .all()
             )
-            nouvelles_soumissions_data = [
-                {
+            # Score automatique calcule a la volee (proposition algorithme).
+            # Pas de statut de conformite ici — l'entite n'a pas encore ete
+            # evaluee par un agent, seul le score auto a du sens a ce stade.
+            from app.services.scoring_service import ScoringService
+            nouvelles_soumissions_data = []
+            for e, wf in nouvelles:
+                try:
+                    score_auto, _ = ScoringService.compute_score_only(e)
+                except Exception:
+                    score_auto = None
+                nouvelles_soumissions_data.append({
                     'entite_id': e.id,
                     'entite_denomination': e.denomination,
                     'entite_numero_cc': e.numero_cc,
                     'entite_ville': e.ville,
                     'entite_region': e.region,
                     'date_soumission': wf.date_soumission.isoformat() if wf.date_soumission else None,
-                    'statut_workflow': wf.statut.value if wf.statut else None,
-                }
-                for e, wf in nouvelles
-            ]
+                    'score_potentiel': score_auto,
+                })
 
         return {
             'assignations': AssignationOutputSchema(many=True).dump(assignations),

@@ -243,6 +243,14 @@ export interface Traitement {
   entite_numero_cc: string | null;
   reponses_formulaire: Record<string, unknown>;
   commentaires_par_rubrique: Record<string, string>;
+  /** K7 : score saisi par rubrique. Cles : 'identification', 'cadre_juridique',
+   * 'registre', 'sous_traitance_transferts', 'securite'. La somme est utilisee
+   * comme `score_manuel` final. */
+  scores_par_rubrique?: Record<string, number>;
+  /** K6 : score detaille par critere du bareme officiel (7 criteres).
+   * Format : { critere_key: { note, commentaire } }. Outil parallele a
+   * scores_par_rubrique : sert d'aide a la decision pour l'admin. */
+  scores_par_critere?: Record<string, { note: number; commentaire: string }>;
   score_automatique: number | null;
   score_manuel: number | null;
   niveau_conformite: string | null;
@@ -271,6 +279,8 @@ export async function updateTraitement(
   traitementId: string,
   data: {
     commentaires_par_rubrique?: Record<string, string>;
+    scores_par_rubrique?: Record<string, number>;
+    scores_par_critere?: Record<string, { note: number; commentaire: string }>;
     score_manuel?: number;
     recommandations?: string;
   },
@@ -335,7 +345,12 @@ export async function uploadRapportAudit(
 
 /** Nouvelle soumission non assignee (visible uniquement par admin/super_admin
  * dans leur panier). L'admin peut soit s'auto-traiter, soit assigner a un
- * editeur via le bouton dedie. */
+ * editeur via le bouton dedie.
+ *
+ * Pas de `statut_conformite` ici : l'entite n'a pas encore ete evaluee. Le
+ * `score_potentiel` est une *proposition* calculee a la volee par
+ * l'algorithme de scoring — c'est ce qui aide l'admin a estimer la charge
+ * de traitement avant d'assigner. */
 export interface NouvelleSoumissionPanier {
   entite_id: string;
   entite_denomination: string | null;
@@ -343,7 +358,7 @@ export interface NouvelleSoumissionPanier {
   entite_ville: string | null;
   entite_region: string | null;
   date_soumission: string | null;
-  statut_workflow: string | null;
+  score_potentiel: number | null;
 }
 
 export interface PanierResponse {
@@ -561,6 +576,27 @@ export async function listEvenements(
     { params }
   );
   return res.data.data?.items ?? [];
+}
+
+/** Journal agrege admin (workflow + retours + validations + signalements) */
+export interface JournalDossierItem {
+  id: string;
+  source?: 'historique_statut' | 'evenement_dossier' | 'signalement';
+  ancien_statut?: string;
+  nouveau_statut?: string;
+  commentaire?: string;
+  modifie_par_nom?: string;
+  date: string | null;
+}
+
+/** GET /api/admin/entites/:id/journal-evenements */
+export async function getJournalDossier(
+  entiteId: string
+): Promise<JournalDossierItem[]> {
+  const res = await apiClient.get<ApiResponse<JournalDossierItem[]>>(
+    `/admin/entites/${entiteId}/journal-evenements`
+  );
+  return res.data.data ?? [];
 }
 
 /** GET /api/admin/entites/:id/revisions */

@@ -21,6 +21,7 @@ import { ROUTES } from '@/utils/constants';
 import { cn } from '@/utils/cn';
 import type { Traitement } from '@/api/admin.api';
 import RevisionsDiff from '@/components/admin/RevisionsDiff';
+import DossierJournal from '@/components/admin/DossierJournal';
 import MonEnregistrementPage from '@/pages/entreprise/MonEnregistrementPage';
 // Note: DossierAuditTrail retire (spec K3 : "Audit trail du dossier (supprimé)").
 // CommentairesAncres n'est plus instancie ici directement : il est embarque
@@ -61,8 +62,38 @@ export default function TraiterDossierPage() {
 
   // Etat local pour les commentaires et le score (debounced save)
   const [commentaires, setCommentaires] = useState<Record<string, string>>({});
+  // K7 : score par rubrique
+  const [scoresParRubrique, setScoresParRubrique] = useState<Record<string, number>>({});
+  // K6 : score detaille par critere du bareme officiel (7 criteres)
+  const [scoresParCritere, setScoresParCritere] = useState<Record<string, { note: number; commentaire: string }>>({});
   const [scoreManuel, setScoreManuel] = useState<number>(0);
   const [recommandations, setRecommandations] = useState('');
+
+  // K6 : bareme officiel ARTCI (cf. ScoringService backend). 7 criteres, total 100 pts.
+  const BAREME_CRITERES: Array<{ key: string; label: string; max: number; rubrique: string }> = [
+    { key: 'connaissance_loi_2013', label: 'Connaissance de la loi 2013-450', max: 5, rubrique: 'identification' },
+    { key: 'designation_dpo', label: "Désignation d'un DPO / CPD", max: 20, rubrique: 'cadre_juridique' },
+    { key: 'formalites_artci', label: 'Formalités ARTCI effectuées (déclaration + autorisation)', max: 30, rubrique: 'registre' },
+    { key: 'registre_traitements', label: 'Registre des traitements à jour', max: 15, rubrique: 'registre' },
+    { key: 'information_personnes', label: 'Information des personnes concernées', max: 10, rubrique: 'registre' },
+    { key: 'contrats_sous_traitants', label: 'Contrats sous-traitants conformes', max: 10, rubrique: 'sous_traitance_transferts' },
+    { key: 'politique_securite', label: 'Politique de sécurité formalisée', max: 10, rubrique: 'securite' },
+  ];
+
+  // Plafonds officiels du bareme ARTCI (total = 100).
+  // Cf. spec K5 « Consulter la grille des critères de scoring : mettre en tableau ».
+  const BAREME_RUBRIQUES: Array<{ key: string; label: string; max: number; description: string }> = [
+    { key: 'identification', label: 'Identification & connaissance du cadre', max: 15,
+      description: 'Connaissance Loi 2013-450, identification claire de l\'entité, secteur d\'activité, GPS.' },
+    { key: 'cadre_juridique', label: 'Désignation DPO', max: 15,
+      description: 'DPO habilité ARTCI, profil conforme Arrêté 511, courrier officiel.' },
+    { key: 'registre', label: 'Registre & formalités traitements', max: 30,
+      description: 'Registre tenu, formalités effectuées, catégories de données complètes, bases légales, finalités explicites.' },
+    { key: 'sous_traitance_transferts', label: 'Sous-traitance & transferts', max: 15,
+      description: 'Contrats sous-traitants conformes, transferts CEDEAO documentés, autorisations.' },
+    { key: 'securite', label: 'Sécurité & formation', max: 25,
+      description: 'Charte protection, mesures techniques + organisationnelles, formations, gestion violations.' },
+  ];
 
   useEffect(() => {
     if (!entiteId) return;
@@ -71,6 +102,8 @@ export default function TraiterDossierPage() {
       .then((t) => {
         setTraitement(t);
         setCommentaires(t.commentaires_par_rubrique ?? {});
+        setScoresParRubrique(t.scores_par_rubrique ?? {});
+        setScoresParCritere(t.scores_par_critere ?? {});
         setScoreManuel(t.score_manuel ?? 0);
         setRecommandations(t.recommandations ?? '');
       })
@@ -78,12 +111,20 @@ export default function TraiterDossierPage() {
       .finally(() => setLoading(false));
   }, [entiteId]);
 
+  // Recalcule le score total quand les sous-scores changent
+  useEffect(() => {
+    const sum = Object.values(scoresParRubrique).reduce((s, v) => s + (Number(v) || 0), 0);
+    if (sum > 0) setScoreManuel(Math.min(100, sum));
+  }, [scoresParRubrique]);
+
   async function handleSave() {
     if (!traitement) return;
     setSaving(true); setError(''); setSuccess('');
     try {
       const updated = await adminApi.updateTraitement(traitement.id, {
         commentaires_par_rubrique: commentaires,
+        scores_par_rubrique: scoresParRubrique,
+        scores_par_critere: scoresParCritere,
         score_manuel: scoreManuel,
         recommandations,
       });
@@ -184,6 +225,9 @@ export default function TraiterDossierPage() {
         </div>
       )}
 
+      {/* Journal agrege des evenements du dossier (workflow + retours + signalements) */}
+      <DossierJournal entiteId={traitement.entite_id} />
+
       {/* Historique des revisions + diff semantique (modele PR §6.2) */}
       <RevisionsDiff entiteId={traitement.entite_id} />
 
@@ -223,66 +267,181 @@ export default function TraiterDossierPage() {
         </div>
       )}
 
-      {/* Etape 4 : score manuel + niveau auto + grille des criteres */}
+      {/* Etape 4 : Saisie manuelle du score par rubrique + total (K5 + K7) */}
       <div className="card mb-4">
         <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
           <Award className="w-5 h-5 text-[var(--artci-green)]" />
           Score final et niveau de conformité
         </h2>
 
-        {/* Page dediee criteres de scoring : disposee en accordion ici */}
+        {/* K5 : Grille des criteres en TABLEAU */}
         <details className="border border-gray-200 rounded mb-4">
           <summary className="cursor-pointer p-3 hover:bg-gray-50 flex items-center gap-2 text-sm font-semibold text-gray-700">
             <BookOpen className="w-4 h-4 text-[var(--artci-orange)]" />
             Consulter la grille des critères de scoring
           </summary>
-          <div className="p-3 border-t border-gray-100 bg-gray-50 text-xs text-gray-700 space-y-2">
-            <p className="font-semibold">Grille interne ARTCI (7 critères, total 100 points)</p>
-            <ul className="list-disc list-inside space-y-1">
-              <li><strong>Connaissance du cadre légal</strong> (10 pts) — connaissance Loi 2013-450, ARTCI, obligations RT.</li>
-              <li><strong>Désignation DPO</strong> (15 pts) — DPO habilité ARTCI, profil conforme Arrêté 511.</li>
-              <li><strong>Formalités préalables</strong> (15 pts) — déclaration/autorisation effectuée selon catégories de données.</li>
-              <li><strong>Registre des traitements</strong> (15 pts) — tenu, à jour, sous forme structurée.</li>
-              <li><strong>Information des personnes</strong> (10 pts) — mentions, droits, supports diffusés.</li>
-              <li><strong>Sous-traitance & transferts</strong> (15 pts) — contrats conformes, garanties, autorisations.</li>
-              <li><strong>Sécurité & formation</strong> (20 pts) — charte, mesures techniques+organisationnelles, formation, gestion violations.</li>
-            </ul>
-            <p className="pt-2 border-t border-gray-200">
-              <strong>Seuils :</strong> Score 100 = <em>Conforme</em> · 70-99 = <em>Partiellement conforme</em> · 0-70 = <em>Non conforme</em>.
+          <div className="p-3 border-t border-gray-100 bg-gray-50">
+            <p className="text-xs font-semibold mb-2 text-gray-700">
+              Grille interne ARTCI (5 rubriques, total 100 points) :
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs border border-gray-200">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="text-left p-2 border border-gray-200">Rubrique</th>
+                    <th className="text-center p-2 border border-gray-200 w-20">Max</th>
+                    <th className="text-left p-2 border border-gray-200">Critères évalués</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {BAREME_RUBRIQUES.map((r) => (
+                    <tr key={r.key}>
+                      <td className="p-2 border border-gray-200 font-semibold">{r.label}</td>
+                      <td className="p-2 border border-gray-200 text-center font-mono">{r.max} pts</td>
+                      <td className="p-2 border border-gray-200 text-gray-600">{r.description}</td>
+                    </tr>
+                  ))}
+                  <tr className="bg-gray-50 font-bold">
+                    <td className="p-2 border border-gray-200">Total</td>
+                    <td className="p-2 border border-gray-200 text-center font-mono">100 pts</td>
+                    <td className="p-2 border border-gray-200" />
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="text-xs text-gray-700 mt-3 pt-2 border-t border-gray-200">
+              <strong>Seuils :</strong> Score = 100 → <em>Conforme</em> · 70–99 → <em>Partiellement conforme</em> · 0–69 → <em>Non conforme</em>.
             </p>
           </div>
         </details>
 
-        <p className="text-xs text-gray-500 mb-4">
-          Le score automatique est <strong>une proposition</strong>. Vous pouvez le modifier selon votre jugement
-          et la grille interne de l'ARTCI. Le niveau de conformité est calculé automatiquement :
-          <br />
-          • Score = 100 → <strong>Conforme</strong>
-          <br />
-          • Score [70 – 99] → <strong>Partiellement conforme</strong>
-          <br />
-          • Score [0 – 70[ → <strong>Non conforme</strong>
+        {/* K6 : Evaluation detaillee par critere (bareme officiel ARTCI) */}
+        <details className="border border-gray-200 rounded mb-4">
+          <summary className="cursor-pointer p-3 hover:bg-gray-50 flex items-center gap-2 text-sm font-semibold text-gray-700">
+            <Award className="w-4 h-4 text-[var(--artci-green)]" />
+            Évaluation détaillée par critère (barème officiel, 7 critères)
+            <span className="ml-auto text-xs text-gray-500 font-normal">
+              Total saisi : {Object.values(scoresParCritere).reduce((s, v) => s + (Number(v?.note) || 0), 0)} / 100
+            </span>
+          </summary>
+          <div className="p-3 border-t border-gray-100">
+            <p className="text-xs text-gray-500 mb-3">
+              Saisissez une note 0..max pour chaque critère officiel du barème ARTCI.
+              Un commentaire optionnel peut justifier la note. Cet outil aide à la décision
+              mais ne remplace pas la saisie par rubrique ci-dessous (qui détermine le score final).
+            </p>
+            <div className="space-y-3">
+              {BAREME_CRITERES.map((c) => {
+                const v = scoresParCritere[c.key] ?? { note: 0, commentaire: '' };
+                return (
+                  <div key={c.key} className="border border-gray-100 rounded p-3 bg-gray-50">
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold">{c.label}</p>
+                        <p className="text-xs text-gray-500">
+                          Rubrique : <em>{c.rubrique}</em> · Max : {c.max} pts
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <input
+                          type="number"
+                          min={0}
+                          max={c.max}
+                          value={v.note ?? 0}
+                          onChange={(e) => {
+                            const n = Math.max(0, Math.min(c.max, Number(e.target.value) || 0));
+                            setScoresParCritere((prev) => ({
+                              ...prev,
+                              [c.key]: { note: n, commentaire: prev[c.key]?.commentaire ?? '' },
+                            }));
+                          }}
+                          disabled={isReadOnly}
+                          className="text-center font-semibold w-16"
+                        />
+                        <span className="text-xs text-gray-500">/ {c.max}</span>
+                      </div>
+                    </div>
+                    <textarea
+                      rows={2}
+                      value={v.commentaire ?? ''}
+                      onChange={(e) =>
+                        setScoresParCritere((prev) => ({
+                          ...prev,
+                          [c.key]: { note: prev[c.key]?.note ?? 0, commentaire: e.target.value },
+                        }))
+                      }
+                      disabled={isReadOnly}
+                      placeholder="Commentaire (optionnel) : justification de la note..."
+                      className="w-full text-sm"
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </details>
+
+        {/* K7 : saisie manuelle par rubrique (avec score auto reference) */}
+        <p className="text-xs text-gray-500 mb-3">
+          Saisissez votre évaluation pour chaque rubrique. Le <strong>score total</strong> est calculé automatiquement.
+          La proposition algorithmique (« Score auto ») n'est qu'une référence.
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
+        <div className="overflow-x-auto mb-4">
+          <table className="w-full text-sm border border-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="text-left p-2 border border-gray-200">Rubrique</th>
+                <th className="text-center p-2 border border-gray-200 w-24">Maximum</th>
+                <th className="text-center p-2 border border-gray-200 w-32">Score manuel</th>
+              </tr>
+            </thead>
+            <tbody>
+              {BAREME_RUBRIQUES.map((r) => (
+                <tr key={r.key}>
+                  <td className="p-2 border border-gray-200">{r.label}</td>
+                  <td className="p-2 border border-gray-200 text-center text-gray-500">{r.max}</td>
+                  <td className="p-2 border border-gray-200 text-center">
+                    <input
+                      type="number"
+                      min={0}
+                      max={r.max}
+                      value={scoresParRubrique[r.key] ?? ''}
+                      onChange={(e) => {
+                        const v = Math.max(0, Math.min(r.max, Number(e.target.value) || 0));
+                        setScoresParRubrique((prev) => ({ ...prev, [r.key]: v }));
+                      }}
+                      disabled={isReadOnly}
+                      placeholder="0"
+                      className="text-center font-semibold w-20"
+                    />
+                  </td>
+                </tr>
+              ))}
+              <tr className="bg-orange-50 font-bold">
+                <td className="p-2 border border-gray-200">Score total</td>
+                <td className="p-2 border border-gray-200 text-center text-gray-500">100</td>
+                <td className="p-2 border border-gray-200 text-center">
+                  <span className="text-xl text-[var(--artci-orange)]">{scoreManuel}/100</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center bg-gray-50 p-3 rounded">
           <div>
-            <label className="text-xs font-semibold block mb-1">Score manuel (0 – 100)</label>
-            <input
-              type="number" min={0} max={100}
-              value={scoreManuel}
-              onChange={(e) => setScoreManuel(Math.max(0, Math.min(100, Number(e.target.value) || 0)))}
-              disabled={isReadOnly}
-              className="text-2xl font-bold w-24"
-            />
+            <p className="text-xs text-gray-500">Score automatique (référence)</p>
+            <p className="text-lg font-bold text-gray-700">{traitement.score_automatique ?? '-'} / 100</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500">Score manuel (somme des rubriques)</p>
+            <p className="text-lg font-bold text-[var(--artci-orange)]">{scoreManuel} / 100</p>
           </div>
           <div>
             <p className="text-xs text-gray-500">Niveau de conformité</p>
             <span className={cn(getNiveauColor(traitement.niveau_conformite), 'text-base')}>
               {scoreManuel >= 100 ? 'Conforme' : scoreManuel >= 70 ? 'Partiellement conforme' : 'Non conforme'}
             </span>
-          </div>
-          <div>
-            <p className="text-xs text-gray-500">Score automatique (référence)</p>
-            <p className="text-lg font-bold text-gray-700">{traitement.score_automatique ?? '-'} / 100</p>
           </div>
         </div>
       </div>

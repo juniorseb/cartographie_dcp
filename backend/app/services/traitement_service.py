@@ -60,6 +60,8 @@ class TraitementService:
             'entite_numero_cc': entite.numero_cc if entite else None,
             'reponses_formulaire': formulaire.reponses if formulaire else {},
             'commentaires_par_rubrique': traitement.commentaires_par_rubrique or {},
+            'scores_par_rubrique': traitement.scores_par_rubrique or {},
+            'scores_par_critere': traitement.scores_par_critere or {},
             'score_automatique': traitement.score_automatique,
             'score_manuel': traitement.score_manuel,
             'niveau_conformite': traitement.niveau_conformite,
@@ -87,6 +89,37 @@ class TraitementService:
             if not isinstance(commentaires, dict):
                 raise ValueError('commentaires_par_rubrique doit etre un objet.')
             traitement.commentaires_par_rubrique = commentaires
+        if 'scores_par_rubrique' in data:
+            scores = data['scores_par_rubrique']
+            if not isinstance(scores, dict):
+                raise ValueError('scores_par_rubrique doit etre un objet.')
+            # Coerce to ints and clamp to plage raisonnable par rubrique (0-100).
+            cleaned = {}
+            for k, v in scores.items():
+                try:
+                    iv = int(v)
+                    cleaned[k] = max(0, min(100, iv))
+                except (ValueError, TypeError):
+                    continue
+            traitement.scores_par_rubrique = cleaned
+        if 'scores_par_critere' in data:
+            criteres = data['scores_par_critere']
+            if not isinstance(criteres, dict):
+                raise ValueError('scores_par_critere doit etre un objet.')
+            # Format attendu : { critere_key: { note: int, commentaire: str } }
+            cleaned_crit = {}
+            for k, v in criteres.items():
+                if not isinstance(v, dict):
+                    continue
+                try:
+                    note = int(v.get('note', 0))
+                except (ValueError, TypeError):
+                    note = 0
+                cleaned_crit[k] = {
+                    'note': max(0, min(100, note)),
+                    'commentaire': (v.get('commentaire') or '')[:1000],
+                }
+            traitement.scores_par_critere = cleaned_crit
         if 'score_manuel' in data:
             try:
                 score = int(data['score_manuel'])
@@ -214,6 +247,52 @@ class TraitementService:
                 motif=motif,
                 acteur_user_id=validateur_id,
             )
+
+        # Notifier l'editeur (traitant) du verdict du validateur N+1
+        if traitement.traitant_id and traitement.traitant_id != validateur_id:
+            from app.models import Notification, User
+            from app.utils.email_sender import send_notification_email
+            from flask import current_app
+            entite = EntiteBase.query.get(traitement.entite_id)
+            denom = entite.denomination if entite else 'dossier'
+            if decision == 'approuve':
+                titre = f"Traitement approuvé : {denom}"
+                message = (
+                    f"Votre traitement du dossier {denom} a été approuvé par la "
+                    f"validation N+1 (score final {traitement.score_manuel or 0}/100)."
+                )
+            else:
+                titre = f"Traitement retourné : {denom}"
+                message = (
+                    f"Votre traitement du dossier {denom} a été retourné par le "
+                    f"validateur N+1. Motif : {motif or '(non précisé)'}"
+                )
+            db.session.add(Notification(
+                destinataire_type='artci',
+                destinataire_id=traitement.traitant_id,
+                type=f'validation_n_plus_1_{decision}',
+                titre=titre,
+                message=message,
+                entite_id=traitement.entite_id,
+                lue=False,
+            ))
+
+            # Email transactionnel (best effort)
+            try:
+                editeur = User.query.get(traitement.traitant_id)
+                if editeur and editeur.email:
+                    nom = f"{editeur.prenom or ''} {editeur.nom or ''}".strip() or editeur.email
+                    action_url = (
+                        current_app.config.get('FRONTEND_URL', 'https://dcp.artci.ci')
+                        + f"/admin/traiter/{traitement.entite_id}"
+                    )
+                    send_notification_email(
+                        to=editeur.email, nom_complet=nom,
+                        titre=titre, message=message, action_url=action_url,
+                        action_label='Ouvrir le dossier',
+                    )
+            except Exception:
+                pass
 
         db.session.commit()
         return traitement

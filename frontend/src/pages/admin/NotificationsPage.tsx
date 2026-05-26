@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Bell, FileText, Clock, CheckCircle, RefreshCw, CheckCheck,
+  AlertTriangle, RotateCcw, ArrowRightCircle, XCircle, Send,
 } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import * as adminApi from '@/api/admin.api';
@@ -8,6 +10,7 @@ import Loading from '@/components/common/Loading';
 import ErrorDisplay from '@/components/common/ErrorDisplay';
 import EmptyState from '@/components/common/EmptyState';
 import { formatDateTime } from '@/utils/format';
+import { ROUTES } from '@/utils/constants';
 import type { LucideIcon } from 'lucide-react';
 
 const TYPE_ICONS: Record<string, LucideIcon> = {
@@ -15,6 +18,12 @@ const TYPE_ICONS: Record<string, LucideIcon> = {
   echeance: Clock,
   validation: CheckCircle,
   renouvellement: RefreshCw,
+  // Nouveaux types lies au journal d'evenements
+  dossier_resoumis: Send,
+  signalement_recu: AlertTriangle,
+  validation_n_plus_1_approuve: CheckCircle,
+  validation_n_plus_1_retourne: XCircle,
+  republication_possible: RotateCcw,
 };
 
 const TYPE_COLORS: Record<string, string> = {
@@ -22,6 +31,11 @@ const TYPE_COLORS: Record<string, string> = {
   echeance: 'text-orange-500',
   validation: 'text-green-500',
   renouvellement: 'text-purple-500',
+  dossier_resoumis: 'text-[var(--artci-orange)]',
+  signalement_recu: 'text-yellow-600',
+  validation_n_plus_1_approuve: 'text-green-600',
+  validation_n_plus_1_retourne: 'text-red-600',
+  republication_possible: 'text-blue-600',
 };
 
 export default function NotificationsPage() {
@@ -103,6 +117,11 @@ export default function NotificationsPage() {
           >
             <option value="">Tous les types</option>
             <option value="nouvelle_demande">Nouvelle demande</option>
+            <option value="dossier_resoumis">Dossier re-soumis</option>
+            <option value="signalement_recu">Signalement entreprise</option>
+            <option value="validation_n_plus_1_approuve">Validation N+1 approuvée</option>
+            <option value="validation_n_plus_1_retourne">Validation N+1 retournée</option>
+            <option value="republication_possible">Republication possible</option>
             <option value="echeance">Echeance</option>
             <option value="validation">Validation</option>
             <option value="renouvellement">Renouvellement</option>
@@ -165,16 +184,27 @@ export default function NotificationsPage() {
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center justify-between mt-2">
+                    <div className="flex items-center justify-between mt-2 flex-wrap gap-2">
                       <p className="text-xs text-gray-400">{formatDateTime(notif.createdAt)}</p>
-                      {!notif.lue && (
-                        <button
-                          className="text-xs text-[var(--artci-green)] hover:underline"
-                          onClick={() => handleMarkRead(notif.id)}
-                        >
-                          Marquer comme lue
-                        </button>
-                      )}
+                      <div className="flex items-center gap-3">
+                        {notif.entite_id && (
+                          <Link
+                            to={ROUTES.ADMIN_TRAITER.replace(':entiteId', notif.entite_id)}
+                            className="text-xs text-[var(--artci-orange)] hover:underline flex items-center gap-1"
+                          >
+                            <ArrowRightCircle className="w-3.5 h-3.5" />
+                            Voir le dossier
+                          </Link>
+                        )}
+                        {!notif.lue && (
+                          <button
+                            className="text-xs text-[var(--artci-green)] hover:underline"
+                            onClick={() => handleMarkRead(notif.id)}
+                          >
+                            Marquer comme lue
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

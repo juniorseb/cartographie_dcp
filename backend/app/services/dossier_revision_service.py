@@ -678,11 +678,37 @@ class DossierRevisionService:
         )
         db.session.add(n)
 
+        # Email transactionnel en complement de la notif in-app (best effort)
+        try:
+            from app.models import CompteEntreprise
+            from app.utils.email_sender import send_notification_email
+            from flask import current_app
+            compte = CompteEntreprise.query.get(entite.compte_entreprise_id)
+            if compte and compte.email:
+                nom = (compte.denomination or 'Madame/Monsieur')
+                action_url = current_app.config.get(
+                    'FRONTEND_URL', 'https://dcp.artci.ci',
+                ) + '/entreprise/dashboard'
+                send_notification_email(
+                    to=compte.email, nom_complet=nom,
+                    titre=titre, message=message, action_url=action_url,
+                    action_label='Voir mon dossier',
+                )
+        except Exception:
+            pass
+
     @staticmethod
     def _notifier_agent_assigne(entite, titre, message, type_notif):
-        """Notifie le ou les agents actuellement assignes a l'entite (orientation #3)."""
-        # On notifie tous les agents avec une assignation en_cours
+        """Notifie le ou les agents actuellement assignes a l'entite (orientation #3).
+
+        - Cree une Notification ARTCI in-app
+        - Envoie un email transactionnel (best effort)
+        """
         from app.models.enums import StatutAssignationEnum
+        from app.models import User
+        from app.utils.email_sender import send_notification_email
+        from flask import current_app
+
         assignations = AssignationDemande.query.filter_by(
             entite_id=entite.id,
             statut=StatutAssignationEnum.en_cours,
@@ -698,3 +724,20 @@ class DossierRevisionService:
                 lue=False,
             )
             db.session.add(n)
+
+            # Email best-effort
+            try:
+                agent = User.query.get(a.agent_id)
+                if agent and agent.email:
+                    nom = f"{agent.prenom or ''} {agent.nom or ''}".strip() or agent.email
+                    action_url = (
+                        current_app.config.get('FRONTEND_URL', 'https://dcp.artci.ci')
+                        + f"/admin/traiter/{entite.id}"
+                    )
+                    send_notification_email(
+                        to=agent.email, nom_complet=nom,
+                        titre=titre, message=message, action_url=action_url,
+                        action_label='Ouvrir le dossier',
+                    )
+            except Exception:
+                pass

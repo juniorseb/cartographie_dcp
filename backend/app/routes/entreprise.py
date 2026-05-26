@@ -362,6 +362,20 @@ def soumettre_formulaire_dcp():
 
     workflow.statut = StatutWorkflowEnum.soumis
     workflow.date_soumission = datetime.now(timezone.utc)
+
+    # Notifier l'editeur (et les autres agents) actuellement assignes a ce
+    # dossier qu'il a ete (re-)soumis et qu'il y a du travail a reprendre.
+    # Pas de notif a la 1ere soumission : aucun agent assigne encore.
+    DossierRevisionService._notifier_agent_assigne(
+        entite,
+        titre=f"Dossier re-soumis : {entite.denomination}",
+        message=(
+            f"L'entreprise {entite.denomination} a re-soumis son dossier après "
+            "vos retours. Veuillez le reprendre dans votre panier."
+        ),
+        type_notif='dossier_resoumis',
+    )
+
     db.session.commit()
     return success_response({'statut': workflow.statut.value}, 'Dossier soumis a l\'ARTCI.')
 
@@ -390,6 +404,49 @@ def get_journal_evenements():
     """Historique des changements de statut du dossier."""
     result = EntrepriseService.get_journal_evenements(g.current_user_id)
     return success_response(result)
+
+
+@entreprise_bp.route('/notifications', methods=['GET'])
+@entreprise_auth_required
+def get_notifications():
+    """Notifications globales de l'entreprise.
+    Inclut : feedbacks ARTCI, signalements traites, depublications auto,
+    changements de score, validations, etc. (table notifications). """
+    from app.models import Notification
+    rows = Notification.query.filter_by(
+        destinataire_type='entreprise',
+        destinataire_id=g.current_user_id,
+    ).order_by(Notification.createdAt.desc()).limit(200).all()
+    return success_response([
+        {
+            'id': n.id,
+            'type': n.type,
+            'titre': n.titre,
+            'message': n.message,
+            'lue': bool(n.lue),
+            'entite_id': n.entite_id,
+            'createdAt': n.createdAt.isoformat() if n.createdAt else None,
+        }
+        for n in rows
+    ])
+
+
+@entreprise_bp.route('/notifications/<string:notif_id>/read', methods=['PUT'])
+@entreprise_auth_required
+def mark_notification_read(notif_id):
+    """Marquer une notification comme lue."""
+    from app.extensions import db
+    from app.models import Notification
+    n = Notification.query.filter_by(
+        id=notif_id,
+        destinataire_type='entreprise',
+        destinataire_id=g.current_user_id,
+    ).first()
+    if not n:
+        return error_response('Notification introuvable.', 404)
+    n.lue = True
+    db.session.commit()
+    return success_response({'id': n.id, 'lue': True})
 
 
 @entreprise_bp.route('/dossier-dpo', methods=['GET'])
@@ -525,6 +582,7 @@ def creer_signalement():
     """Creer un signalement d'erreur sur sa fiche/dossier."""
     from app.extensions import db
     from app.models import EntiteBase, SignalementErreur
+    from app.services.dossier_revision_service import DossierRevisionService
     data = request.get_json() or {}
     sujet = (data.get('sujet') or '').strip()
     description = (data.get('description') or '').strip()
@@ -533,6 +591,8 @@ def creer_signalement():
     entite = EntiteBase.query.filter_by(compte_entreprise_id=g.current_user_id).first()
     if not entite:
         return error_response('Aucun dossier rattache a votre compte.', 404)
+    from app.models import Notification, User
+    from app.models.enums import UserRoleEnum
     signalement = SignalementErreur(
         entite_id=entite.id,
         compte_id=g.current_user_id,
@@ -541,6 +601,49 @@ def creer_signalement():
         rubrique_concernee=(data.get('rubrique_concernee') or '')[:120] or None,
     )
     db.session.add(signalement)
+
+    # Notifier les agents assignes a ce dossier (editeur en cours de traitement)
+    DossierRevisionService._notifier_agent_assigne(
+        entite,
+        titre=f"Signalement entreprise : {entite.denomination}",
+        message=(
+            f"L'entreprise {entite.denomination} a transmis un signalement « {sujet[:100]} »."
+            " Consultez le journal d'événements du dossier."
+        ),
+        type_notif='signalement_recu',
+    )
+
+    # Notifier tous les Super Administrateurs (ils gerent les signalements)
+    from app.utils.email_sender import send_notification_email
+    from flask import current_app
+    super_admins = User.query.filter(User.role == UserRoleEnum.super_admin).all()
+    titre_sa = f"Nouveau signalement : {entite.denomination}"
+    message_sa = f"« {sujet[:100]} » — {description[:150]}"
+    action_url_sa = (
+        current_app.config.get('FRONTEND_URL', 'https://dcp.artci.ci')
+        + f"/admin/traiter/{entite.id}"
+    )
+    for sa in super_admins:
+        db.session.add(Notification(
+            destinataire_type='artci',
+            destinataire_id=sa.id,
+            type='signalement_recu',
+            titre=titre_sa,
+            message=message_sa,
+            entite_id=entite.id,
+            lue=False,
+        ))
+        try:
+            if sa.email:
+                nom = f"{sa.prenom or ''} {sa.nom or ''}".strip() or sa.email
+                send_notification_email(
+                    to=sa.email, nom_complet=nom,
+                    titre=titre_sa, message=message_sa, action_url=action_url_sa,
+                    action_label='Voir le dossier',
+                )
+        except Exception:
+            pass
+
     db.session.commit()
     return created_response(
         {'id': signalement.id, 'statut': signalement.statut},

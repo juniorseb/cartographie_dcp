@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useCallback, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { UserCheck, CheckCircle, Activity, Plus, X } from 'lucide-react';
 import * as adminApi from '@/api/admin.api';
 import { useApi } from '@/hooks/useApi';
@@ -18,13 +18,25 @@ const NIVEAU_TRAITEMENT: Record<StatutAssignation, { label: string; className: s
 };
 
 export default function AssignationPage() {
-  const [showForm, setShowForm] = useState(false);
-  const [entiteId, setEntiteId] = useState('');
+  // Pre-selection via ?entite=... quand on arrive depuis Mon Panier
+  const [searchParams] = useSearchParams();
+  const entiteFromUrl = searchParams.get('entite');
+  const [showForm, setShowForm] = useState(Boolean(entiteFromUrl));
+  const [entiteId, setEntiteId] = useState(entiteFromUrl ?? '');
   const [agentId, setAgentId] = useState('');
   const [echeance, setEcheance] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // Scroll vers le formulaire quand pre-rempli depuis le panier
+  useEffect(() => {
+    if (entiteFromUrl) {
+      setTimeout(() => {
+        document.getElementById('assignation-form')?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }
+  }, [entiteFromUrl]);
 
   // Liste de toutes les assignations
   const { data: assignations, isLoading, refetch } = useApi(() => adminApi.getAllAssignations(), []);
@@ -100,7 +112,7 @@ export default function AssignationPage() {
 
       {/* Formulaire de nouvelle assignation (repliable) */}
       {showForm && (
-        <form onSubmit={handleSubmit} className="card mb-6">
+        <form id="assignation-form" onSubmit={handleSubmit} className="card mb-6">
           <h2 className="text-lg font-bold mb-4">Nouvelle assignation</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="form-group mb-0">

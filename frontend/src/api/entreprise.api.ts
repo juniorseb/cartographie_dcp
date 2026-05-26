@@ -155,6 +155,10 @@ export interface DocumentJointItem {
 
 export interface JournalEvenementItem {
   id: string;
+  /** Origine de l'evenement : 'historique_statut' (workflow), 'evenement_dossier'
+   * (retours admin / validations / depublications), ou 'signalement' (cree par
+   * l'entreprise). Permet de colorer/regrouper dans l'UI. */
+  source?: 'historique_statut' | 'evenement_dossier' | 'signalement';
   ancien_statut?: string;
   nouveau_statut?: string;
   commentaire?: string;
@@ -190,6 +194,28 @@ export async function getMesDocuments(): Promise<MesDocumentItem[]> {
 export async function getJournalEvenements(): Promise<JournalEvenementItem[]> {
   const res = await apiClient.get<ApiResponse<JournalEvenementItem[]>>('/entreprise/journal-evenements');
   return res.data.data!;
+}
+
+/** Notification entreprise (table notifications, type variable). */
+export interface NotificationEntrepriseItem {
+  id: string;
+  type: string;            // 'signalement_traite' | 'depublication_auto' | 'validation' | ...
+  titre: string;
+  message: string;
+  lue: boolean;
+  entite_id?: string | null;
+  createdAt: string | null;
+}
+
+/** GET /api/entreprise/notifications — toutes les notifications globales. */
+export async function getEntrepriseNotifications(): Promise<NotificationEntrepriseItem[]> {
+  const res = await apiClient.get<ApiResponse<NotificationEntrepriseItem[]>>('/entreprise/notifications');
+  return res.data.data!;
+}
+
+/** PUT /api/entreprise/notifications/:id/read — marquer comme lue. */
+export async function markEntrepriseNotificationRead(notifId: string): Promise<void> {
+  await apiClient.put(`/entreprise/notifications/${notifId}/read`);
 }
 
 /** GET /api/entreprise/dossier-dpo */

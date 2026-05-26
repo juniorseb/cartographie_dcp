@@ -31,6 +31,7 @@ import LocalisationPicker from '@/components/entreprise/dcp-form/LocalisationPic
 import { useFormProgress } from '@/components/entreprise/dcp-form/useFormProgress';
 import CommentairesARTCI from '@/components/entreprise/CommentairesARTCI';
 import CommentairesAncres from '@/components/admin/CommentairesAncres';
+import R2FileUploadField from '@/components/entreprise/dcp-form/R2FileUploadField';
 import { CATEGORIES_DONNEES_CONFIG } from '@/components/entreprise/dcp-form/categories-donnees-config';
 import { REGIONS_CI, communesForRegion, SECTEURS_ACTIVITE } from '@/components/entreprise/dcp-form/ci-localites';
 import {
@@ -847,29 +848,26 @@ export default function MonEnregistrementPage({ mode = 'entreprise', entiteId: e
               </div>
             )}
 
-            {/* Upload obligatoire courrier d'habilitation ARTCI */}
+            {/* Upload obligatoire courrier d'habilitation ARTCI — via R2 */}
             <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded">
-              <p className="text-xs font-semibold text-gray-800 mb-1">
-                Upload du courrier d'habilitation émis par l'ARTCI <span className="text-red-500">*</span>
-              </p>
-              <p className="text-[11px] text-gray-500 mb-2">Format accepté : PDF uniquement — taille max 5 Mo.</p>
-              <input
-                type="file"
-                accept="application/pdf"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f && f.size > 5 * 1024 * 1024) {
-                    setError('Le courrier d\'habilitation dépasse 5 Mo.');
-                    e.target.value = '';
-                    return;
-                  }
-                  updatePart('cadre_juridique', { dpo_courrier_habilitation_uploaded: !!f });
-                }}
-                className="text-xs"
+              <R2FileUploadField
+                label="Upload du courrier d'habilitation émis par l'ARTCI"
+                folder="documents"
+                required
+                maxSizeMo={5}
+                disabled={isReadOnly}
+                r2Key={cj.dpo_courrier_habilitation_doc?.r2_key}
+                filename={cj.dpo_courrier_habilitation_doc?.filename}
+                downloadUrl={cj.dpo_courrier_habilitation_doc?.download_url}
+                onUploaded={(doc) => updatePart('cadre_juridique', {
+                  dpo_courrier_habilitation_doc: doc,
+                  dpo_courrier_habilitation_uploaded: true,
+                })}
+                onRemove={() => updatePart('cadre_juridique', {
+                  dpo_courrier_habilitation_doc: undefined,
+                  dpo_courrier_habilitation_uploaded: false,
+                })}
               />
-              {cj.dpo_courrier_habilitation_uploaded && (
-                <p className="text-xs text-green-600 mt-1">✓ Document PDF sélectionné</p>
-              )}
             </div>
           </fieldset>
         )}
@@ -1363,25 +1361,23 @@ export default function MonEnregistrementPage({ mode = 'entreprise', entiteId: e
                   value={st.numero_autorisation_transfert}
                   onChange={(v) => updatePart('sous_traitance_transferts', { numero_autorisation_transfert: v })} />
                 <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded">
-                  <p className="text-xs font-semibold text-gray-800 mb-1">
-                    Joindre l'autorisation de transfert délivrée par l'ARTCI
-                  </p>
-                  <p className="text-[11px] text-gray-500 mb-2">Format accepté : PDF uniquement — taille max 5 Mo.</p>
-                  <input
-                    type="file"
-                    accept="application/pdf"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f && f.size > 5 * 1024 * 1024) {
-                        setError("L'autorisation dépasse 5 Mo.");
-                        e.target.value = '';
-                        return;
-                      }
-                      updatePart('sous_traitance_transferts', { autorisation_transfert_document_uploaded: !!f });
-                    }}
-                    className="text-xs"
+                  <R2FileUploadField
+                    label="Joindre l'autorisation de transfert délivrée par l'ARTCI"
+                    folder="autorisations"
+                    maxSizeMo={5}
+                    disabled={isReadOnly}
+                    r2Key={st.autorisation_transfert_document_doc?.r2_key}
+                    filename={st.autorisation_transfert_document_doc?.filename}
+                    downloadUrl={st.autorisation_transfert_document_doc?.download_url}
+                    onUploaded={(doc) => updatePart('sous_traitance_transferts', {
+                      autorisation_transfert_document_doc: doc,
+                      autorisation_transfert_document_uploaded: true,
+                    })}
+                    onRemove={() => updatePart('sous_traitance_transferts', {
+                      autorisation_transfert_document_doc: undefined,
+                      autorisation_transfert_document_uploaded: false,
+                    })}
                   />
-                  {st.autorisation_transfert_document_uploaded && <p className="text-xs text-green-600 mt-1">✓ Document PDF sélectionné</p>}
                 </div>
               </>
             )}
@@ -1442,25 +1438,24 @@ export default function MonEnregistrementPage({ mode = 'entreprise', entiteId: e
         {/* Spec 3.9 : si Oui formalisee → upload obligatoire de la charte */}
         {sec.politique_securite === 'oui_formalisee' && (
           <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded">
-            <p className="text-xs font-semibold text-gray-800 mb-1">
-              Upload de la Charte de protection des données <span className="text-red-500">*</span>
-            </p>
-            <p className="text-[11px] text-gray-500 mb-2">Format accepté : PDF uniquement — taille max 5 Mo.</p>
-            <input
-              type="file"
-              accept="application/pdf"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f && f.size > 5 * 1024 * 1024) {
-                  setError('La charte dépasse 5 Mo.');
-                  e.target.value = '';
-                  return;
-                }
-                updatePart('securite', { charte_uploaded: !!f });
-              }}
-              className="text-xs"
+            <R2FileUploadField
+              label="Upload de la Charte de protection des données"
+              folder="documents"
+              required
+              maxSizeMo={5}
+              disabled={isReadOnly}
+              r2Key={sec.charte_doc?.r2_key}
+              filename={sec.charte_doc?.filename}
+              downloadUrl={sec.charte_doc?.download_url}
+              onUploaded={(doc) => updatePart('securite', {
+                charte_doc: doc,
+                charte_uploaded: true,
+              })}
+              onRemove={() => updatePart('securite', {
+                charte_doc: undefined,
+                charte_uploaded: false,
+              })}
             />
-            {sec.charte_uploaded && <p className="text-xs text-green-600 mt-1">✓ Document PDF sélectionné</p>}
           </div>
         )}
 
@@ -1586,26 +1581,24 @@ export default function MonEnregistrementPage({ mode = 'entreprise', entiteId: e
         />
         {sec.registre_violations === 'oui' && (
           <div className="border border-gray-200 rounded p-3 mb-4 bg-gray-50">
-            <label className="text-xs font-semibold block mb-2">
-              Téléverser le registre des violations (PDF, max 5 Mo)
-            </label>
-            <input
-              type="file"
-              accept="application/pdf"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f && f.size > 5 * 1024 * 1024) {
-                  setError('Le registre dépasse 5 Mo.');
-                  e.target.value = '';
-                  return;
-                }
-                updatePart('securite', { registre_violations_uploaded: !!f });
-              }}
-              className="text-xs"
+            <R2FileUploadField
+              label="Téléverser le registre des violations"
+              folder="documents"
+              required
+              maxSizeMo={5}
+              disabled={isReadOnly}
+              r2Key={sec.registre_violations_doc?.r2_key}
+              filename={sec.registre_violations_doc?.filename}
+              downloadUrl={sec.registre_violations_doc?.download_url}
+              onUploaded={(doc) => updatePart('securite', {
+                registre_violations_doc: doc,
+                registre_violations_uploaded: true,
+              })}
+              onRemove={() => updatePart('securite', {
+                registre_violations_doc: undefined,
+                registre_violations_uploaded: false,
+              })}
             />
-            {sec.registre_violations_uploaded && (
-              <p className="text-xs text-green-600 mt-1">✓ Document PDF sélectionné</p>
-            )}
           </div>
         )}
 
@@ -1622,26 +1615,24 @@ export default function MonEnregistrementPage({ mode = 'entreprise', entiteId: e
         />
         {sec.procedures_violation === 'oui_documentee_testee' && (
           <div className="border border-gray-200 rounded p-3 mb-4 bg-gray-50">
-            <label className="text-xs font-semibold block mb-2">
-              Téléverser le document de procédure (PDF, max 5 Mo)
-            </label>
-            <input
-              type="file"
-              accept="application/pdf"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f && f.size > 5 * 1024 * 1024) {
-                  setError('Le document dépasse 5 Mo.');
-                  e.target.value = '';
-                  return;
-                }
-                updatePart('securite', { procedures_violation_uploaded: !!f });
-              }}
-              className="text-xs"
+            <R2FileUploadField
+              label="Téléverser le document de procédure"
+              folder="documents"
+              required
+              maxSizeMo={5}
+              disabled={isReadOnly}
+              r2Key={sec.procedures_violation_doc?.r2_key}
+              filename={sec.procedures_violation_doc?.filename}
+              downloadUrl={sec.procedures_violation_doc?.download_url}
+              onUploaded={(doc) => updatePart('securite', {
+                procedures_violation_doc: doc,
+                procedures_violation_uploaded: true,
+              })}
+              onRemove={() => updatePart('securite', {
+                procedures_violation_doc: undefined,
+                procedures_violation_uploaded: false,
+              })}
             />
-            {sec.procedures_violation_uploaded && (
-              <p className="text-xs text-green-600 mt-1">✓ Document PDF sélectionné</p>
-            )}
           </div>
         )}
 

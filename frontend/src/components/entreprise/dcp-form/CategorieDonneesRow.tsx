@@ -214,7 +214,8 @@ export default function CategorieDonneesRow({
                 type="text"
                 value={data.duree_autre ?? ''}
                 onChange={(e) => update({ duree_autre: e.target.value })}
-                placeholder="Préciser la durée..."
+                placeholder="Ex : durées variables selon le type de donnée — précisez ici…"
+                title="Cochez 'Autre' si la durée varie selon les documents/données de cette catégorie, puis détaillez ci-dessous."
                 className="text-xs w-full"
               />
             )}

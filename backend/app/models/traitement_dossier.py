@@ -24,6 +24,13 @@ class TraitementDossier(UUIDMixin, TimestampMixin, db.Model):
     traitant_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
     # Commentaires par rubrique : { 'identification': '...', 'cadre_juridique': '...', ... }
     commentaires_par_rubrique = db.Column(JSONB, nullable=False, default=dict)
+    # K7 : score manuel par rubrique. Le score_manuel global est la somme.
+    # Format : { 'identification': 8, 'cadre_juridique': 12, ... }
+    scores_par_rubrique = db.Column(JSONB, nullable=False, server_default='{}', default=dict)
+    # K6 : grille de saisie par critere du bareme officiel ARTCI (7 criteres).
+    # Format : { 'connaissance_loi_2013': { 'note': 5, 'commentaire': '...' }, ... }
+    # Outil d'aide a la decision parallele a scores_par_rubrique. Total = 100 pts.
+    scores_par_critere = db.Column(JSONB, nullable=False, server_default='{}', default=dict)
     # Score automatique propose par le systeme (lecture seule, snapshot)
     score_automatique = db.Column(db.Integer)
     # Score manuel saisi par l'editeur (le systeme deduit niveau_conformite a partir de ca)

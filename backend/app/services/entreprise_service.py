@@ -342,10 +342,58 @@ class EntrepriseService:
                     'download_url': download_url,
                 })
 
-        # 2) Documents joints de l'entite (rapports, autorisation, etc.)
+        # 2) Documents joints de l'entite (rapports d'audit, autorisations, etc.)
         for d in EntrepriseService.list_documents(compte_id):
             d['source'] = 'enregistrement'
             resultat.append(d)
+
+        # 3) Documents du formulaire DCP — Charte, courrier DPO, registre violations,
+        # procedure violation, autorisation transfert. Stockes en JSONB sur le
+        # FormulaireDCP (champs *_doc avec {r2_key, filename, size, mime_type}).
+        from app.models import EntiteBase, FormulaireDCP
+        entites = EntiteBase.query.filter_by(compte_entreprise_id=compte_id).all()
+        # Chaque (path dans le JSONB, type_document logique)
+        FORM_DOC_PATHS = [
+            (['cadre_juridique', 'dpo_courrier_habilitation_doc'], 'courrier_habilitation_dpo'),
+            (['securite', 'charte_doc'], 'charte_protection'),
+            (['securite', 'registre_violations_doc'], 'registre_violations'),
+            (['securite', 'procedures_violation_doc'], 'procedure_violation'),
+            (['sous_traitance_transferts', 'autorisation_transfert_document_doc'], 'autorisation_transfert'),
+        ]
+        for entite in entites:
+            formulaire = FormulaireDCP.query.get(entite.id)
+            if not formulaire or not formulaire.reponses:
+                continue
+            reponses = formulaire.reponses
+            for path, type_doc in FORM_DOC_PATHS:
+                # Naviguer dans le JSONB
+                current = reponses
+                for key in path:
+                    if not isinstance(current, dict):
+                        current = None
+                        break
+                    current = current.get(key)
+                if not isinstance(current, dict) or not current.get('r2_key'):
+                    continue
+                r2_key = current['r2_key']
+                filename = current.get('filename')
+                download_url = None
+                try:
+                    download_url = generate_download_url(
+                        r2_key, expires_in=3600, filename=filename,
+                    )
+                except Exception:
+                    pass
+                resultat.append({
+                    'id': f'form-{entite.id}-{type_doc}',
+                    'source': 'enregistrement',
+                    'type_document': type_doc,
+                    'nom_fichier': filename,
+                    'taille': current.get('size'),
+                    'mime_type': current.get('mime_type'),
+                    'uploadedAt': None,
+                    'download_url': download_url,
+                })
 
         return resultat
 
@@ -419,28 +467,121 @@ class EntrepriseService:
 
     @staticmethod
     def get_journal_evenements(compte_id):
-        """Historique des changements de statut (journal d'evenements)."""
-        from app.models import HistoriqueStatut
+        """Journal complet des evenements lies au dossier de l'entreprise (vue entreprise)."""
         entite = EntiteBase.query.filter_by(compte_entreprise_id=compte_id).first()
         if not entite:
             return []
-        events = (
-            HistoriqueStatut.query.filter_by(entite_id=entite.id)
-            .order_by(HistoriqueStatut.date_changement.desc())
-            .all()
+        return EntrepriseService.get_journal_evenements_for_entite(
+            entite.id, viewer='entreprise', signalement_compte_filter=compte_id,
         )
+
+    @staticmethod
+    def get_journal_evenements_for_entite(entite_id, viewer='admin', signalement_compte_filter=None):
+        """Journal agrege des evenements pour une entite donnee.
+
+        Spec E2 : « Prends en compte tous les evenements lies a l'enregistrement
+        (ARTCI ou Entreprise lui meme (soumission...), signalements...) »
+
+        Agrege :
+        - HistoriqueStatut : transitions de workflow (soumis, en_verification, ...)
+        - DossierEvenement : retours admin, validations N+1, depublications auto,
+          scoring applique...
+        - SignalementErreur : signalements emis par l'entreprise
+
+        Args:
+            entite_id : identifiant de l'entite
+            viewer    : 'entreprise' ou 'admin' (impacte les libelles pour les retours)
+            signalement_compte_filter : si fourni, ne renvoie que les signalements
+                de ce compte (vue entreprise mono-utilisateur).
+        """
+        from app.models import HistoriqueStatut, DossierEvenement, SignalementErreur
+
         result = []
-        for e in events:
+
+        # 1) Historique des transitions de statut (workflow)
+        for e in HistoriqueStatut.query.filter_by(entite_id=entite_id).all():
             modifie_par_nom = ''
             if e.modifie_par_user:
                 modifie_par_nom = f"{e.modifie_par_user.prenom} {e.modifie_par_user.nom}".strip()
             result.append({
-                'id': e.id,
+                'id': f'hist-{e.id}',
+                'source': 'historique_statut',
                 'ancien_statut': e.ancien_statut,
                 'nouveau_statut': e.nouveau_statut,
                 'commentaire': e.commentaire,
                 'modifie_par_nom': modifie_par_nom,
                 'date': e.date_changement.isoformat() if e.date_changement else None,
             })
+
+        # 2) Evenements riches du dossier (retours admin, validations, etc.)
+        if viewer == 'entreprise':
+            TYPES_LISIBLES = {
+                'retour_entreprise': 'Dossier retourné à votre entreprise',
+                'validation_n_plus_1': 'Validation finale (N+1) effectuée',
+                'score_applique': 'Nouveau score appliqué',
+                're_soumission_recalc': 'Re-soumission — score recalculé',
+                'depublication_auto': 'Fiche retirée automatiquement de la carte',
+                'publication': 'Fiche publiée sur la cartographie',
+            }
+        else:
+            TYPES_LISIBLES = {
+                'retour_entreprise': 'Dossier retourné à l\'entreprise',
+                'validation_n_plus_1': 'Validation N+1 effectuée',
+                'score_applique': 'Nouveau score appliqué',
+                're_soumission_recalc': 'Re-soumission — score recalculé',
+                'depublication_auto': 'Fiche dépubliée automatiquement',
+                'publication': 'Fiche publiée sur la cartographie',
+            }
+        for ev in DossierEvenement.query.filter_by(entite_id=entite_id).all():
+            label = TYPES_LISIBLES.get(ev.evenement_type) or ev.evenement_type.replace('_', ' ').capitalize()
+            payload = ev.payload or {}
+            commentaire_parts = []
+            if isinstance(payload, dict):
+                if payload.get('motif'):
+                    commentaire_parts.append(f"Motif : {payload['motif']}")
+                if payload.get('score_apres') is not None:
+                    commentaire_parts.append(f"Score après : {payload['score_apres']}/100")
+                if payload.get('score_final') is not None:
+                    commentaire_parts.append(f"Score final : {payload['score_final']}/100")
+                if payload.get('decision'):
+                    commentaire_parts.append(f"Décision : {payload['decision']}")
+            result.append({
+                'id': f'event-{ev.id}',
+                'source': 'evenement_dossier',
+                'ancien_statut': None,
+                'nouveau_statut': label,  # label lisible (pas le code brut)
+                'commentaire': ' • '.join(commentaire_parts) if commentaire_parts else None,
+                'modifie_par_nom': ev.acteur_role.capitalize() if ev.acteur_role else 'ARTCI',
+                'date': ev.createdAt.isoformat() if ev.createdAt else None,
+            })
+
+        # 3) Signalements emis par l'entreprise (etat actuel)
+        STATUT_SIGNAL_LABELS = {
+            'open': 'Signalement en attente',
+            'in_progress': 'Signalement en cours de traitement',
+            'resolved': 'Signalement résolu',
+            'dismissed': 'Signalement clôturé',
+        }
+        sig_query = SignalementErreur.query.filter_by(entite_id=entite_id)
+        if signalement_compte_filter:
+            sig_query = sig_query.filter_by(compte_id=signalement_compte_filter)
+        for s in sig_query.all():
+            modifie_par_nom = 'Vous' if viewer == 'entreprise' else 'Entreprise'
+            result.append({
+                'id': f'signal-{s.id}',
+                'source': 'signalement',
+                'ancien_statut': None,
+                'nouveau_statut': STATUT_SIGNAL_LABELS.get(s.statut, s.statut),
+                'commentaire': f"« {s.sujet} » — {s.description[:150]}"
+                + (' ...' if s.description and len(s.description) > 150 else ''),
+                'modifie_par_nom': modifie_par_nom,
+                'date': (
+                    s.date_traitement.isoformat() if s.date_traitement
+                    else s.createdAt.isoformat() if s.createdAt else None
+                ),
+            })
+
+        # Tri chronologique inverse (le plus recent en premier)
+        result.sort(key=lambda x: x['date'] or '', reverse=True)
         return result
 
