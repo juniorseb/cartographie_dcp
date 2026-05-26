@@ -1802,9 +1802,71 @@ export function RecapView({ form, onEdit }: { form: FormulaireDCP; onEdit: (step
   const st = form.sous_traitance_transferts ?? {};
   const sec = form.securite ?? {};
 
-  // Rend un code technique lisible : "oui_systematiquement" → "Oui systematiquement"
+  // Dictionnaire de libelles humains pour les codes techniques du formulaire.
+  // Quand un code n'est pas mappe, on tombe sur le prettify generique (underscore -> space).
+  const LABELS: Record<string, string> = {
+    // Statut juridique
+    'pm_droit_prive': 'Personne morale de droit privé',
+    'pm_droit_public': 'Personne morale de droit public',
+    'personne_physique': 'Personne physique',
+    // Formalites ARTCI
+    'oui_tous': 'Oui, pour tous les traitements',
+    'oui_partiel': 'Oui, partiellement',
+    'en_cours': 'En cours',
+    'non_aucune': 'Non, aucune formalité effectuée',
+    // Categories de personnes
+    'salaries_agents': 'Salariés / Agents',
+    'clients': 'Clients',
+    'prospects': 'Prospects',
+    'fournisseurs': 'Fournisseurs',
+    'patients': 'Patients',
+    'eleves': 'Élèves',
+    'usagers': 'Usagers',
+    // Mode de traitement
+    'automatise': 'Traitement automatisé (informatique)',
+    'manuel': 'Traitement manuel (papier)',
+    'mixte': 'Traitement mixte (informatique + papier)',
+    // Reponses oui/non/incertain
+    'oui': 'Oui',
+    'non': 'Non',
+    'incertain': 'Incertain',
+    'parfois': 'Parfois',
+    'ne_sais_pas': 'Ne sais pas',
+    // Reponses 72h
+    'oui_72h': 'Oui, dans les 72 heures',
+    'oui_tardivement': 'Oui, mais tardivement',
+    // Procedures violation
+    'oui_documentee_testee': 'Oui, procédure documentée et testée',
+    'oui_documentee': 'Oui, procédure documentée',
+    'non_applicable': 'Non applicable',
+    // Personnel sensibilise
+    'oui_formation_initiale': 'Oui, formation initiale obligatoire',
+    'oui_sensibilisation_periodique': 'Oui, sensibilisations périodiques',
+    'formation_ponctuelle': 'Formation ponctuelle',
+    // Frequences sensibilisation
+    'mensuelle': 'Mensuelle',
+    'trimestrielle': 'Trimestrielle',
+    'semestrielle': 'Semestrielle',
+    'annuelle': 'Annuelle',
+    'journaliere': 'Journalière',
+    'hebdomadaire': 'Hebdomadaire',
+    // Politique securite
+    'oui_formalisee': 'Oui, charte formalisée',
+    'en_cours_redaction': 'En cours de rédaction',
+    // Volume donnees / Stade demarche
+    'consentement': 'Consentement',
+    'contrat': 'Contrat',
+    'obligation_legale': 'Obligation légale',
+    'interet_vital': 'Intérêt vital',
+    'mission_publique': 'Mission de service public',
+    'interet_legitime': 'Intérêt légitime',
+    'sauvegarde_vie': "Sauvegarde de l'intérêt ou des droits et libertés fondamentaux de la personne concernée",
+  };
+
+  // Rend un code technique lisible avec mapping > fallback prettify generique.
   function prettify(s: string): string {
     if (!s.trim()) return s;
+    if (LABELS[s]) return LABELS[s];
     const spaced = s.replace(/_/g, ' ').trim();
     return spaced.charAt(0).toUpperCase() + spaced.slice(1);
   }
@@ -1847,9 +1909,10 @@ export function RecapView({ form, onEdit }: { form: FormulaireDCP; onEdit: (step
   const categoriesRenseignees = CATEGORIES_DONNEES_CONFIG
     .filter((c) => (reg.categories_donnees as Record<string, { items_coches?: unknown[] }>)?.[c.key]?.items_coches?.length)
     .map((c) => c.titre);
+  // Spec C5 : afficher les libelles uniquement (pas le compteur).
   const categoriesRenseigneesStr = categoriesRenseignees.length === 0
     ? '—'
-    : `${categoriesRenseignees.length} : ${categoriesRenseignees.join(', ')}`;
+    : categoriesRenseignees.join(', ');
 
   const formaliteType = determinerFormalite(form).type;
   const formaliteLabel = formaliteType === 'autorisation_prealable' ? 'Autorisation préalable'
@@ -1905,12 +1968,12 @@ export function RecapView({ form, onEdit }: { form: FormulaireDCP; onEdit: (step
       </SectionRecap>
 
       <SectionRecap titre="Partie 3 — Registre & cartographie des traitements" stepNum={3}>
-        <Row label="Distinction Déclaration/Autorisation" value={cj.distinction_decl_aut} />
+        {/* Spec B6 : Q "Distinction Déclaration/Autorisation" supprimée du formulaire. */}
         <Row label="Activités de traitement" value={reg.activites_traitement} />
         <Row label="Registre de traitement" value={reg.registre_tenu} />
         <Row label="Catégories de personnes" value={reg.categories_personnes} />
         <Row label="Catégories de données renseignées" value={categoriesRenseigneesStr} />
-        <Row label="Action après conservation" value={st.suppression_anonymisation} />
+        <Row label="Action après anonymisation" value={st.suppression_anonymisation} />
         <Row label="Finalités" value={reg.finalites} />
         <Row label="Formalité à effectuer" value={formaliteLabel} />
         <Row label="Bases légales" value={reg.bases_legales} />

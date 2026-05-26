@@ -148,6 +148,9 @@ export interface DocumentJointItem {
   taille?: number;
   mime_type?: string;
   uploadedAt: string | null;
+  /** URL R2 signee valide ~1h pour les fichiers stockes en cloud. null si
+   * fichier en stockage local (telechargement via endpoint backend). */
+  download_url?: string | null;
 }
 
 export interface JournalEvenementItem {

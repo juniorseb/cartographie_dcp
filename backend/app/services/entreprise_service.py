@@ -305,15 +305,32 @@ class EntrepriseService:
     @staticmethod
     def get_tous_documents(compte_id):
         """Liste l'ensemble des fichiers deposes par l'entreprise :
-        - documents d'inscription (RCCM, DFE, autres) stockes sur le compte
+        - documents d'inscription (RCCM, DFE, autres) stockes sur R2 / compte
         - documents joints de l'entite (rapports, documents DPO, autorisation, etc.)
+
+        Chaque entree contient un `download_url` signe (R2) si possible, sinon
+        une URL backend de fallback pour les fichiers stockes en local.
         """
+        from app.utils.r2_storage import generate_download_url
+
         resultat = []
 
-        # 1) Documents d'inscription (stockes en JSONB sur le compte)
+        # 1) Documents d'inscription (stockes en JSONB sur le compte).
+        # Les fichiers recents sont sur R2 (champ `r2_key`) — on genere une URL
+        # signee valide 1h. Les anciens (champ `chemin_fichier` disque local)
+        # restent telechargeables via l'ancien endpoint backend.
         compte = db.session.get(CompteEntreprise, compte_id)
         if compte and compte.documents_inscription:
             for i, d in enumerate(compte.documents_inscription):
+                download_url = None
+                r2_key = d.get('r2_key')
+                if r2_key:
+                    try:
+                        download_url = generate_download_url(
+                            r2_key, expires_in=3600, filename=d.get('nom_fichier'),
+                        )
+                    except Exception:
+                        download_url = None
                 resultat.append({
                     'id': f'inscription-{i}',
                     'source': 'inscription',
@@ -322,9 +339,10 @@ class EntrepriseService:
                     'taille': d.get('taille'),
                     'mime_type': d.get('mime_type'),
                     'uploadedAt': d.get('uploadedAt'),
+                    'download_url': download_url,
                 })
 
-        # 2) Documents joints de l'entite (tous types)
+        # 2) Documents joints de l'entite (rapports, autorisation, etc.)
         for d in EntrepriseService.list_documents(compte_id):
             d['source'] = 'enregistrement'
             resultat.append(d)

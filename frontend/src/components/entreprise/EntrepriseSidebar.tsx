@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, FileText, FolderOpen, Bell,
-  RefreshCw, X, ChevronDown, ChevronRight, AlertTriangle,
+  RefreshCw, X, ChevronDown, ChevronRight, AlertTriangle, Folder,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { useApi } from '@/hooks/useApi';
@@ -27,6 +27,7 @@ const sidebarLinks: SidebarLink[] = [
   // Entree directe (plus de regroupement "Demande" qui n'apportait rien)
   { to: ROUTES.ENTREPRISE_ENREGISTREMENT, label: 'Mon enregistrement', icon: FileText },
   { to: ROUTES.ENTREPRISE_DOSSIER, label: 'Mon dossier', icon: FolderOpen },
+  { to: ROUTES.ENTREPRISE_DOCUMENTS, label: 'Mes documents', icon: Folder },
   { to: ROUTES.ENTREPRISE_NOTIFICATIONS, label: 'Notifications', icon: Bell },
   { to: ROUTES.ENTREPRISE_SIGNALER_ERREUR, label: 'Signaler une erreur', icon: AlertTriangle },
   {

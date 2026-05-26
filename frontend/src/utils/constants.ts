@@ -18,6 +18,8 @@ export const ROUTES = {
   ENTREPRISE_ENREGISTREMENT: '/entreprise/mon-enregistrement',
   ENTREPRISE_ENREGISTREMENT_EDIT: '/entreprise/mon-enregistrement/:id',
   ENTREPRISE_DOSSIER: '/entreprise/mon-dossier',
+  ENTREPRISE_DOCUMENTS: '/entreprise/mes-documents',
+  ENTREPRISE_JOURNAL: '/entreprise/journal',
   ENTREPRISE_NOTIFICATIONS: '/entreprise/notifications',
   ENTREPRISE_FORMALITES: '/entreprise/formalites',
   ENTREPRISE_DECLARATION_CORRESPONDANT: '/entreprise/formalites/declaration/correspondant',
