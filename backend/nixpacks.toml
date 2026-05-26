@@ -1,0 +1,13 @@
+# Configuration Nixpacks pour le deploiement Railway.
+# On force explicitement Python 3.11 + pip + les dependances systeme dont
+# psycopg2 a besoin (libpq-dev), sinon Nixpacks tombe sur un image sans
+# Python et le `pip install` echoue avec "pip: not found".
+
+[phases.setup]
+nixPkgs = ["python311", "python311Packages.pip", "gcc", "libpq", "postgresql"]
+
+[phases.install]
+cmds = ["python3.11 -m pip install --upgrade pip", "python3.11 -m pip install -r requirements.txt"]
+
+[start]
+cmd = "gunicorn run:app -c gunicorn.conf.py"
