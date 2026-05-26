@@ -505,8 +505,9 @@ def upload_rapport_audit(entite_id):
 @admin_bp.route('/panier', methods=['GET'])
 @editor_or_above
 def get_panier():
-    """Mon panier de demandes assignées."""
-    result = AdminService.get_panier(g.current_user_id)
+    """Mon panier : assignations directes + nouvelles soumissions a assigner
+    (uniquement pour admin/super_admin)."""
+    result = AdminService.get_panier(g.current_user_id, role=g.current_user_role)
     return success_response(result)
 
 

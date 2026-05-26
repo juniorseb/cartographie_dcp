@@ -34,7 +34,7 @@ export default function FeedbacksPage() {
     return (
       <div className="max-w-3xl mx-auto">
         <h1 className="text-2xl mb-6">Notifications</h1>
-        <EmptyState />
+        <EmptyState title="Aucune notification" description="" />
       </div>
     );
   }

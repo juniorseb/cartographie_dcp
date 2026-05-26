@@ -607,8 +607,37 @@ class AdminService:
 
     @staticmethod
     def list_inscriptions(statut='pending'):
-        """Liste les comptes entreprise dont l'inscription est dans le statut donne."""
+        """Liste les comptes entreprise dont l'inscription est dans le statut donne.
+        Inclut les documents administratifs (RCCM, DFE) avec URL signee R2 pour
+        permettre a l'admin de les telecharger directement depuis la page de
+        validation."""
         from app.models.comptes_entreprises import CompteEntreprise
+        from app.utils.r2_storage import generate_download_url
+
+        def _docs_with_urls(raw_docs):
+            """Enrichit chaque doc avec une URL signee valide 1h."""
+            if not raw_docs:
+                return []
+            enriched = []
+            for d in raw_docs:
+                doc = dict(d)
+                r2_key = doc.get('r2_key')
+                if r2_key:
+                    try:
+                        doc['download_url'] = generate_download_url(
+                            r2_key,
+                            expires_in=3600,
+                            filename=doc.get('nom_fichier'),
+                        )
+                    except Exception:
+                        # R2 mal configure -> on retourne le doc sans URL plutot que crash
+                        doc['download_url'] = None
+                else:
+                    # Anciens documents pre-R2 (chemin disque local) - non telechargeables
+                    doc['download_url'] = None
+                enriched.append(doc)
+            return enriched
+
         query = CompteEntreprise.query.filter_by(inscription_statut=statut)
         query = query.order_by(CompteEntreprise.createdAt.desc())
         return [{
@@ -629,6 +658,7 @@ class AdminService:
             'inscription_statut': c.inscription_statut,
             'inscription_motif_rejet': c.inscription_motif_rejet,
             'createdAt': c.createdAt.isoformat() if c.createdAt else None,
+            'documents_inscription': _docs_with_urls(c.documents_inscription),
         } for c in query.all()]
 
     @staticmethod
@@ -846,17 +876,27 @@ class AdminService:
 
     @staticmethod
     def get_panier(agent_id, role=None):
-        """Récupérer le panier de l'agent (spec §5).
-        - Editeur : seulement les entités assignées + créées par lui (pas brouillons).
-        - Admin / Super Admin : toutes les assignations + nouveaux enregistrements.
+        """Recuperer le panier de l'agent (spec §5).
+
+        - Editeur : seulement les entites assignees a lui.
+        - Admin / Super Admin : assignations directes + NOUVELLES SOUMISSIONS
+          non encore assignees (les admins peuvent soit s'auto-traiter, soit
+          re-assigner a un editeur).
+
+        Retourne TOUJOURS la meme structure pour ne pas casser le client :
+            {
+              "assignations": [...],         # rows AssignationDemande
+              "nouvelles_soumissions": [...] # entites 'soumis' sans assignation
+                                              # (admin/super uniquement, [] pour editor)
+            }
         """
-        from sqlalchemy import or_
-        # Assignations directes de l'agent
+        from sqlalchemy import or_, not_
+
+        # 1) Assignations directes de l'agent (existant)
         query = AssignationDemande.query.filter(
             AssignationDemande.agent_id == agent_id
         )
-        # On exclut les brouillons (spec §5.3 : "Les entités au statut Brouillon ne doivent pas
-        # apparaître dans sa liste — au minimum, seules les entités au statut Soumis doivent être visibles.")
+        # Exclure les brouillons (spec §5.3)
         query = query.join(EntiteBase, AssignationDemande.entite_id == EntiteBase.id).join(
             EntiteWorkflow, EntiteBase.id == EntiteWorkflow.entite_id
         ).filter(
@@ -870,7 +910,43 @@ class AdminService:
             )
         )
         assignations = query.order_by(AssignationDemande.echeance.asc()).all()
-        return AssignationOutputSchema(many=True).dump(assignations)
+
+        # 2) Nouvelles soumissions non assignees (admin/super_admin uniquement).
+        # Spec : "Les nouvelles entites vont dans le 'mon panier' de super
+        # admin et admin et peuvent etre assignees dynamiquement."
+        nouvelles_soumissions_data = []
+        if role in ('admin', 'super_admin'):
+            # IDs des entites deja en cours d'assignation
+            assigned_ids_subq = db.session.query(AssignationDemande.entite_id).distinct().subquery()
+
+            nouvelles = (
+                db.session.query(EntiteBase, EntiteWorkflow)
+                .join(EntiteWorkflow, EntiteWorkflow.entite_id == EntiteBase.id)
+                .filter(
+                    EntiteBase.archive == False,  # noqa: E712
+                    EntiteWorkflow.statut == StatutWorkflowEnum.soumis,
+                    not_(EntiteBase.id.in_(db.session.query(assigned_ids_subq))),
+                )
+                .order_by(EntiteWorkflow.date_soumission.asc().nulls_last())
+                .all()
+            )
+            nouvelles_soumissions_data = [
+                {
+                    'entite_id': e.id,
+                    'entite_denomination': e.denomination,
+                    'entite_numero_cc': e.numero_cc,
+                    'entite_ville': e.ville,
+                    'entite_region': e.region,
+                    'date_soumission': wf.date_soumission.isoformat() if wf.date_soumission else None,
+                    'statut_workflow': wf.statut.value if wf.statut else None,
+                }
+                for e, wf in nouvelles
+            ]
+
+        return {
+            'assignations': AssignationOutputSchema(many=True).dump(assignations),
+            'nouvelles_soumissions': nouvelles_soumissions_data,
+        }
 
     @staticmethod
     def list_all_assignations():

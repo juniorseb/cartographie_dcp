@@ -121,13 +121,20 @@ class WorkflowService:
         workflow.statut = StatutWorkflowEnum.en_verification
         workflow.assignedTo = agent_id
 
-        # Historique
+        # Historique — on stocke le nom complet de l'agent plutot que son UUID
+        # pour que le journal d'evenements soit lisible directement.
+        from app.models import User
+        agent_user = User.query.get(agent_id)
+        agent_label = (
+            f"{agent_user.prenom or ''} {agent_user.nom or ''}".strip()
+            or (agent_user.email if agent_user else agent_id)
+        )
         historique = HistoriqueStatut(
             entite_id=entite_id,
             ancien_statut='soumis',
             nouveau_statut='en_verification',
             modifie_par=assigned_by,
-            commentaire=f'Demande assignée à l\'agent {agent_id}'
+            commentaire=f"Demande assignée à {agent_label}"
         )
         db.session.add(historique)
 

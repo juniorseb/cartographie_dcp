@@ -71,10 +71,31 @@ export default function ParametresPage() {
           Seuils de conformité
         </h2>
 
-        <p className="text-sm text-gray-500 mb-4">
-          Trois niveaux : <strong>Non conforme</strong> (en dessous du seuil partiel),
-          <strong> Partiellement conforme</strong> (à partir du seuil partiel),
-          <strong> Conforme</strong> (à partir du seuil conforme).
+        {/* Recap en grand format — les 3 niveaux qui pilotent toute la
+            plateforme. Configurable via les sliders ci-dessous. */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+          <div className="border border-green-200 bg-green-50 rounded-lg p-4 text-center">
+            <p className="text-xs font-semibold text-gray-600 uppercase mb-1">Score conforme (%)</p>
+            <p className="text-3xl font-bold text-[var(--artci-green)]">
+              {params.seuil_conforme === 100 ? '100' : `≥ ${params.seuil_conforme}`}
+            </p>
+          </div>
+          <div className="border border-orange-200 bg-orange-50 rounded-lg p-4 text-center">
+            <p className="text-xs font-semibold text-gray-600 uppercase mb-1">Score partiellement conforme (%)</p>
+            <p className="text-3xl font-bold text-[var(--artci-orange)]">
+              {params.seuil_partiellement_conforme} – {params.seuil_conforme - 1}
+            </p>
+          </div>
+          <div className="border border-red-200 bg-red-50 rounded-lg p-4 text-center">
+            <p className="text-xs font-semibold text-gray-600 uppercase mb-1">Score non conforme (%)</p>
+            <p className="text-3xl font-bold text-red-600">
+              inférieur à {params.seuil_partiellement_conforme}
+            </p>
+          </div>
+        </div>
+
+        <p className="text-xs text-gray-500 mb-3">
+          Ajustez les seuils via les curseurs ci-dessous :
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -109,12 +130,6 @@ export default function ParametresPage() {
               <span className="text-sm font-mono w-10 text-right">{params.seuil_conforme}</span>
             </div>
           </div>
-        </div>
-
-        <div className="mt-4 text-xs text-gray-500 space-y-1">
-          <p>• Non conforme : 0 – {params.seuil_partiellement_conforme - 1}%</p>
-          <p>• Partiellement conforme : {params.seuil_partiellement_conforme} – {params.seuil_conforme - 1}%</p>
-          <p>• Conforme : {params.seuil_conforme}%{params.seuil_conforme < 100 ? ' et plus' : ''}</p>
         </div>
       </div>
 

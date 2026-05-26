@@ -45,15 +45,21 @@ export default function EntitesAdminPage() {
         )}
       </div>
 
-      {/* Filtres */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
-        <SearchBar value={filters.search ?? ''} onChange={(v) => updateFilter('search', v)} placeholder="Rechercher..." />
+      {/* Filtres — un filtre pour chaque colonne pertinente */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6 [&_input]:h-11 [&_select]:h-11">
+        <SearchBar value={filters.search ?? ''} onChange={(v) => updateFilter('search', v)} placeholder="Rechercher (dénomination, N° CC, email...)" />
         <div className="form-group mb-0">
-          <select value={filters.statut_workflow ?? ''} onChange={(e) => updateFilter('statut_workflow', e.target.value)} className="w-full py-2.5">
-            <option value="">Tous les statuts (validés)</option>
-            <option value="conforme_sous_reserve">Conforme sous réserve</option>
-            <option value="valide">Validé</option>
-            <option value="publie">Publié</option>
+          <select value={filters.forme_juridique ?? ''} onChange={(e) => updateFilter('forme_juridique', e.target.value)} className="w-full py-2.5">
+            <option value="">Toutes formes juridiques</option>
+            <option value="Société Anonyme (SA)">Société Anonyme (SA)</option>
+            <option value="SARL">SARL</option>
+            <option value="SASU">SASU</option>
+            <option value="Entreprise Individuelle">Entreprise Individuelle</option>
+            <option value="Administration publique">Administration publique</option>
+            <option value="Établissement public">Établissement public</option>
+            <option value="Association">Association</option>
+            <option value="Coopérative">Coopérative</option>
+            <option value="Autre">Autre</option>
           </select>
         </div>
         <div className="form-group mb-0">
@@ -72,10 +78,44 @@ export default function EntitesAdminPage() {
           </select>
         </div>
         <div className="form-group mb-0">
+          <input
+            type="text"
+            placeholder="Ville (ex : Abidjan)"
+            value={filters.ville ?? ''}
+            onChange={(e) => updateFilter('ville', e.target.value)}
+            className="w-full py-2.5"
+          />
+        </div>
+        <div className="form-group mb-0">
+          <input
+            type="text"
+            placeholder="Région (ex : Vallée du Bandama)"
+            value={filters.region ?? ''}
+            onChange={(e) => updateFilter('region', e.target.value)}
+            className="w-full py-2.5"
+          />
+        </div>
+        <div className="form-group mb-0">
           <select value={filters.origine_saisie ?? ''} onChange={(e) => updateFilter('origine_saisie', e.target.value)} className="w-full py-2.5">
             <option value="">Toutes origines</option>
             <option value="auto_recensement">Auto-recensement</option>
             <option value="saisie_artci">Saisie ARTCI</option>
+          </select>
+        </div>
+        <div className="form-group mb-0">
+          <select value={filters.statut_workflow ?? ''} onChange={(e) => updateFilter('statut_workflow', e.target.value)} className="w-full py-2.5">
+            <option value="">Tous les statuts (validés)</option>
+            <option value="conforme_sous_reserve">Conforme sous réserve</option>
+            <option value="valide">Validé</option>
+            <option value="publie">Publié</option>
+          </select>
+        </div>
+        <div className="form-group mb-0">
+          <select value={filters.statut_conformite ?? ''} onChange={(e) => updateFilter('statut_conformite', e.target.value)} className="w-full py-2.5">
+            <option value="">Toutes conformités</option>
+            <option value="Conforme">Conforme (100)</option>
+            <option value="Partiellement conforme">Partiellement (70-99)</option>
+            <option value="Non conforme">Non conforme (0-69)</option>
           </select>
         </div>
         <div className="form-group mb-0">

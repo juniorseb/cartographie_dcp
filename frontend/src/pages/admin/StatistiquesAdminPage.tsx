@@ -59,7 +59,7 @@ export default function StatistiquesAdminPage() {
 
   const summaryCards = [
     { label: 'Total Entités', value: stats.total_entites, icon: Database, color: 'var(--artci-orange)', cardClass: 'card card-orange' },
-    { label: 'Demandes en Cours', value: stats.demandes_en_cours, icon: Activity, color: 'var(--status-encours)', cardClass: 'card' },
+    { label: 'Demandes assignées', value: stats.demandes_en_cours, icon: Activity, color: 'var(--status-encours)', cardClass: 'card' },
     { label: 'En Retard', value: stats.demandes_en_retard, icon: AlertTriangle, color: 'var(--status-rejete)', cardClass: 'card' },
     { label: 'Agents Actifs', value: stats.agents_actifs, icon: Users, color: 'var(--artci-green)', cardClass: 'card card-green' },
   ];

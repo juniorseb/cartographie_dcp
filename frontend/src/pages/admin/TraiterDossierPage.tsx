@@ -20,9 +20,11 @@ import { hasMinRole } from '@/components/admin/AdminSidebar';
 import { ROUTES } from '@/utils/constants';
 import { cn } from '@/utils/cn';
 import type { Traitement } from '@/api/admin.api';
-import CommentairesAncres from '@/components/admin/CommentairesAncres';
 import RevisionsDiff from '@/components/admin/RevisionsDiff';
-import DossierAuditTrail from '@/components/admin/DossierAuditTrail';
+import MonEnregistrementPage from '@/pages/entreprise/MonEnregistrementPage';
+// Note: DossierAuditTrail retire (spec K3 : "Audit trail du dossier (supprimé)").
+// CommentairesAncres n'est plus instancie ici directement : il est embarque
+// dans MonEnregistrementPage en mode 'treat'.
 
 const RUBRIQUES = [
   { key: 'identification', label: 'Partie 1 — Identification de l\'entité' },
@@ -185,60 +187,15 @@ export default function TraiterDossierPage() {
       {/* Historique des revisions + diff semantique (modele PR §6.2) */}
       <RevisionsDiff entiteId={traitement.entite_id} />
 
-      {/* Audit trail global du dossier (manœuvre A) */}
-      <DossierAuditTrail entiteId={traitement.entite_id} />
-
-      {/* Commentaires ancres (modele PR) - source de verite */}
-      <CommentairesAncres
-        entiteId={traitement.entite_id}
-        readOnly={isReadOnly}
-      />
-
-      {/* Lecture des reponses du formulaire par rubrique (vue de reference).
-          Le champ commentaire ci-dessous est conserve pour retrocompat avec
-          les anciens dossiers ; les nouveaux commentaires se font via le
-          composant ancre ci-dessus. */}
-      <div className="card mb-4">
-        <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
-          <MessageSquare className="w-5 h-5 text-[var(--artci-orange)]" />
-          Réponses du formulaire (par rubrique)
-        </h2>
-        <p className="text-xs text-gray-500 mb-4">
-          Vue lecture des réponses fournies par l'entreprise. Les commentaires sont à
-          ajouter dans le bloc « Commentaires ancrés » ci-dessus.
-        </p>
-        <div className="space-y-3">
-          {RUBRIQUES.map((r) => {
-            const reponses = (traitement.reponses_formulaire as Record<string, unknown>)[r.key];
-            const hasContent = !!(reponses && typeof reponses === 'object' && Object.keys(reponses as object).length > 0);
-            return (
-              <details key={r.key} className="border border-gray-200 rounded">
-                <summary className="cursor-pointer p-3 hover:bg-gray-50">
-                  <span className="font-semibold text-sm">{r.label}</span>
-                  {hasContent && <span className="ml-2 text-xs text-green-600">✓ Renseignée</span>}
-                </summary>
-                <div className="p-3 border-t border-gray-100 bg-gray-50">
-                  {hasContent ? (
-                    <pre className="text-xs whitespace-pre-wrap text-gray-700 mb-3 max-h-64 overflow-y-auto">
-                      {JSON.stringify(reponses, null, 2)}
-                    </pre>
-                  ) : (
-                    <p className="text-xs italic text-gray-400 mb-3">Aucune réponse fournie</p>
-                  )}
-                  <label className="text-xs font-semibold block mb-1">Vos commentaires</label>
-                  <textarea
-                    rows={3}
-                    value={commentaires[r.key] ?? ''}
-                    onChange={(e) => setCommentaires((prev) => ({ ...prev, [r.key]: e.target.value }))}
-                    placeholder="Vos remarques sur cette rubrique..."
-                    disabled={isReadOnly}
-                    className="w-full text-sm"
-                  />
-                </div>
-              </details>
-            );
-          })}
-        </div>
+      {/* Formulaire DCP — affiche EXACTEMENT comme l'entreprise l'a renseigne
+          (meme stepper, memes sections), en lecture seule, avec le panneau
+          de commentaires ancres pour permettre a l'editeur de commenter
+          chaque rubrique. Cf. spec : "il peut ajouter des commentaires". */}
+      <div className="mb-4">
+        <MonEnregistrementPage
+          mode={isReadOnly ? 'view' : 'treat'}
+          entiteId={traitement.entite_id}
+        />
       </div>
 
       {/* Resume feedbacks consolides : tous les commentaires saisis ci-dessus */}

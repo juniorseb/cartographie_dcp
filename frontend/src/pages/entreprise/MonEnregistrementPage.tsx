@@ -15,7 +15,7 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Save, Send, AlertTriangle, Lock, ChevronLeft, ChevronRight, CheckCircle2, ListChecks, ShieldAlert, Eye } from 'lucide-react';
+import { Save, Send, AlertTriangle, Lock, ChevronLeft, ChevronRight, CheckCircle2, ListChecks, ShieldAlert, RefreshCw } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import { useAuth } from '@/hooks/useAuth';
 import * as entrepriseApi from '@/api/entreprise.api';
@@ -30,6 +30,7 @@ import PaysSelect from '@/components/entreprise/dcp-form/PaysSelect';
 import LocalisationPicker from '@/components/entreprise/dcp-form/LocalisationPicker';
 import { useFormProgress } from '@/components/entreprise/dcp-form/useFormProgress';
 import CommentairesARTCI from '@/components/entreprise/CommentairesARTCI';
+import CommentairesAncres from '@/components/admin/CommentairesAncres';
 import { CATEGORIES_DONNEES_CONFIG } from '@/components/entreprise/dcp-form/categories-donnees-config';
 import { REGIONS_CI, communesForRegion, SECTEURS_ACTIVITE } from '@/components/entreprise/dcp-form/ci-localites';
 import {
@@ -170,17 +171,34 @@ function validateStep(step: StepNum, form: FormulaireDCP): string {
 }
 
 interface MonEnregistrementPageProps {
-  /** Mode d'utilisation. Defaut: 'entreprise'. */
-  mode?: 'entreprise' | 'admin';
+  /** Mode d'utilisation. Defaut: 'entreprise'.
+   *
+   * - 'entreprise' : utilisateur entreprise remplit/modifie son dossier.
+   * - 'admin'      : agent ARTCI saisit ou edite (saisie ARTCI).
+   * - 'view'       : admin/editeur consulte en LECTURE SEULE (depuis l'entite
+   *   ou Mon Panier). Memes sections, meme stepper, mais aucun input editable.
+   * - 'treat'      : admin/editeur traite le dossier — lecture seule PLUS le
+   *   panneau commentaires ARTCI affiche sous chaque section. Le scoring,
+   *   la validation et le retour a l'entreprise sont geres par les wrappers
+   *   admin (TraiterDossierPage, etc.) qui affichent ces actions a cote.
+   */
+  mode?: 'entreprise' | 'admin' | 'view' | 'treat';
+  /** ID de l'entite a charger (mode admin/view/treat). Si absent, on lit
+   * useParams().id. Pratique pour les wrappers ou le param de route porte
+   * un autre nom (ex: TraiterDossierPage utilise `:entiteId`). */
+  entiteId?: string;
 }
 
-export default function MonEnregistrementPage({ mode = 'entreprise' }: MonEnregistrementPageProps) {
+export default function MonEnregistrementPage({ mode = 'entreprise', entiteId: entiteIdProp }: MonEnregistrementPageProps) {
   const isAdminMode = mode === 'admin';
+  const isViewMode = mode === 'view' || mode === 'treat';
+  const showComments = mode === 'treat';
   const { compte } = useAuth();
   const params = useParams<{ id?: string }>();
   const navigate = useNavigate();
-  // En mode admin, l'entite cible est dans l'URL (ou null pour creation)
-  const [adminEntiteId, setAdminEntiteId] = useState<string | null>(params.id ?? null);
+  // L'entite cible vient en priorite de la prop (wrapper admin), sinon du
+  // param d'URL `:id` (route /admin/entites/:id).
+  const [adminEntiteId, setAdminEntiteId] = useState<string | null>(entiteIdProp ?? params.id ?? null);
 
   const [form, setForm] = useState<FormulaireDCP>(emptyFormulaireDCP());
   const [saving, setSaving] = useState(false);
@@ -194,28 +212,34 @@ export default function MonEnregistrementPage({ mode = 'entreprise' }: MonEnregi
   // Etape courante du stepper (1..6)
   const [currentStep, setCurrentStep] = useState<StepNum>(1);
 
-  // Loader cote entreprise
+  // Loader cote entreprise (uniquement en mode 'entreprise')
+  const useEntrepriseLoader = mode === 'entreprise';
+  // Loader cote admin (mode 'admin' / 'view' / 'treat') : on charge l'entite
+  // par son ID via l'endpoint admin (qui retourne le formulaire DCP complet).
+  const useAdminLoader = (mode === 'admin' || isViewMode) && Boolean(adminEntiteId);
+
   const { data: entrepriseData, isLoading: entrepriseLoading } = useApi(
-    () => isAdminMode ? Promise.resolve(null) : entrepriseApi.getFormulaireDCP(),
-    [isAdminMode],
+    () => useEntrepriseLoader ? entrepriseApi.getFormulaireDCP() : Promise.resolve(null),
+    [useEntrepriseLoader],
   );
   const { data: dossier } = useApi(
-    () => isAdminMode ? Promise.resolve(null) : entrepriseApi.getMonDossier(),
-    [isAdminMode],
+    () => useEntrepriseLoader ? entrepriseApi.getMonDossier() : Promise.resolve(null),
+    [useEntrepriseLoader],
   );
 
-  // Loader cote admin (si entiteId fourni)
   const { data: adminData, isLoading: adminLoading } = useApi(
-    () => (isAdminMode && adminEntiteId)
-      ? adminApi.adminGetFormulaireDCP(adminEntiteId)
+    () => useAdminLoader
+      ? adminApi.adminGetFormulaireDCP(adminEntiteId!)
       : Promise.resolve(null),
-    [isAdminMode, adminEntiteId],
+    [useAdminLoader, adminEntiteId],
   );
 
   const isLoading = entrepriseLoading || adminLoading;
 
   useEffect(() => {
-    const data = isAdminMode ? adminData : entrepriseData;
+    // En modes admin / view / treat on lit l'entite via l'endpoint admin.
+    // En mode entreprise on lit le dossier propre.
+    const data = useAdminLoader ? adminData : entrepriseData;
     const hasReponses = data?.reponses && Object.keys(data.reponses).length > 0;
     if (hasReponses) {
       setForm({ ...emptyFormulaireDCP(), ...(data!.reponses as Partial<FormulaireDCP>) });
@@ -250,10 +274,14 @@ export default function MonEnregistrementPage({ mode = 'entreprise' }: MonEnregi
     }
   }, [dossier]);
 
-  // En mode admin, jamais de lecture seule (l'agent peut toujours editer)
-  const isReadOnly = !isAdminMode
-    && statutWorkflow !== null
-    && STATUTS_LECTURE_SEULE.includes(statutWorkflow);
+  // Lecture seule :
+  // - mode 'view' / 'treat' : TOUJOURS lecture seule (admin/editeur consulte)
+  // - mode 'entreprise' : lecture seule si dossier soumis / en verification
+  // - mode 'admin' (saisie ARTCI) : jamais lecture seule
+  const isReadOnly = isViewMode
+    || (!isAdminMode
+        && statutWorkflow !== null
+        && STATUTS_LECTURE_SEULE.includes(statutWorkflow));
 
   const updatePart = useCallback(<K extends keyof FormulaireDCP>(key: K, patch: Partial<FormulaireDCP[K]>) => {
     setForm((prev) => ({ ...prev, [key]: { ...(prev[key] as object), ...patch } } as FormulaireDCP));
@@ -487,17 +515,30 @@ export default function MonEnregistrementPage({ mode = 'entreprise' }: MonEnregi
       {success && <div className="alert alert-success mb-4">{success}</div>}
 
       {/* Commentaires ARTCI ancres (modele PR) - cote ENTREPRISE uniquement */}
-      {!isAdminMode && <CommentairesARTCI />}
+      {mode === 'entreprise' && <CommentairesARTCI />}
 
-      {/* Bandeau lecture seule si dossier soumis / en verification */}
+      {/* Commentaires ancres - cote ADMIN/EDITEUR en mode 'treat'.
+          En mode 'view' on n'affiche rien (consultation pure).
+          En mode 'admin' (saisie ARTCI) non plus : c'est de la saisie initiale. */}
+      {showComments && adminEntiteId && (
+        <CommentairesAncres entiteId={adminEntiteId} />
+      )}
+
+      {/* Bandeau lecture seule — message different selon le contexte */}
       {isReadOnly && (
         <div className="alert alert-info mb-6 flex items-start gap-3">
           <Lock className="w-5 h-5 flex-shrink-0 mt-0.5" />
           <div>
             <strong>Formulaire en lecture seule.</strong>
             <p className="text-sm mt-1">
-              Votre dossier est en cours de vérification par l'ARTCI. Le formulaire sera
-              de nouveau modifiable après retour de l'ARTCI.
+              {mode === 'view' && "Consultation du dossier soumis par l'entreprise."}
+              {mode === 'treat' && "Vous traitez ce dossier. Ajoutez vos commentaires par section ci-dessus."}
+              {mode === 'entreprise' && (
+                <>
+                  Votre enregistrement est en cours de vérification par l'ARTCI. Le formulaire sera
+                  de nouveau modifiable après retour de l'ARTCI.
+                </>
+              )}
             </p>
           </div>
         </div>
@@ -673,7 +714,7 @@ export default function MonEnregistrementPage({ mode = 'entreprise' }: MonEnregi
 
         {/* Q5 reformulee */}
         <RadioGroup
-          legend="Avez-vous un correspondant à la protection des données personnelles (DPO) ?"
+          legend="Avez-vous un correspondant à la protection des données (DPO) habilité par l'ARTCI ?"
           required
           inline
           options={[
@@ -839,19 +880,10 @@ export default function MonEnregistrementPage({ mode = 'entreprise' }: MonEnregi
       {currentStep === 3 && (
       <FormSection title="PARTIE 3 : REGISTRE ET CARTOGRAPHIE DES TRAITEMENTS">
 
-        {/* Questions deplacees depuis la Partie 2 (Cadre juridique) */}
-        <RadioGroup
-          legend="Savez-vous distinguer les traitements soumis à déclaration et ceux soumis à autorisation préalable ?"
-          required
-          inline
-          options={[
-            { value: 'oui', label: 'Oui' },
-            { value: 'non', label: 'Non' },
-            { value: 'incertain', label: 'Incertain' },
-          ]}
-          value={cj.distinction_decl_aut}
-          onChange={(v) => updatePart('cadre_juridique', { distinction_decl_aut: v })}
-        />
+        {/* Spec B6 : question "Savez-vous distinguer les traitements soumis a
+            declaration et ceux soumis a autorisation prealable ?" supprimee
+            (l'algorithme calcule deja la formalite applicable a partir des
+            categories de donnees + secteur). */}
 
         {/* Spec 3.6.1 : 1ere question = activites de traitement DCP (multi-cases) */}
         <CheckboxGroup
@@ -1543,6 +1575,7 @@ export default function MonEnregistrementPage({ mode = 'entreprise' }: MonEnregi
           </fieldset>
         )}
 
+        {/* B27 : registre des violations + upload si Oui */}
         <RadioGroup
           legend="Tenez-vous un registre/inventaire des violations de données ?"
           required
@@ -1551,7 +1584,32 @@ export default function MonEnregistrementPage({ mode = 'entreprise' }: MonEnregi
           value={sec.registre_violations}
           onChange={(v) => updatePart('securite', { registre_violations: v })}
         />
+        {sec.registre_violations === 'oui' && (
+          <div className="border border-gray-200 rounded p-3 mb-4 bg-gray-50">
+            <label className="text-xs font-semibold block mb-2">
+              Téléverser le registre des violations (PDF, max 5 Mo)
+            </label>
+            <input
+              type="file"
+              accept="application/pdf"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f && f.size > 5 * 1024 * 1024) {
+                  setError('Le registre dépasse 5 Mo.');
+                  e.target.value = '';
+                  return;
+                }
+                updatePart('securite', { registre_violations_uploaded: !!f });
+              }}
+              className="text-xs"
+            />
+            {sec.registre_violations_uploaded && (
+              <p className="text-xs text-green-600 mt-1">✓ Document PDF sélectionné</p>
+            )}
+          </div>
+        )}
 
+        {/* B28 : procedures de reaction (2 options) + upload si Oui */}
         <RadioGroup
           legend="Avez-vous défini des procédures de réaction et de remontée d'informations en cas de violation ?"
           required
@@ -1562,7 +1620,32 @@ export default function MonEnregistrementPage({ mode = 'entreprise' }: MonEnregi
           value={sec.procedures_violation}
           onChange={(v) => updatePart('securite', { procedures_violation: v })}
         />
+        {sec.procedures_violation === 'oui_documentee_testee' && (
+          <div className="border border-gray-200 rounded p-3 mb-4 bg-gray-50">
+            <label className="text-xs font-semibold block mb-2">
+              Téléverser le document de procédure (PDF, max 5 Mo)
+            </label>
+            <input
+              type="file"
+              accept="application/pdf"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f && f.size > 5 * 1024 * 1024) {
+                  setError('Le document dépasse 5 Mo.');
+                  e.target.value = '';
+                  return;
+                }
+                updatePart('securite', { procedures_violation_uploaded: !!f });
+              }}
+              className="text-xs"
+            />
+            {sec.procedures_violation_uploaded && (
+              <p className="text-xs text-green-600 mt-1">✓ Document PDF sélectionné</p>
+            )}
+          </div>
+        )}
 
+        {/* B29 : formations — cases a cocher pour la frequence des sensibilisations */}
         <RadioGroup
           legend="Les personnels sont-ils sensibilisés/formés à la protection des données ?"
           required
@@ -1577,16 +1660,17 @@ export default function MonEnregistrementPage({ mode = 'entreprise' }: MonEnregi
         />
 
         {sec.personnel_sensibilise === 'oui_sensibilisation_periodique' && (
-          <RadioGroup
-            legend="Précisez la période des sensibilisations :"
-            inline
+          <CheckboxGroup
+            legend="Précisez la ou les fréquences des sensibilisations :"
+            columns={2}
             options={[
-              { value: 'journaliere', label: 'Journalière' },
-              { value: 'hebdomadaire', label: 'Hebdomadaire' },
               { value: 'mensuelle', label: 'Mensuelle' },
+              { value: 'trimestrielle', label: 'Trimestrielle' },
+              { value: 'semestrielle', label: 'Semestrielle' },
+              { value: 'annuelle', label: 'Annuelle' },
             ]}
-            value={sec.periode_sensibilisation}
-            onChange={(v) => updatePart('securite', { periode_sensibilisation: v })}
+            values={sec.frequences_sensibilisation ?? []}
+            onChange={(v) => updatePart('securite', { frequences_sensibilisation: v })}
           />
         )}
       </FormSection>
@@ -1687,16 +1771,17 @@ export default function MonEnregistrementPage({ mode = 'entreprise' }: MonEnregi
                 onClick={() => setShowSubmitConfirm(false)}
                 className="btn btn-outline flex items-center gap-2"
               >
-                <Eye className="w-4 h-4" /> Vérifier à nouveau
+                <RefreshCw className="w-4 h-4" /> Vérifier à nouveau
               </button>
               <button
                 onClick={handleSubmit}
                 disabled={submitting}
-                className="btn btn-primary flex items-center gap-2"
+                className="btn btn-secondary flex items-center gap-2 text-base px-5 py-2.5"
+                style={{ backgroundColor: 'var(--artci-green)', color: 'white', borderColor: 'var(--artci-green)' }}
               >
                 {submitting ? (
-                  <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} />
-                ) : <Send className="w-4 h-4" />}
+                  <div className="spinner" style={{ width: 20, height: 20, borderWidth: 2 }} />
+                ) : <Send className="w-5 h-5" />}
                 Soumettre
               </button>
             </div>

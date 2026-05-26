@@ -49,6 +49,8 @@ const sidebarSections: SidebarSection[] = [
       { to: ROUTES.ADMIN_ENTITES, label: 'Entités', icon: Database, end: true, minRole: 'reader' },
       { to: ROUTES.ADMIN_ENTITE_CREATE, label: 'Nouvelle entité', icon: FilePlus, end: false, minRole: 'editor' },
       { to: ROUTES.ADMIN_STATISTIQUES, label: 'Statistiques', icon: BarChart3, end: false, minRole: 'reader' },
+      // Notifications remontees ici (juste apres Statistiques) pour acces rapide
+      { to: ROUTES.ADMIN_NOTIFICATIONS, label: 'Notifications', icon: Bell, end: false, minRole: 'reader' },
     ],
   },
   {
@@ -78,7 +80,6 @@ const sidebarSections: SidebarSection[] = [
       { to: ROUTES.ADMIN_IMPORTS_HISTORIQUE, label: 'Historique Imports', icon: Archive, end: false, minRole: 'admin' },
       // Logs renommé en Journal d'événements (fusion ancien Logs + Audits)
       { to: ROUTES.ADMIN_LOGS, label: "Journal d'événements", icon: ClipboardCheck, end: false, minRole: 'admin' },
-      { to: ROUTES.ADMIN_NOTIFICATIONS, label: 'Notifications', icon: Bell, end: false, minRole: 'reader' },
     ],
   },
   {
@@ -106,15 +107,53 @@ export default function AdminSidebar({ mobileOpen, onClose }: AdminSidebarProps)
   );
   const unreadCount = (notifications ?? []).filter((n) => !n.lue).length;
 
-  // Quand la page Notifications marque une notif comme lue, elle dispatch
-  // un event 'notifications:updated' que la sidebar ecoute pour rafraichir
-  // son badge. Sans ca, le compteur reste fige tant que la sidebar n'est
-  // pas re-montee.
+  // Compteur d'inscriptions en attente (visible admin+ uniquement)
+  const canSeeInscriptions = hasMinRole(userRole, 'admin');
+  const { data: pendingInscriptions, refetch: refetchInscriptions } = useApi(
+    () => canSeeInscriptions ? adminApi.getInscriptions('pending') : Promise.resolve([]),
+    [canSeeInscriptions]
+  );
+  const pendingInscriptionsCount = (pendingInscriptions ?? []).length;
+
+  // Compteur du panier (editor+) : assignations actives + nouvelles soumissions
+  const canSeePanier = hasMinRole(userRole, 'editor');
+  const { data: panierResponse, refetch: refetchPanier } = useApi(
+    () => canSeePanier
+      ? adminApi.getPanier()
+      : Promise.resolve({ assignations: [], nouvelles_soumissions: [] }),
+    [canSeePanier]
+  );
+  // Assignations a traiter activement + nouvelles soumissions a prendre en charge
+  const assignationsActives = (panierResponse?.assignations ?? []).filter(
+    (a) => a.statut === 'en_cours' || a.statut === 'en_retard',
+  );
+  const panierCount = assignationsActives.length + (panierResponse?.nouvelles_soumissions?.length ?? 0);
+
+  // Refresh des badges sur evenements custom dispatched par les pages metier.
+  // Notifications -> 'notifications:updated' (deja existant)
+  // Inscriptions  -> 'inscriptions:updated' (a dispatch dans InscriptionsPage)
+  // Panier        -> 'panier:updated' (a dispatch dans PanierPage)
   useEffect(() => {
-    const handler = () => refetchNotifications();
-    window.addEventListener('notifications:updated', handler);
-    return () => window.removeEventListener('notifications:updated', handler);
-  }, [refetchNotifications]);
+    const onNotif = () => refetchNotifications();
+    const onInscr = () => refetchInscriptions();
+    const onPanier = () => refetchPanier();
+    window.addEventListener('notifications:updated', onNotif);
+    window.addEventListener('inscriptions:updated', onInscr);
+    window.addEventListener('panier:updated', onPanier);
+    return () => {
+      window.removeEventListener('notifications:updated', onNotif);
+      window.removeEventListener('inscriptions:updated', onInscr);
+      window.removeEventListener('panier:updated', onPanier);
+    };
+  }, [refetchNotifications, refetchInscriptions, refetchPanier]);
+
+  // Helper d'affichage du badge a cote du label
+  function badgeFor(to: string): number {
+    if (to === ROUTES.ADMIN_NOTIFICATIONS) return unreadCount;
+    if (to === ROUTES.ADMIN_INSCRIPTIONS) return pendingInscriptionsCount;
+    if (to === ROUTES.ADMIN_PANIER) return panierCount;
+    return 0;
+  }
 
   const visibleSections = sidebarSections
     .map((section) => ({
@@ -150,30 +189,33 @@ export default function AdminSidebar({ mobileOpen, onClose }: AdminSidebarProps)
                 {section.title}
               </p>
               <div className="space-y-0.5">
-                {section.links.map(({ to, label, icon: Icon, end }) => (
-                  <NavLink
-                    key={to}
-                    to={to}
-                    end={end}
-                    onClick={onClose}
-                    className={({ isActive }) =>
-                      cn(
-                        'flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-colors no-underline',
-                        isActive
-                          ? 'bg-[var(--artci-green)] text-white'
-                          : 'text-gray-700 hover:bg-gray-100'
-                      )
-                    }
-                  >
-                    <Icon className="w-4 h-4 flex-shrink-0" />
-                    <span className="flex-1">{label}</span>
-                    {to === ROUTES.ADMIN_NOTIFICATIONS && unreadCount > 0 && (
-                      <span className="ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[11px] font-bold">
-                        {unreadCount}
-                      </span>
-                    )}
-                  </NavLink>
-                ))}
+                {section.links.map(({ to, label, icon: Icon, end }) => {
+                  const count = badgeFor(to);
+                  return (
+                    <NavLink
+                      key={to}
+                      to={to}
+                      end={end}
+                      onClick={onClose}
+                      className={({ isActive }) =>
+                        cn(
+                          'flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-colors no-underline',
+                          isActive
+                            ? 'bg-[var(--artci-green)] text-white'
+                            : 'text-gray-700 hover:bg-gray-100'
+                        )
+                      }
+                    >
+                      <Icon className="w-4 h-4 flex-shrink-0" />
+                      <span className="flex-1">{label}</span>
+                      {count > 0 && (
+                        <span className="ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[11px] font-bold">
+                          {count}
+                        </span>
+                      )}
+                    </NavLink>
+                  );
+                })}
               </div>
             </div>
           ))}

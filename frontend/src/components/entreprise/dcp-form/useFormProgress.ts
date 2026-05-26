@@ -69,7 +69,9 @@ export function useFormProgress(form: FormulaireDCP): ProgressResult {
 
     // ----- PARTIE 3 -----
     const part3 = acc([
-      { applicable: true, value: cj.distinction_decl_aut },
+      // Q "distinction declaration/autorisation" supprimee (spec B6) — n'est
+      // donc plus comptee dans la progression (sinon le formulaire plafonnait
+      // a 98% car la valeur ne pouvait plus etre renseignee).
       { applicable: true, value: reg.activites_traitement },
       { applicable: true, value: reg.registre_tenu },
       { applicable: reg.registre_tenu === 'oui', value: reg.forme_registre },

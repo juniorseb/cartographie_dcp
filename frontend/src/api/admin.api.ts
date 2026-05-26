@@ -107,6 +107,16 @@ export async function downloadBackup(filename: string): Promise<void> {
 // Inscriptions a valider
 // ============================================================
 
+export interface InscriptionDocument {
+  type?: string;              // ex 'doc_rccm', 'doc_dfe', 'doc_autre'
+  r2_key?: string;
+  nom_fichier?: string;
+  taille?: number;
+  mime_type?: string;
+  uploadedAt?: string;
+  download_url?: string | null;  // URL R2 signee valide 1h (null pour les vieux docs)
+}
+
 export interface InscriptionItem {
   id: string;
   denomination: string;
@@ -131,6 +141,7 @@ export interface InscriptionItem {
   inscription_statut: 'pending' | 'approved' | 'rejected';
   inscription_motif_rejet?: string;
   createdAt: string;
+  documents_inscription?: InscriptionDocument[];
 }
 
 /** GET /api/admin/inscriptions?statut=pending */
@@ -322,9 +333,27 @@ export async function uploadRapportAudit(
 // Workflow — Panier / Assignation
 // ============================================================
 
+/** Nouvelle soumission non assignee (visible uniquement par admin/super_admin
+ * dans leur panier). L'admin peut soit s'auto-traiter, soit assigner a un
+ * editeur via le bouton dedie. */
+export interface NouvelleSoumissionPanier {
+  entite_id: string;
+  entite_denomination: string | null;
+  entite_numero_cc: string | null;
+  entite_ville: string | null;
+  entite_region: string | null;
+  date_soumission: string | null;
+  statut_workflow: string | null;
+}
+
+export interface PanierResponse {
+  assignations: AssignationItem[];
+  nouvelles_soumissions: NouvelleSoumissionPanier[];
+}
+
 /** GET /api/admin/panier */
-export async function getPanier(): Promise<AssignationItem[]> {
-  const res = await apiClient.get<ApiResponse<AssignationItem[]>>('/admin/panier');
+export async function getPanier(): Promise<PanierResponse> {
+  const res = await apiClient.get<ApiResponse<PanierResponse>>('/admin/panier');
   return res.data.data!;
 }
 

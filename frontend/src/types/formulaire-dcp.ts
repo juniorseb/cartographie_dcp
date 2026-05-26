@@ -454,12 +454,18 @@ export interface Partie5Securite {
   notification_artci?: NotificationArtci72h;
   info_personnes_violation?: InfoPersonnesViolation;
   registre_violations?: 'oui' | 'non';
+  // B27 : upload du registre des violations si Oui
+  registre_violations_uploaded?: boolean;
   procedures_violation?: ProcedureViolation;
+  // B28 : upload du document de procedure si Oui (procédure documentée et testée)
+  procedures_violation_uploaded?: boolean;
   // Formation
   personnel_sensibilise?: PersonnelSensibilise;
   frequence_formations?: FrequenceFormations;
-  // Si sensibilisation périodique : préciser la période
+  // Si sensibilisation périodique : préciser la période (deprecie, voir frequences_sensibilisation)
   periode_sensibilisation?: 'journaliere' | 'hebdomadaire' | 'mensuelle';
+  // B29 : frequences (multi) de sensibilisation periodique
+  frequences_sensibilisation?: ('mensuelle' | 'trimestrielle' | 'semestrielle' | 'annuelle')[];
   // Anciens champs gardes pour compatibilite
   mesures_techniques?: 'oui' | 'non';
   mesures_organisationnelles?: 'oui' | 'non';

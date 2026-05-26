@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { UserCheck, Building2, Lock, CheckCircle, XCircle, Clock, ChevronDown, ChevronUp } from 'lucide-react';
+import { UserCheck, Building2, Lock, CheckCircle, XCircle, Clock, ChevronDown, ChevronUp, FileText, Download, AlertTriangle } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import * as adminApi from '@/api/admin.api';
 import Loading from '@/components/common/Loading';
@@ -84,6 +84,7 @@ function InscriptionCard({ item, onChanged }: { item: InscriptionItem; onChanged
     try {
       await adminApi.validerInscription(item.id);
       onChanged();
+      window.dispatchEvent(new Event('inscriptions:updated'));
     } catch {
       setError('Erreur lors de la validation.');
     } finally {
@@ -101,6 +102,7 @@ function InscriptionCard({ item, onChanged }: { item: InscriptionItem; onChanged
     try {
       await adminApi.rejeterInscription(item.id, motif.trim() || ' ', motifCode || undefined);
       onChanged();
+      window.dispatchEvent(new Event('inscriptions:updated'));
     } catch {
       setError('Erreur lors du rejet.');
     } finally {
@@ -164,6 +166,54 @@ function InscriptionCard({ item, onChanged }: { item: InscriptionItem; onChanged
               <div><span className="text-xs text-gray-500">Représentant légal :</span> {item.acces_email_referant ?? item.dg_email ?? '-'}</div>
               <div><span className="text-xs text-gray-500">Demandeur :</span> {item.acces_email_dpo ?? item.dpo_email ?? '-'}</div>
             </div>
+          </div>
+
+          {/* Documents administratifs deposes a l'inscription */}
+          <div className="lg:col-span-3">
+            <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+              <FileText className="w-4 h-4 text-[var(--artci-orange)]" />
+              Documents administratifs déposés
+            </h4>
+            {item.documents_inscription && item.documents_inscription.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {item.documents_inscription.map((doc, i) => {
+                  const labelByType: Record<string, string> = {
+                    doc_rccm: 'RCCM (Registre du Commerce)',
+                    doc_dfe: 'DFE (Déclaration Fiscale)',
+                    doc_autre: 'Autre document',
+                  };
+                  const label = labelByType[doc.type ?? ''] ?? doc.type ?? 'Document';
+                  const sizeKb = doc.taille ? Math.round(doc.taille / 1024) : null;
+                  return (
+                    <div key={i} className="border border-gray-200 rounded p-2 flex items-start gap-2 text-sm">
+                      <FileText className="w-4 h-4 text-gray-500 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-xs">{label}</div>
+                        <div className="text-xs text-gray-500 truncate">{doc.nom_fichier ?? '—'}</div>
+                        {sizeKb !== null && <div className="text-[10px] text-gray-400">{sizeKb} Ko</div>}
+                      </div>
+                      {doc.download_url ? (
+                        <a
+                          href={doc.download_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-[var(--artci-green)] hover:underline flex items-center gap-1 flex-shrink-0"
+                        >
+                          <Download className="w-3 h-3" /> Voir
+                        </a>
+                      ) : (
+                        <span className="text-[10px] text-gray-400 italic">URL indisponible</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="alert alert-warning text-xs flex items-center gap-2">
+                <AlertTriangle className="w-3 h-3" />
+                Aucun document administratif n'a été joint à cette inscription.
+              </div>
+            )}
           </div>
 
           {item.inscription_motif_rejet && (

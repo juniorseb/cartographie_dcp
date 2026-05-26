@@ -47,7 +47,7 @@ export default function DashboardPage() {
         <div className="alert alert-info mb-6 flex items-start gap-3">
           <Clock className="w-5 h-5 flex-shrink-0 mt-0.5" />
           <div>
-            <strong>Votre dossier est en cours de vérification par les équipes de l'ARTCI.</strong>
+            <strong>Votre enregistrement est en cours de vérification par les équipes de l'ARTCI.</strong>
             <p className="text-sm mt-1">
               Vous serez notifié(e) dès qu'une réponse sera disponible.
               Pendant cette période, votre formulaire est en lecture seule.
