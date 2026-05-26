@@ -69,9 +69,7 @@ export default function StatistiquesPage() {
                   cx="50%"
                   cy="50%"
                   outerRadius={120}
-                  label={({ name, percent }) =>
-                    `${name} (${(percent * 100).toFixed(0)}%)`
-                  }
+                  label={({ percent }) => (percent < 0.05 ? '' : `${(percent * 100).toFixed(0)}%`)}
                   labelLine={false}
                 >
                   {secteurData.map((_, i) => (

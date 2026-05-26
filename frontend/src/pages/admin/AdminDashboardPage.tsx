@@ -257,7 +257,7 @@ export default function AdminDashboardPage() {
                   cx="50%"
                   cy="50%"
                   outerRadius={90}
-                  label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                  label={({ percent }) => (percent < 0.05 ? '' : `${(percent * 100).toFixed(0)}%`)}
                   labelLine={false}
                 >
                   {workflowData.map((_, i) => (

@@ -139,7 +139,7 @@ export default function StatistiquesAdminPage() {
                   cx="50%"
                   cy="50%"
                   outerRadius={100}
-                  label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                  label={({ percent }) => (percent < 0.05 ? '' : `${(percent * 100).toFixed(0)}%`)}
                   labelLine={false}
                 >
                   {workflowData.map((_, i) => (
@@ -166,7 +166,7 @@ export default function StatistiquesAdminPage() {
                   cx="50%"
                   cy="50%"
                   outerRadius={100}
-                  label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                  label={({ percent }) => (percent < 0.05 ? '' : `${(percent * 100).toFixed(0)}%`)}
                   labelLine={false}
                 >
                   {conformiteData.map((_, i) => (
@@ -193,7 +193,7 @@ export default function StatistiquesAdminPage() {
                   cx="50%"
                   cy="50%"
                   outerRadius={100}
-                  label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                  label={({ percent }) => (percent < 0.05 ? '' : `${(percent * 100).toFixed(0)}%`)}
                   labelLine={false}
                 >
                   {secteurData.map((_, i) => (
@@ -220,7 +220,7 @@ export default function StatistiquesAdminPage() {
                   cx="50%"
                   cy="50%"
                   outerRadius={100}
-                  label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                  label={({ percent }) => (percent < 0.05 ? '' : `${(percent * 100).toFixed(0)}%`)}
                   labelLine={false}
                 >
                   {origineData.map((_, i) => (

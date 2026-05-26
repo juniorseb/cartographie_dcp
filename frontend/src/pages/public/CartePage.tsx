@@ -7,37 +7,6 @@ import ErrorDisplay from '@/components/common/ErrorDisplay';
 import Loading from '@/components/common/Loading';
 import { formatNumber } from '@/utils/format';
 
-const SECTEURS = [
-  'Tous les secteurs',
-  'Télécommunications',
-  'Banque / Finance',
-  'Commerce',
-  'Santé',
-  'Éducation',
-  'Transport',
-  'Administration publique',
-  'Assurance',
-  'Autre',
-];
-
-const REGIONS = [
-  'Toutes les régions',
-  'Abidjan',
-  'Bas-Sassandra',
-  'Comoé',
-  'Denguélé',
-  'Gôh-Djiboua',
-  'Lacs',
-  'Lagunes',
-  'Montagnes',
-  'Sassandra-Marahoué',
-  'Savanes',
-  'Vallée du Bandama',
-  'Woroba',
-  'Yamoussoukro',
-  'Zanzan',
-];
-
 interface StatutFilter {
   conforme: boolean;
   partiellement: boolean;
@@ -85,6 +54,11 @@ export default function CartePage() {
     () => publicApi.getStats(),
     []
   );
+
+  // Dropdowns alimentes par les vraies valeurs en base (filtrees aux entites
+  // publiables visibles). Plus de listes hardcodees.
+  const secteursDisponibles = Object.keys(statsData?.par_secteur ?? {}).sort();
+  const regionsDisponibles = Object.keys(statsData?.par_region ?? {}).sort();
 
   const fetchEntites = useCallback(
     () =>
@@ -229,10 +203,9 @@ export default function CartePage() {
               isMobile ? 'py-3 text-base' : 'py-2.5 text-sm'
             }`}
           >
-            {SECTEURS.map((s) => (
-              <option key={s} value={s === 'Tous les secteurs' ? '' : s}>
-                {s}
-              </option>
+            <option value="">Tous les secteurs</option>
+            {secteursDisponibles.map((s) => (
+              <option key={s} value={s}>{s}</option>
             ))}
           </select>
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
@@ -252,10 +225,9 @@ export default function CartePage() {
               isMobile ? 'py-3 text-base' : 'py-2.5 text-sm'
             }`}
           >
-            {REGIONS.map((r) => (
-              <option key={r} value={r === 'Toutes les régions' ? '' : r}>
-                {r}
-              </option>
+            <option value="">Toutes les régions</option>
+            {regionsDisponibles.map((r) => (
+              <option key={r} value={r}>{r}</option>
             ))}
           </select>
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />

@@ -10,8 +10,10 @@ import EmptyState from '@/components/common/EmptyState';
 import ExportButton from '@/components/common/ExportButton';
 import Loading from '@/components/common/Loading';
 import ErrorDisplay from '@/components/common/ErrorDisplay';
-import { ITEMS_PER_PAGE } from '@/utils/constants';
 import type { EntiteFilter } from '@/types/entite';
+
+// Pagination dediee a la liste publique (10 par page).
+const PER_PAGE_PUBLIC_LIST = 10;
 
 export default function ListeEntitesPage() {
   const [filters, setFilters] = useState<EntiteFilter>({});
@@ -19,10 +21,18 @@ export default function ListeEntitesPage() {
   const [exporting, setExporting] = useState(false);
 
   const fetchEntites = useCallback(
-    () => publicApi.getEntites({ ...filters, page, per_page: ITEMS_PER_PAGE }),
+    () => publicApi.getEntites({ ...filters, page, per_page: PER_PAGE_PUBLIC_LIST }),
     [filters, page]
   );
   const { data, isLoading, error, refetch } = useApi(fetchEntites, [filters, page]);
+
+  // Stats publiques : leurs cles par_secteur / par_region / par_ville donnent
+  // les valeurs reellement presentes en base (filtrees aux entites publiables
+  // visibles sur la carte). Plus de listes hardcodees qui derivent du reel.
+  const { data: stats } = useApi(() => publicApi.getStats(), []);
+  const secteurs = Object.keys(stats?.par_secteur ?? {}).sort();
+  const regions = Object.keys(stats?.par_region ?? {}).sort();
+  const villes = Object.keys(stats?.par_ville ?? {}).sort();
 
   function updateFilter(key: keyof EntiteFilter, value: string) {
     setFilters((prev) => ({ ...prev, [key]: value || undefined }));
@@ -45,8 +55,8 @@ export default function ListeEntitesPage() {
         <ExportButton onExport={handleExport} isLoading={exporting} />
       </div>
 
-      {/* Filtres */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
+      {/* Filtres — toutes les inputs/selects partagent la meme hauteur h-11 */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-6 [&_input]:h-11 [&_select]:h-11">
         <SearchBar
           value={filters.search ?? ''}
           onChange={(v) => updateFilter('search', v)}
@@ -59,35 +69,34 @@ export default function ListeEntitesPage() {
             className="w-full py-2.5"
           >
             <option value="">Tous les secteurs</option>
-            <option value="Télécommunications">Télécommunications</option>
-            <option value="Banque / Finance">Banque / Finance</option>
-            <option value="Assurance">Assurance</option>
-            <option value="Santé">Santé</option>
-            <option value="Éducation">Éducation</option>
-            <option value="Commerce">Commerce</option>
-            <option value="Industrie">Industrie</option>
-            <option value="Services">Services</option>
-            <option value="Transport">Transport</option>
-            <option value="Autre">Autre</option>
+            {secteurs.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
           </select>
         </div>
         <div className="form-group mb-0">
-          <input
-            type="text"
-            placeholder="Ville"
+          <select
             value={filters.ville ?? ''}
             onChange={(e) => updateFilter('ville', e.target.value)}
             className="w-full py-2.5"
-          />
+          >
+            <option value="">Toutes les villes</option>
+            {villes.map((v) => (
+              <option key={v} value={v}>{v}</option>
+            ))}
+          </select>
         </div>
         <div className="form-group mb-0">
-          <input
-            type="text"
-            placeholder="Région"
+          <select
             value={filters.region ?? ''}
             onChange={(e) => updateFilter('region', e.target.value)}
             className="w-full py-2.5"
-          />
+          >
+            <option value="">Toutes les régions</option>
+            {regions.map((r) => (
+              <option key={r} value={r}>{r}</option>
+            ))}
+          </select>
         </div>
         <div className="form-group mb-0">
           <select

@@ -116,10 +116,18 @@ class PublicService:
             'total_demarche_en_cours': 0,
         }
 
-        # Sous-requete IDs des entites visibles sur la carte.
-        visibles_ids_subq = db.session.query(EntiteBase.id).filter(
+        # Sous-requete IDs des entites visibles sur la carte ET publiables.
+        # On filtre sur les 3 criteres ensemble pour que TOUS les breakdowns
+        # (par statut, par secteur, par region, par ville) comptent exactement
+        # les memes entites — sinon les sommes ne matchent pas (un dossier
+        # publie_sur_carte=True mais non_conforme serait compte dans 'par
+        # secteur' alors qu'il est exclu de 'total_conformes').
+        publiables_ids_subq = db.session.query(EntiteBase.id).join(
+            EntiteConformite, EntiteConformite.entite_id == EntiteBase.id,
+        ).filter(
             EntiteBase.archive == False,  # noqa: E712
             EntiteBase.publie_sur_carte == True,  # noqa: E712
+            EntiteConformite.statut_conformite.in_(PublicService._STATUTS_PUBLIABLES),
             select(1).select_from(EntiteLocalisation).where(
                 EntiteLocalisation.entite_id == EntiteBase.id,
                 EntiteLocalisation.latitude.isnot(None),
@@ -127,13 +135,12 @@ class PublicService:
             ).exists(),
         ).subquery()
 
-        # Comptage par statut conformite (restreint aux entites visibles ET publiables)
+        # Comptage par statut conformite (sur le meme univers)
         conformite_counts = db.session.query(
             EntiteConformite.statut_conformite,
             func.count(EntiteConformite.entite_id),
         ).filter(
-            EntiteConformite.entite_id.in_(db.session.query(visibles_ids_subq)),
-            EntiteConformite.statut_conformite.in_(PublicService._STATUTS_PUBLIABLES),
+            EntiteConformite.entite_id.in_(db.session.query(publiables_ids_subq)),
         ).group_by(EntiteConformite.statut_conformite).all()
 
         for statut, count in conformite_counts:
@@ -146,25 +153,25 @@ class PublicService:
             ):
                 stats['total_partiellement_conformes'] += count
 
-        # Repartitions geographiques — restreintes aux entites visibles.
+        # Repartitions geographiques — meme univers que ci-dessus.
         secteur_counts = db.session.query(
             EntiteBase.secteur_activite, func.count(EntiteBase.id),
         ).filter(
-            EntiteBase.id.in_(db.session.query(visibles_ids_subq)),
+            EntiteBase.id.in_(db.session.query(publiables_ids_subq)),
         ).group_by(EntiteBase.secteur_activite).all()
         stats['par_secteur'] = {s: c for s, c in secteur_counts if s}
 
         region_counts = db.session.query(
             EntiteBase.region, func.count(EntiteBase.id),
         ).filter(
-            EntiteBase.id.in_(db.session.query(visibles_ids_subq)),
+            EntiteBase.id.in_(db.session.query(publiables_ids_subq)),
         ).group_by(EntiteBase.region).all()
         stats['par_region'] = {r: c for r, c in region_counts if r}
 
         ville_counts = db.session.query(
             EntiteBase.ville, func.count(EntiteBase.id),
         ).filter(
-            EntiteBase.id.in_(db.session.query(visibles_ids_subq)),
+            EntiteBase.id.in_(db.session.query(publiables_ids_subq)),
         ).group_by(EntiteBase.ville).all()
         stats['par_ville'] = {v: c for v, c in ville_counts if v}
 
