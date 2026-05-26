@@ -11,10 +11,10 @@ Barème (100 points) :
 - Contrats sous-traitants conformes : 10 pts
 - Politique de sécurité formalisée : 10 pts
 
-Classification :
-- 80-100 : Conforme
-- 50-79  : Partiellement Conforme
-- 0-49   : Non-Conforme
+Classification (seuils officiels) :
+- 100     : Conforme
+- 70 - 99 : Partiellement conforme
+- 0 - 69  : Non conforme
 """
 from app.extensions import db
 from app.models.entites_conformite import EntiteConformite

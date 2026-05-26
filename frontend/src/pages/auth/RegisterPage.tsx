@@ -137,16 +137,27 @@ export default function RegisterPage() {
       setSubmitted(true);
     } catch (e: unknown) {
       const err = e as {
-        response?: { status?: number; data?: { message?: string; errors?: Record<string, string[]> } };
+        response?: {
+          status?: number;
+          // Le backend Flask renvoie soit {error, details?} (erreur metier
+          // / validation), soit {message} (compat). On lit les deux.
+          data?: {
+            error?: string;
+            message?: string;
+            details?: Record<string, string[] | string> | string;
+          };
+        };
         message?: string;
       };
-      const backendMsg = err?.response?.data?.message;
-      const fieldErrors = err?.response?.data?.errors;
+      const data = err?.response?.data;
+      const backendMsg = data?.error || data?.message;
+      const fieldErrors = typeof data?.details === 'object' ? data.details : undefined;
+
       if (fieldErrors && Object.keys(fieldErrors).length > 0) {
-        const details = Object.entries(fieldErrors)
+        const fmt = Object.entries(fieldErrors)
           .map(([field, msgs]) => `${field} : ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
           .join(' | ');
-        setError(`Erreur de validation — ${details}`);
+        setError(`${backendMsg ?? 'Erreur de validation'} — ${fmt}`);
       } else if (backendMsg) {
         setError(backendMsg);
       } else if (!err?.response) {
@@ -180,7 +191,7 @@ export default function RegisterPage() {
         Inscription
       </h2>
       <p className="text-sm text-gray-500 text-center mb-6">
-        Créez votre compte entreprise (3 étapes)
+        Créez votre compte entité — personne physique ou morale (3 étapes)
       </p>
 
       <div className="flex items-start justify-center mb-6">
@@ -299,7 +310,7 @@ function SectionEntreprise({
         </div>
         <div className="form-group">
           <label htmlFor="telephone">Téléphone entreprise</label>
-          <input id="telephone" type="tel" pattern="[+]?[\d\s\-().]{6,30}"
+          <input id="telephone" type="tel" pattern="[+]?[\d\s\-.\(\)]{6,30}"
             value={form.telephone} onChange={(e) => updateField('telephone', e.target.value)} />
         </div>
       </div>
@@ -414,7 +425,7 @@ function SectionRL({ form, updateField }: SectionProps) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="form-group">
           <label htmlFor="rl_telephone">Téléphone</label>
-          <input id="rl_telephone" type="tel" pattern="[+]?[\d\s\-().]{6,30}"
+          <input id="rl_telephone" type="tel" pattern="[+]?[\d\s\-.\(\)]{6,30}"
             value={form.rl_telephone} onChange={(e) => updateField('rl_telephone', e.target.value)} />
         </div>
         <div className="form-group">
@@ -454,7 +465,7 @@ function SectionDemandeur({ form, updateField }: SectionProps) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="form-group">
           <label htmlFor="dem_telephone">Téléphone</label>
-          <input id="dem_telephone" type="tel" pattern="[+]?[\d\s\-().]{6,30}"
+          <input id="dem_telephone" type="tel" pattern="[+]?[\d\s\-.\(\)]{6,30}"
             value={form.dem_telephone} onChange={(e) => updateField('dem_telephone', e.target.value)} />
         </div>
         <div className="form-group">

@@ -41,11 +41,24 @@ class EntiteWorkflowOutputSchema(Schema):
 
 
 class EntiteLocalisationSchema(Schema):
-    """EntiteLocalisation - input & output."""
+    """EntiteLocalisation - input & output.
+
+    Les coordonnees GPS sont obligatoires : une entite est a une adresse
+    physique reelle, ses coordonnees sont une donnee d'identite (pas une
+    option d'affichage). Bornes validees grossierement sur la Cote d'Ivoire.
+    """
     class Meta:
         unknown = EXCLUDE
-    latitude = fields.Float()
-    longitude = fields.Float()
+    latitude = fields.Float(
+        required=True,
+        validate=validate.Range(min=4.0, max=11.0,
+                                error="Latitude hors Cote d'Ivoire (4° N à 11° N)."),
+    )
+    longitude = fields.Float(
+        required=True,
+        validate=validate.Range(min=-8.5, max=-2.5,
+                                error="Longitude hors Cote d'Ivoire (-8.5° à -2.5°)."),
+    )
     precision_gps = fields.String(validate=validate.Length(max=50))
     methode_geolocalisation = fields.String(validate=validate.Length(max=100))
     adresse_complete = fields.String(validate=validate.Length(max=500))
@@ -256,7 +269,8 @@ class EntiteCreateInputSchema(Schema):
     email = fields.Email(load_default=None)
     # Objets enfants imbriqués
     contact = fields.Nested(EntiteContactSchema, load_default=None)
-    localisation = fields.Nested(EntiteLocalisationSchema, load_default=None)
+    # Localisation GPS obligatoire (donnee d'identite de l'entite)
+    localisation = fields.Nested(EntiteLocalisationSchema, required=True)
     securite = fields.Nested(SecuriteConformiteSchema, load_default=None)
     # Listes enfants
     responsables_legaux = fields.List(fields.Nested(ResponsableLegalSchema), load_default=[])

@@ -66,7 +66,7 @@ export default function LoginPage() {
         Connexion
       </h2>
       <p className="text-sm text-gray-500 text-center mb-6">
-        Accédez à votre espace entreprise
+        Accédez à votre espace entité
       </p>
 
       {error && <div className="alert alert-danger mb-4">{error}</div>}

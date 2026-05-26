@@ -39,7 +39,7 @@ function FitBounds({ entites }: { entites: EntiteListItem[] }) {
   useEffect(() => {
     if (entites.length > 0) {
       const points = entites
-        .filter((e) => e.latitude && e.longitude)
+        .filter((e) => e.latitude != null && e.longitude != null)
         .map((e) => [e.latitude!, e.longitude!] as [number, number]);
 
       if (points.length > 0) {
@@ -91,7 +91,7 @@ export default function MapView({ entites, isLoading }: MapProps) {
       </LayersControl>
       <FitBounds entites={entites} />
       {entites
-        .filter((e) => e.latitude && e.longitude)
+        .filter((e) => e.latitude != null && e.longitude != null)
         .map((entite) => (
           <Marker
             key={entite.id}

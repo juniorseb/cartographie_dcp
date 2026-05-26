@@ -466,8 +466,9 @@ startxref
         print(f"[OK] {len(contacts)} contacts créés")
 
         # ── 6. Conformité ────────────────────────────────────────────
+        # Bareme officiel : Conforme = 100 / Partiellement = 70-99 / Non = 0-69
         conformites = [
-            EntiteConformite(entite_id=eA.id, score_conformite=92,
+            EntiteConformite(entite_id=eA.id, score_conformite=100,
                              statut_conformite=StatutConformiteEnum.conforme,
                              a_dpo=True, type_dpo=TypeDPOEnum.interne,
                              effectif_entreprise='1000+', volume_donnees_traitees='10 millions+'),
@@ -476,7 +477,7 @@ startxref
                              a_dpo=True, type_dpo=TypeDPOEnum.externe,
                              effectif_entreprise='500-1000', volume_donnees_traitees='5-10 millions'),
             EntiteConformite(entite_id=eC.id, score_conformite=85,
-                             statut_conformite=StatutConformiteEnum.conforme,
+                             statut_conformite=StatutConformiteEnum.partiellement_conforme,
                              a_dpo=True, type_dpo=TypeDPOEnum.interne,
                              effectif_entreprise='200-500', volume_donnees_traitees='1-5 millions'),
             EntiteConformite(entite_id=eD.id, score_conformite=55,
@@ -499,12 +500,12 @@ startxref
                              statut_conformite=StatutConformiteEnum.partiellement_conforme,
                              a_dpo=True, type_dpo=TypeDPOEnum.interne,
                              effectif_entreprise='200-500', volume_donnees_traitees='500 000-1 million'),
-            EntiteConformite(entite_id=eI.id, score_conformite=88,
+            EntiteConformite(entite_id=eI.id, score_conformite=100,
                              statut_conformite=StatutConformiteEnum.conforme,
                              a_dpo=True, type_dpo=TypeDPOEnum.interne,
                              effectif_entreprise='500-1000', volume_donnees_traitees='1-5 millions'),
-            EntiteConformite(entite_id=eJ.id, score_conformite=82,
-                             statut_conformite=StatutConformiteEnum.conforme,
+            EntiteConformite(entite_id=eJ.id, score_conformite=95,
+                             statut_conformite=StatutConformiteEnum.partiellement_conforme,
                              a_dpo=True, type_dpo=TypeDPOEnum.externe,
                              effectif_entreprise='1000+', volume_donnees_traitees='5-10 millions'),
         ]
@@ -513,6 +514,8 @@ startxref
         print(f"[OK] {len(conformites)} conformités créées")
 
         # ── 7. Localisations (GPS Côte d'Ivoire) ────────────────────
+        # Spec : les coordonnees GPS sont OBLIGATOIRES pour toute entite,
+        # qu'elle soit publiee sur la carte ou pas (donnee d'identite).
         localisations = [
             EntiteLocalisation(entite_id=eA.id,
                                latitude=5.3220, longitude=-4.0165,
@@ -526,6 +529,10 @@ startxref
                                latitude=5.3180, longitude=-4.0210,
                                adresse_complete='Avenue Terrasson de Fougères, Plateau, Abidjan',
                                precision_gps='10m', methode_geolocalisation='GPS'),
+            EntiteLocalisation(entite_id=eD.id,
+                               latitude=5.3260, longitude=-4.0155,
+                               adresse_complete='5 Avenue Joseph Anoma, Plateau, Abidjan',
+                               precision_gps='15m', methode_geolocalisation='Adresse'),
             EntiteLocalisation(entite_id=eE.id,
                                latitude=7.6936, longitude=-5.0308,
                                adresse_complete='Quartier Commerce, Bouaké',
@@ -534,6 +541,14 @@ startxref
                                latitude=6.8276, longitude=-5.2893,
                                adresse_complete='Avenue Principale, Yamoussoukro',
                                precision_gps='30m', methode_geolocalisation='Adresse'),
+            EntiteLocalisation(entite_id=eG.id,
+                               latitude=4.7485, longitude=-6.6363,
+                               adresse_complete='Zone Portuaire, Boulevard Maritime, San-Pédro',
+                               precision_gps='30m', methode_geolocalisation='Adresse'),
+            EntiteLocalisation(entite_id=eH.id,
+                               latitude=5.3235, longitude=-4.0175,
+                               adresse_complete='Immeuble Alliance, Boulevard de la République, Plateau, Abidjan',
+                               precision_gps='15m', methode_geolocalisation='Adresse'),
             EntiteLocalisation(entite_id=eI.id,
                                latitude=5.3195, longitude=-4.0188,
                                adresse_complete='Tour C Administrative, Plateau, Abidjan',

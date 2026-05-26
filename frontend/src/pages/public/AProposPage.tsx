@@ -39,7 +39,7 @@ const FAQ_ITEMS = [
   },
   {
     question: 'Comment mettre à jour mon dossier ?',
-    answer: 'Connectez-vous à votre espace entreprise, accédez à "Mon Dossier" et cliquez sur "Modifier". Vous pouvez mettre à jour vos informations tant que votre dossier est en brouillon ou si des compléments vous sont demandés.',
+    answer: 'Connectez-vous à votre espace entité, accédez à "Mon Dossier" et cliquez sur "Modifier". Vous pouvez mettre à jour vos informations tant que votre dossier est en brouillon ou si des compléments vous sont demandés.',
   },
   {
     question: 'Quels documents dois-je fournir ?',

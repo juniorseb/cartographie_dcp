@@ -32,7 +32,7 @@ export default function DashboardLayout() {
               <img src={logoArtci} alt="Cartographie DCP" className="w-10 h-10 object-contain" />
               <div className="hidden sm:block">
                 <div className="font-bold text-sm text-[var(--artci-black)]">Cartographie DCP</div>
-                <div className="text-xs text-gray-500">Espace Entreprise</div>
+                <div className="text-xs text-gray-500">Espace Entité</div>
               </div>
             </Link>
           </div>

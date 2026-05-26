@@ -649,10 +649,27 @@ def create_user():
         return error_response(str(e), 409)
 
 
+def _ensure_can_manage_user(target_user_id):
+    """Empeche un admin de modifier / desactiver un super_admin.
+    Retourne une error_response si interdit, sinon None."""
+    from app.models import User
+    from app.models.enums import RoleEnum
+    if g.current_user_role == 'super_admin':
+        return None
+    target = User.query.get(target_user_id)
+    if target and target.role == RoleEnum.super_admin:
+        return error_response("Vous n'avez pas le droit de modifier un super-administrateur.", 403)
+    return None
+
+
 @admin_bp.route('/users/<string:user_id>', methods=['PUT'])
 @admin_or_above
 def update_user(user_id):
     """Modifier un utilisateur ARTCI."""
+    forbidden = _ensure_can_manage_user(user_id)
+    if forbidden:
+        return forbidden
+
     schema = UserUpdateInputSchema()
     try:
         data = schema.load(request.get_json())
@@ -673,6 +690,9 @@ def update_user(user_id):
 @admin_or_above
 def deactivate_user(user_id):
     """Désactiver un utilisateur (soft delete)."""
+    forbidden = _ensure_can_manage_user(user_id)
+    if forbidden:
+        return forbidden
     try:
         AdminService.deactivate_user(user_id)
         return no_content_response()

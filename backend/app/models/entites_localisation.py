@@ -12,8 +12,9 @@ class EntiteLocalisation(db.Model):
     entite_id = db.Column(
         db.String(36), db.ForeignKey('entites_base.id'), primary_key=True
     )
-    latitude = db.Column(db.Float)
-    longitude = db.Column(db.Float)
+    # Coordonnees GPS obligatoires (cf. migration o5p6q7r8s9t0).
+    latitude = db.Column(db.Float, nullable=False)
+    longitude = db.Column(db.Float, nullable=False)
     precision_gps = db.Column(db.String(50))
     methode_geolocalisation = db.Column(db.String(100))
     adresse_complete = db.Column(db.String(500))
