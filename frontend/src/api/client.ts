@@ -4,7 +4,11 @@ const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 const apiClient = axios.create({
   baseURL: API_BASE,
-  timeout: 30000,
+  // 90s : sur Render free, le backend dort apres 15min d'inactivite et peut
+  // mettre 30-60s a se reveiller (cold start). Ajoute a un upload multipart
+  // (RCCM + DFE), 30s ne suffisaient pas → l'inscription paraissait planter
+  // alors qu'elle aboutissait cote backend.
+  timeout: 90000,
   headers: { 'Content-Type': 'application/json' },
 });
 

@@ -63,13 +63,16 @@ def create_app(config_name='default'):
     return app
 
 def register_blueprints(app):
-    """Enregistrer les 4 blueprints API."""
+    """Enregistrer les blueprints API."""
     from app.routes import auth_bp, public_bp, entreprise_bp, admin_bp
+    from app.routes.uploads import uploads_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(public_bp, url_prefix='/api/public')
     app.register_blueprint(entreprise_bp, url_prefix='/api/entreprise')
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
+    # Upload distribue (URLs pre-signees R2) — pas de prefixe metier, just /api
+    app.register_blueprint(uploads_bp, url_prefix='/api')
 
 def register_error_handlers(app):
     """Gestionnaires d'erreurs globaux"""

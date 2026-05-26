@@ -24,25 +24,17 @@ auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
-    """Inscription entreprise (3 sections : RL, Demandeur, acces).
-    Accepte JSON (sans documents) ou multipart/form-data avec les fichiers
-    RCCM, DFE et eventuels autres documents.
-    Le compte est cree mais reste inactif jusqu'a validation manuelle ARTCI."""
-    import json as _json
+    """Inscription entreprise (3 sections : Entreprise, RL, Demandeur).
 
-    if request.content_type and request.content_type.startswith('multipart/form-data'):
-        # Champs JSON dans un champ texte 'payload'
-        payload_str = request.form.get('payload')
-        if not payload_str:
-            return error_response("Champ 'payload' manquant.", 400)
-        try:
-            raw_data = _json.loads(payload_str)
-        except _json.JSONDecodeError:
-            return error_response("Payload JSON invalide.", 400)
-        files = request.files
-    else:
-        raw_data = request.get_json() or {}
-        files = None
+    Payload JSON pur — les documents (RCCM, DFE) sont uploades par le frontend
+    DIRECTEMENT vers Cloudflare R2 via une URL pre-signee (cf.
+    /api/uploads/presigned-url), puis le frontend nous transmet seulement les
+    cles R2 (champ `documents`).
+
+    Le compte est cree mais reste inactif jusqu'a validation manuelle ARTCI.
+    """
+    raw_data = request.get_json() or {}
+    documents = raw_data.pop('documents', None)
 
     schema = RegisterInputSchema()
     try:
@@ -51,7 +43,7 @@ def register():
         return validation_error_response(err.messages)
 
     try:
-        compte, _ = AuthService.register_entreprise(data, files=files)
+        compte, _ = AuthService.register_entreprise(data, documents=documents)
         return created_response(
             CompteEntrepriseOutputSchema().dump(compte),
             "Inscription enregistrée. Votre compte sera activé après vérification par l'ARTCI."

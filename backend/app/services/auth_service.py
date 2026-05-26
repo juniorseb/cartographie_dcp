@@ -19,22 +19,21 @@ from app.utils.otp import create_otp, send_otp_email, verify_otp
 class AuthService:
 
     @staticmethod
-    def register_entreprise(data, files=None):
+    def register_entreprise(data, documents=None):
         """
         Inscrire une nouvelle entreprise (3 sections : Entreprise, DG, DPO).
         Pas de mot de passe a l'inscription : le compte est cree inactif,
         l'ARTCI valide manuellement, puis genere et envoie un mot de passe
         par defaut au DG et au DPO (qui le changeront a la 1ere connexion).
 
-        files : MultiDict werkzeug (request.files) pouvant contenir :
-        - 'doc_rccm' : fichier RCCM obligatoire
-        - 'doc_dfe' : fichier DFE obligatoire
-        - 'doc_autre_<i>' : autres documents
+        documents (optionnel) : liste de dicts {type, r2_key, nom_fichier,
+        taille, mime_type} provenant d'uploads directs vers R2 (cf.
+        /api/uploads/presigned-url). Le backend ne recoit pas les bytes, il
+        verifie juste que les objets R2 existent puis enregistre les cles.
         """
-        import os
         import secrets
-        from werkzeug.utils import secure_filename
         from datetime import timedelta
+        from app.utils.r2_storage import object_exists
 
         # Email principal du compte = email du DG (referant)
         dg_email = data['dg_email']
@@ -90,45 +89,28 @@ class AuthService:
         db.session.add(compte)
         db.session.flush()
 
-        # Sauvegarde des documents administratifs (RCCM, DFE, autres)
-        if files:
-            upload_root = current_app.config.get(
-                'INSCRIPTION_UPLOAD_DIR',
-                os.path.join(current_app.instance_path, 'uploads', 'inscriptions')
-            )
-            target_dir = os.path.join(upload_root, compte.id)
-            os.makedirs(target_dir, exist_ok=True)
+        # Documents administratifs (deja uploades vers R2 par le frontend).
+        # On verifie l'existence cote R2 pour eviter qu'un client malicieux
+        # nous envoie des cles vides ou inexistantes — et on stocke la metadata.
+        if documents:
             docs_meta = []
-
-            def _save(file_storage, type_doc):
-                if not file_storage or not file_storage.filename:
-                    return None
-                filename = secure_filename(file_storage.filename)
-                # On prefixe par le type pour eviter les collisions
-                disk_name = f"{type_doc}_{filename}"
-                disk_path = os.path.join(target_dir, disk_name)
-                file_storage.save(disk_path)
-                size = os.path.getsize(disk_path)
-                return {
-                    'type': type_doc,
-                    'nom_fichier': filename,
-                    'chemin_fichier': disk_path,
-                    'taille': size,
-                    'mime_type': file_storage.mimetype,
+            for doc in documents:
+                r2_key = doc.get('r2_key')
+                if not r2_key:
+                    continue
+                if not object_exists(r2_key):
+                    raise ValueError(
+                        f"Document {doc.get('type', '?')} introuvable sur le stockage. "
+                        "Reuploadez-le et reessayez."
+                    )
+                docs_meta.append({
+                    'type': doc.get('type'),
+                    'r2_key': r2_key,
+                    'nom_fichier': doc.get('nom_fichier'),
+                    'taille': doc.get('taille'),
+                    'mime_type': doc.get('mime_type'),
                     'uploadedAt': datetime.now(timezone.utc).isoformat(),
-                }
-
-            for key in ('doc_rccm', 'doc_dfe'):
-                meta = _save(files.get(key), key)
-                if meta:
-                    docs_meta.append(meta)
-
-            for key in files:
-                if key.startswith('doc_autre_'):
-                    meta = _save(files.get(key), 'doc_autre')
-                    if meta:
-                        docs_meta.append(meta)
-
+                })
             compte.documents_inscription = docs_meta
 
         db.session.commit()

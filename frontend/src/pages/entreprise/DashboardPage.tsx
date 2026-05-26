@@ -38,7 +38,7 @@ export default function DashboardPage() {
 
       {/* Stepper 3 étapes */}
       <div className="card mb-6">
-        <h3 className="text-lg font-bold mb-2">Votre parcours de conformité</h3>
+        <h3 className="text-lg font-bold mb-2">Votre parcours d'enregistrement</h3>
         <StepperWorkflow steps={dashboard.steps} />
       </div>
 

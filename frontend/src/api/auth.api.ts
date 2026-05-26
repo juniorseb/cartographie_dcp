@@ -4,34 +4,31 @@ import type {
   LoginResponse, RegisterInput, LoginInput, VerifyOTPInput, CompteEntreprise
 } from '@/types/auth';
 
+/** Metadata d'un document deja uploade sur R2 (cf. uploads.api.ts). */
+export interface UploadedDocument {
+  type: string;            // 'doc_rccm', 'doc_dfe', 'doc_autre'
+  r2_key: string;
+  nom_fichier: string;
+  taille: number;
+  mime_type: string;
+}
+
 /**
  * POST /auth/register
- * Si `documents` est fourni : envoi en multipart/form-data avec les fichiers
- * (RCCM, DFE et autres). Sinon : envoi JSON simple.
+ * JSON pur : les documents (RCCM, DFE) sont uploades par le frontend
+ * DIRECTEMENT vers R2 via uploads.api.ts puis on envoie ici juste les cles.
+ * Le backend ne traite plus de multipart -> plus de cold-start timeout.
  */
 export async function register(
   data: RegisterInput,
-  documents?: { rccm?: File; dfe?: File; autres?: File[] }
+  documents?: UploadedDocument[],
 ): Promise<CompteEntreprise> {
-  const hasFiles = documents && (documents.rccm || documents.dfe || (documents.autres?.length ?? 0) > 0);
-
-  if (hasFiles) {
-    const formData = new FormData();
-    formData.append('payload', JSON.stringify(data));
-    if (documents?.rccm) formData.append('doc_rccm', documents.rccm);
-    if (documents?.dfe) formData.append('doc_dfe', documents.dfe);
-    documents?.autres?.forEach((f, i) => formData.append(`doc_autre_${i}`, f));
-    const response = await apiClient.post<ApiResponse<CompteEntreprise>>(
-      '/auth/register',
-      formData,
-      { headers: { 'Content-Type': 'multipart/form-data' } }
-    );
-    return response.data.data!;
-  }
-
+  const payload = documents && documents.length > 0
+    ? { ...data, documents }
+    : data;
   const response = await apiClient.post<ApiResponse<CompteEntreprise>>(
     '/auth/register',
-    data
+    payload,
   );
   return response.data.data!;
 }

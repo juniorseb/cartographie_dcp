@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Building2, UserCheck, ChevronRight, ChevronLeft, CheckCircle, Info, FileText, X } from 'lucide-react';
 import * as authApi from '@/api/auth.api';
+import { uploadToR2 } from '@/api/uploads.api';
 import { ROUTES } from '@/utils/constants';
 import { cn } from '@/utils/cn';
 
@@ -107,6 +108,19 @@ export default function RegisterPage() {
     setError('');
     setIsLoading(true);
     try {
+      // 1) Upload des PDF directement vers Cloudflare R2 (le backend ne voit
+      //    jamais les bytes -> pas de timeout / cold start sur le multipart).
+      const documents: authApi.UploadedDocument[] = [];
+      if (docRccm) {
+        const up = await uploadToR2('inscriptions', docRccm.file);
+        documents.push({ type: 'doc_rccm', r2_key: up.key, nom_fichier: up.filename, taille: up.size, mime_type: up.mime_type });
+      }
+      if (docDfe) {
+        const up = await uploadToR2('inscriptions', docDfe.file);
+        documents.push({ type: 'doc_dfe', r2_key: up.key, nom_fichier: up.filename, taille: up.size, mime_type: up.mime_type });
+      }
+
+      // 2) Inscription proprement dite : JSON pur (cles R2 seulement).
       // Note : on map les champs Demandeur → champs dpo_* en backend
       // (le "DPO" de l'inscription = "Demandeur" selon la nouvelle spec §9)
       await authApi.register(
@@ -129,10 +143,7 @@ export default function RegisterPage() {
           dpo_telephone: form.dem_telephone || undefined,
           dpo_email: form.dem_email,
         },
-        {
-          rccm: docRccm?.file,
-          dfe: docDfe?.file,
-        }
+        documents,
       );
       setSubmitted(true);
     } catch (e: unknown) {
@@ -161,7 +172,16 @@ export default function RegisterPage() {
       } else if (backendMsg) {
         setError(backendMsg);
       } else if (!err?.response) {
-        setError("Impossible de joindre le serveur. Vérifiez votre connexion ou réessayez dans quelques instants.");
+        // Cas typique du cold start Render free : la requete a bien ete envoyee
+        // mais la reponse n'est jamais arrivee (timeout cote navigateur). Le
+        // backend a souvent traite avec succes — d'ou le 409 "email deja
+        // utilise" au 2e essai. On le dit explicitement a l'utilisateur.
+        setError(
+          "La requête a peut-être abouti mais la réponse n'est pas arrivée à temps "
+          + "(le serveur peut être en cours de réveil). Vérifiez votre boîte mail "
+          + "dans 1-2 minutes avant de retenter — vous avez peut-être déjà reçu un "
+          + "email de confirmation."
+        );
       } else {
         setError("Erreur lors de l'inscription. Vérifiez vos informations et réessayez.");
       }

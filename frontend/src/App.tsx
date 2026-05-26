@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
 import Loading from '@/components/common/Loading';
@@ -7,6 +7,7 @@ import AuthLayout from '@/components/layout/AuthLayout';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import AdminLayout from '@/components/admin/AdminLayout';
+import apiClient from '@/api/client';
 
 // Lazy loading des pages publiques
 const CartePage = lazy(() => import('@/pages/public/CartePage'));
@@ -68,6 +69,15 @@ const BackupPage = lazy(() => import('@/pages/admin/BackupPage'));
 const InscriptionsPage = lazy(() => import('@/pages/admin/InscriptionsPage'));
 
 export default function App() {
+  // Pre-rechauffer le backend des le chargement de l'app : sur Render free,
+  // le service dort apres 15min d'inactivite et met 30-60s a se reveiller.
+  // Un ping immediat permet au backend d'etre chaud quand l'utilisateur
+  // arrivera sur une page d'action (inscription, login, etc.) — sinon sa
+  // premiere requete multipart timeoute alors qu'elle aboutit cote serveur.
+  useEffect(() => {
+    apiClient.get('/public/stats').catch(() => { /* silencieux */ });
+  }, []);
+
   return (
     <ErrorBoundary>
       <Suspense fallback={<Loading fullPage text="Chargement..." />}>
