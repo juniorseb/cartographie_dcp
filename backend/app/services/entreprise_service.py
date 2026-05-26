@@ -45,9 +45,9 @@ class EntrepriseService:
                 'statut_conformite': None,
                 'score_conformite': None,
                 'steps': [
-                    {'step': 1, 'label': 'Demande', 'statut': 'active', 'description': 'Remplir et soumettre le formulaire'},
+                    {'step': 1, 'label': 'Enregistrement', 'statut': 'active', 'description': 'Remplir et soumettre le formulaire'},
                     {'step': 2, 'label': 'Vérification', 'statut': 'pending', 'description': 'Examen par l\'ARTCI'},
-                    {'step': 3, 'label': 'Décision', 'statut': 'pending', 'description': 'Validation ou rejet'},
+                    {'step': 3, 'label': 'Publication', 'statut': 'pending', 'description': 'Mise en ligne sur la carte'},
                 ],
                 'has_demande': False,
                 'can_edit': True,
@@ -66,27 +66,35 @@ class EntrepriseService:
         )
         score = conformite.score_conformite if conformite else None
 
-        # Déterminer l'étape courante
-        # Une fois l'enregistrement soumis, l'entité passe à l'étape 2 (Vérification).
+        # Déterminer l'étape courante (3 etapes : Enregistrement / Vérification / Publication)
+        # - brouillon                 : en train de remplir le formulaire (etape 1)
+        # - soumis / verif / attente  : ARTCI examine (etape 2)
+        # - valide / conforme_sous_r. : pret a publier ou publication en cours (etape 3)
+        # - publie                    : entite visible sur la carte -> tout complet
+        # - rejete                    : workflow termine sur un rejet (etape 3 marquee active)
         if statut == 'brouillon':
             etape = 1
-        elif statut in ('soumis', 'en_verification', 'en_attente_complements', 'conforme_sous_reserve'):
+        elif statut in ('soumis', 'en_verification', 'en_attente_complements'):
             etape = 2
-        else:  # conforme, valide, publie, rejete
+        else:  # conforme_sous_reserve, valide, publie, rejete
             etape = 3
 
-        # Construire les steps pour le stepper
+        # Si publie : tous les steps completes (stepper full green).
+        all_completed = statut == 'publie'
+
         def step_statut(step_num):
+            if all_completed:
+                return 'completed'
             if step_num < etape:
                 return 'completed'
-            elif step_num == etape:
+            if step_num == etape:
                 return 'active'
             return 'pending'
 
         steps = [
-            {'step': 1, 'label': 'Demande', 'statut': step_statut(1), 'description': 'Remplir et soumettre le formulaire'},
+            {'step': 1, 'label': 'Enregistrement', 'statut': step_statut(1), 'description': 'Remplir et soumettre le formulaire'},
             {'step': 2, 'label': 'Vérification', 'statut': step_statut(2), 'description': 'Examen par l\'ARTCI'},
-            {'step': 3, 'label': 'Décision', 'statut': step_statut(3), 'description': 'Validation ou rejet'},
+            {'step': 3, 'label': 'Publication', 'statut': step_statut(3), 'description': 'Mise en ligne sur la carte'},
         ]
 
         # Compter les feedbacks
