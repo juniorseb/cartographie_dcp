@@ -1,5 +1,5 @@
 import { MessageSquare, Clock, AlertTriangle, CheckCircle2, Bell } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApi } from '@/hooks/useApi';
 import * as entrepriseApi from '@/api/entreprise.api';
 import type { SignalementErreurItem } from '@/api/entreprise.api';
@@ -30,6 +30,19 @@ export default function FeedbacksPage() {
     []
   );
   const [markingId, setMarkingId] = useState<string | null>(null);
+
+  // Polling auto 30s sur les notifications globales (entreprise voit les
+  // signalements traites, depublications, validations en quasi temps reel).
+  useEffect(() => {
+    const tick = () => { if (!document.hidden) refetchNotifs(); };
+    const interval = setInterval(tick, 30_000);
+    const onVisibility = () => { if (!document.hidden) refetchNotifs(); };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [refetchNotifs]);
 
   async function handleMarkRead(id: string) {
     setMarkingId(id);

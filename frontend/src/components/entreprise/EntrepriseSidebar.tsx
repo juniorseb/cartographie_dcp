@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, FileText, FolderOpen, Bell,
@@ -64,8 +64,21 @@ export default function EntrepriseSidebar({ mobileOpen, onClose }: EntrepriseSid
   const location = useLocation();
 
   // Compteur de notifications non lues (retours ARTCI) affiché en badge
-  const { data: feedbacks } = useApi(() => entrepriseApi.getFeedbacks(), []);
+  const { data: feedbacks, refetch: refetchFeedbacks } = useApi(() => entrepriseApi.getFeedbacks(), []);
   const unreadCount = (feedbacks ?? []).filter((f) => !f.is_read).length;
+
+  // Polling auto 30s : rafraichit le badge sans avoir a recharger la page.
+  // Pause si l'onglet est masque (document.hidden) pour preserver batterie.
+  useEffect(() => {
+    const tick = () => { if (!document.hidden) refetchFeedbacks(); };
+    const interval = setInterval(tick, 30_000);
+    const onVisibility = () => { if (!document.hidden) refetchFeedbacks(); };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [refetchFeedbacks]);
 
   // Auto-ouvrir les parents dont un enfant est actif
   const initialExpanded: Record<string, boolean> = {};

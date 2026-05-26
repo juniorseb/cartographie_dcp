@@ -147,6 +147,26 @@ export default function AdminSidebar({ mobileOpen, onClose }: AdminSidebarProps)
     };
   }, [refetchNotifications, refetchInscriptions, refetchPanier]);
 
+  // Polling auto toutes les 30s pour rafraichir les badges sans rechargement
+  // de page. Pause si l'onglet est masque (document.hidden) pour economiser
+  // batterie + bande passante.
+  useEffect(() => {
+    const tick = () => {
+      if (document.hidden) return;
+      refetchNotifications();
+      if (canSeeInscriptions) refetchInscriptions();
+      if (canSeePanier) refetchPanier();
+    };
+    const interval = setInterval(tick, 30_000);
+    // Rafraichit aussi quand l'onglet redevient visible apres une longue absence
+    const onVisibility = () => { if (!document.hidden) tick(); };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [refetchNotifications, refetchInscriptions, refetchPanier, canSeeInscriptions, canSeePanier]);
+
   // Helper d'affichage du badge a cote du label
   function badgeFor(to: string): number {
     if (to === ROUTES.ADMIN_NOTIFICATIONS) return unreadCount;

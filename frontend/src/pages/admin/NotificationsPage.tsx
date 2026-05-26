@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Bell, FileText, Clock, CheckCircle, RefreshCw, CheckCheck,
@@ -53,6 +53,19 @@ export default function NotificationsPage() {
   );
 
   const { data, isLoading, error, refetch } = useApi(fetchNotifications, [typeFilter, lueFilter]);
+
+  // Polling auto toutes les 30s pour voir arriver les nouvelles notifs sans
+  // rechargement manuel. Pause si l'onglet est cache.
+  useEffect(() => {
+    const tick = () => { if (!document.hidden) refetch(); };
+    const interval = setInterval(tick, 30_000);
+    const onVisibility = () => { if (!document.hidden) refetch(); };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [refetch]);
 
   async function handleMarkRead(id: string) {
     try {
