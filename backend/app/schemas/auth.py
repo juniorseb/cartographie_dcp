@@ -8,29 +8,53 @@ from marshmallow import Schema, fields, validate, validates_schema, ValidationEr
 # --- INPUT ---
 
 class RegisterInputSchema(Schema):
-    """POST /api/auth/register - inscription en 3 sections (Entreprise / Representant legal / DPO).
+    """POST /api/auth/register - inscription.
+
+    3 profils (statut_juridique) :
+    - personne_physique : seuls dg_nom/dg_prenom/dg_email sont requis (la
+      personne EST le declarant, pas de RL/Demandeur distincts, pas
+      d'entreprise). denomination/numero_cc sont synthetises en backend.
+    - pm_droit_prive / pm_droit_public : comportement historique inchange,
+      3 sections (Entreprise / Representant legal / Demandeur) requises.
+
     Pas de mot de passe a l'inscription : il est genere et envoye par email
     a la validation par l'ARTCI."""
-    # Section 1 - Entreprise
-    denomination = fields.String(required=True, validate=validate.Length(min=2, max=255))
-    numero_cc = fields.String(required=True, validate=validate.Length(min=2, max=50))
+    statut_juridique = fields.String(
+        required=True,
+        validate=validate.OneOf(['personne_physique', 'pm_droit_prive', 'pm_droit_public'])
+    )
+    # Section 1 - Entreprise (requis seulement pour pm_droit_prive/pm_droit_public)
+    denomination = fields.String(validate=validate.Length(min=2, max=255))
+    numero_cc = fields.String(validate=validate.Length(min=2, max=50))
     telephone = fields.String(validate=validate.Length(max=20))
     adresse = fields.String(validate=validate.Length(max=500))
     ville = fields.String(validate=validate.Length(max=100))
     region = fields.String(validate=validate.Length(max=100))
     # Section 2 - Representant legal / Referant (DG) - email = acces login
+    # Pour personne_physique : ce sont les infos de la personne elle-meme.
     dg_nom = fields.String(required=True, validate=validate.Length(min=2, max=200))
     dg_prenom = fields.String(required=True, validate=validate.Length(min=2, max=200))
     dg_fonction = fields.String(validate=validate.Length(max=200))
     dg_telephone = fields.String(validate=validate.Length(max=30))
     dg_email = fields.Email(required=True)
-    # Section 3 - DPO - email = acces login
-    dpo_nom = fields.String(required=True, validate=validate.Length(min=2, max=200))
-    dpo_prenom = fields.String(required=True, validate=validate.Length(min=2, max=200))
+    # Section 3 - DPO (requis seulement pour pm_droit_prive/pm_droit_public)
+    dpo_nom = fields.String(validate=validate.Length(min=2, max=200))
+    dpo_prenom = fields.String(validate=validate.Length(min=2, max=200))
     dpo_telephone = fields.String(validate=validate.Length(max=30))
-    dpo_email = fields.Email(required=True)
+    dpo_email = fields.Email()
     dpo_type = fields.String(validate=validate.OneOf(['interne', 'externe']))
     dpo_organisme = fields.String(validate=validate.Length(max=255))
+
+    @validates_schema
+    def validate_par_statut_juridique(self, data, **kwargs):
+        if data.get('statut_juridique') == 'personne_physique':
+            return  # pas d'entreprise ni de DPO/Demandeur distinct a valider
+        errors = {}
+        for field_name in ('denomination', 'numero_cc', 'dpo_nom', 'dpo_prenom', 'dpo_email'):
+            if not data.get(field_name):
+                errors[field_name] = ['Ce champ est obligatoire pour une personne morale.']
+        if errors:
+            raise ValidationError(errors)
 
 
 class VerifyOTPInputSchema(Schema):
@@ -95,6 +119,7 @@ class CompteEntrepriseOutputSchema(Schema):
     """Compte entreprise sérialisé (sans password_hash)."""
     id = fields.String()
     email = fields.String()
+    statut_juridique = fields.String()
     denomination = fields.String()
     numero_cc = fields.String()
     telephone = fields.String()

@@ -3,9 +3,12 @@
  */
 import type { Role } from './enums';
 
+export type StatutJuridiqueInscription = 'personne_physique' | 'pm_droit_prive' | 'pm_droit_public';
+
 export interface CompteEntreprise {
   id: string;
   email: string;
+  statut_juridique: StatutJuridiqueInscription;
   denomination: string;
   numero_cc: string;
   telephone: string | null;
@@ -42,24 +45,26 @@ export interface LoginResponse {
 }
 
 export interface RegisterInput {
-  // Section 1 — Entreprise
-  denomination: string;
-  numero_cc: string;
+  statut_juridique: StatutJuridiqueInscription;
+  // Section 1 — Entreprise (requis seulement pour pm_droit_prive/pm_droit_public)
+  denomination?: string;
+  numero_cc?: string;
   telephone?: string;
   adresse?: string;
   ville?: string;
   region?: string;
   // Section 2 — Représentant légal (email = identifiant)
+  // Pour personne_physique : infos de la personne elle-même.
   dg_nom: string;
   dg_prenom: string;
   dg_fonction?: string;
   dg_telephone?: string;
   dg_email: string;
-  // Section 3 — DPO (email = identifiant)
-  dpo_nom: string;
-  dpo_prenom: string;
+  // Section 3 — DPO (requis seulement pour pm_droit_prive/pm_droit_public)
+  dpo_nom?: string;
+  dpo_prenom?: string;
   dpo_telephone?: string;
-  dpo_email: string;
+  dpo_email?: string;
   dpo_type?: 'interne' | 'externe';
   dpo_organisme?: string;
 }

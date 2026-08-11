@@ -13,6 +13,12 @@ class CompteEntreprise(UUIDMixin, TimestampMixin, db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     denomination = db.Column(db.String(255), nullable=False)
     numero_cc = db.Column(db.String(50), unique=True, nullable=False)
+    # 'personne_physique' | 'pm_droit_prive' | 'pm_droit_public' (memes valeurs
+    # que StatutJuridique cote frontend, frontend/src/types/formulaire-dcp.ts).
+    # Pour une personne physique, denomination/numero_cc sont synthetises
+    # (voir AuthService.register_entreprise) pour ne pas toucher aux
+    # contraintes NOT NULL/UNIQUE existantes ni au reste du code aval.
+    statut_juridique = db.Column(db.String(20), nullable=False, default='pm_droit_prive')
     telephone = db.Column(db.String(20))
     adresse = db.Column(db.String(500))
     ville = db.Column(db.String(100))

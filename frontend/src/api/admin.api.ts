@@ -119,6 +119,7 @@ export interface InscriptionDocument {
 
 export interface InscriptionItem {
   id: string;
+  statut_juridique?: 'personne_physique' | 'pm_droit_prive' | 'pm_droit_public';
   denomination: string;
   numero_cc: string;
   email: string;

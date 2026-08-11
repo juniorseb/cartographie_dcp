@@ -21,10 +21,20 @@ class AuthService:
     @staticmethod
     def register_entreprise(data, documents=None):
         """
-        Inscrire une nouvelle entreprise (3 sections : Entreprise, DG, DPO).
+        Inscrire un nouveau compte declarant.
+
+        3 profils (data['statut_juridique']) :
+        - personne_physique : la personne EST le declarant (pas de RL/Demandeur
+          distincts, pas d'entreprise). denomination/numero_cc sont synthetises
+          (voir _build_identite_physique) pour ne pas toucher aux contraintes
+          NOT NULL/UNIQUE existantes ni au reste du code aval (creation
+          differee d'EntiteBase, emails, listing admin...).
+        - pm_droit_prive / pm_droit_public : comportement historique inchange
+          (3 sections Entreprise / DG / DPO).
+
         Pas de mot de passe a l'inscription : le compte est cree inactif,
         l'ARTCI valide manuellement, puis genere et envoie un mot de passe
-        par defaut au DG et au DPO (qui le changeront a la 1ere connexion).
+        par defaut au(x) referent(s) (qui le changeront a la 1ere connexion).
 
         documents (optionnel) : liste de dicts {type, r2_key, nom_fichier,
         taille, mime_type} provenant d'uploads directs vers R2 (cf.
@@ -35,45 +45,60 @@ class AuthService:
         from datetime import timedelta
         from app.utils.r2_storage import object_exists
 
-        # Email principal du compte = email du DG (referant)
+        statut_juridique = data['statut_juridique']
+        is_physique = statut_juridique == 'personne_physique'
+
+        # Email principal du compte = email du DG (referant) ; pour une
+        # personne physique, dg_* stocke les infos de la personne elle-meme.
         dg_email = data['dg_email']
-        dpo_email = data['dpo_email']
+        dpo_email = None if is_physique else data['dpo_email']
 
         if CompteEntreprise.query.filter_by(email=dg_email).first():
-            raise ValueError('Un compte existe deja avec cet email DG.')
+            raise ValueError('Un compte existe deja avec cet email.')
 
-        if CompteEntreprise.query.filter_by(numero_cc=data['numero_cc']).first():
-            raise ValueError('Un compte existe deja avec ce numero CC.')
+        if is_physique:
+            denomination, numero_cc = AuthService._build_identite_physique(data)
+        else:
+            denomination = data['denomination']
+            numero_cc = data['numero_cc']
+            if CompteEntreprise.query.filter_by(numero_cc=numero_cc).first():
+                raise ValueError('Un compte existe deja avec ce numero CC.')
 
         # Mot de passe placeholder (jamais utilisable car compte inactif)
         # Sera remplace par un mot de passe genere a la validation
         placeholder_password = secrets.token_urlsafe(32)
 
-        # Token de verification email RL (lien magique 72h)
-        rl_token = secrets.token_urlsafe(32)
-        rl_token_expires = datetime.now(timezone.utc) + timedelta(hours=72)
+        # Token de verification email RL (lien magique 72h) - non applicable
+        # a une personne physique : il n'y a pas de tiers mandataire a
+        # authentifier, la personne inscrite EST le declarant.
+        rl_token = None
+        rl_token_expires = None
+        if not is_physique:
+            rl_token = secrets.token_urlsafe(32)
+            rl_token_expires = datetime.now(timezone.utc) + timedelta(hours=72)
 
         compte = CompteEntreprise(
             email=dg_email,
             password_hash=hash_password(placeholder_password),
-            denomination=data['denomination'],
-            numero_cc=data['numero_cc'],
-            telephone=data.get('telephone'),
+            statut_juridique=statut_juridique,
+            denomination=denomination,
+            numero_cc=numero_cc,
+            telephone=data.get('telephone') or (data.get('dg_telephone') if is_physique else None),
             adresse=data.get('adresse'),
             ville=data.get('ville'),
             region=data.get('region'),
             email_verified=False,
             is_active=False,
             inscription_statut='pending',
-            # DG
+            # DG (ou la personne physique elle-meme)
             dg_nom=data['dg_nom'],
             dg_prenom=data['dg_prenom'],
             dg_fonction=data.get('dg_fonction'),
             dg_telephone=data.get('dg_telephone'),
             dg_email=dg_email,
-            # DPO
-            dpo_nom=data['dpo_nom'],
-            dpo_prenom=data['dpo_prenom'],
+            # DPO (absent pour une personne physique)
+            dpo_nom=data.get('dpo_nom'),
+            dpo_prenom=data.get('dpo_prenom'),
             dpo_telephone=data.get('dpo_telephone'),
             dpo_email=dpo_email,
             dpo_type=data.get('dpo_type'),
@@ -84,7 +109,7 @@ class AuthService:
             # Verification email RL
             rl_email_token=rl_token,
             rl_email_token_expires_at=rl_token_expires,
-            rl_email_verified=False,
+            rl_email_verified=is_physique,
         )
         db.session.add(compte)
         db.session.flush()
@@ -115,51 +140,69 @@ class AuthService:
 
         db.session.commit()
 
-        # Envoi des mails de confirmation : RL (avec lien de verification) + Demandeur
+        # Envoi des mails de confirmation.
         try:
             from app.utils.email_sender import send_email
-            base_url = current_app.config.get('FRONTEND_URL', 'http://localhost:5173')
-            verif_url = f"{base_url}/verification-rl?token={rl_token}"
 
-            # Mail au Representant legal : verification email + confirmation mandat
-            send_email(
-                to=dg_email,
-                subject="Vérifiez votre email - ARTCI",
-                body=(
-                    f"Bonjour {compte.dg_prenom} {compte.dg_nom},\n\n"
-                    f"Une demande d'inscription a été déposée sur la plateforme "
-                    f"Cartographie DCP de l'ARTCI au nom de l'entreprise "
-                    f"« {compte.denomination} » avec votre email comme email du Représentant légal.\n\n"
-                    f"Le Demandeur ({compte.dpo_prenom} {compte.dpo_nom}, {compte.dpo_email}) "
-                    f"a indiqué agir en votre nom.\n\n"
-                    f"Pour confirmer que cet email vous appartient et que vous mandatez "
-                    f"effectivement le Demandeur, cliquez sur le lien suivant "
-                    f"(valable 72 heures) :\n\n{verif_url}\n\n"
-                    f"Si vous n'êtes pas à l'origine de cette inscription, ignorez ce message "
-                    f"ou signalez-le à l'ARTCI.\n\n"
-                    f"Cordialement,\nL'équipe ARTCI"
-                ),
-            )
+            if is_physique:
+                # Un seul email : la personne inscrite est elle-meme le declarant,
+                # pas de mandat de tiers a confirmer.
+                send_email(
+                    to=dg_email,
+                    subject="Inscription enregistrée - ARTCI",
+                    body=(
+                        f"Bonjour {compte.dg_prenom} {compte.dg_nom},\n\n"
+                        f"Votre demande d'inscription en tant que personne physique sur la "
+                        f"plateforme Cartographie DCP de l'ARTCI a bien été reçue.\n\n"
+                        f"Le processus d'inscription est en cours. Une fois la vérification "
+                        f"effectuée par les équipes ARTCI, vous recevrez un email contenant "
+                        f"vos accès personnels à la plateforme.\n\n"
+                        f"Cordialement,\nL'équipe ARTCI"
+                    ),
+                )
+            else:
+                base_url = current_app.config.get('FRONTEND_URL', 'http://localhost:5173')
+                verif_url = f"{base_url}/verification-rl?token={rl_token}"
 
-            # Mail au Demandeur : accuse de reception
-            send_email(
-                to=dpo_email,
-                subject="Inscription enregistrée - ARTCI",
-                body=(
-                    f"Bonjour {compte.dpo_prenom} {compte.dpo_nom},\n\n"
-                    f"Votre demande d'inscription pour l'entreprise "
-                    f"« {compte.denomination} » a bien été reçue par l'ARTCI.\n\n"
-                    f"Le processus d'inscription est en cours. Un email de vérification "
-                    f"vient d'être envoyé au Représentant légal ({compte.dg_email}) pour "
-                    f"confirmer l'existence de l'entreprise et votre mandat.\n\n"
-                    f"Une fois la vérification effectuée par les équipes ARTCI, vous recevrez "
-                    f"avec le Représentant légal un email contenant vos accès personnels à la "
-                    f"plateforme.\n\n"
-                    f"Cordialement,\nL'équipe ARTCI"
-                ),
-            )
+                # Mail au Representant legal : verification email + confirmation mandat
+                send_email(
+                    to=dg_email,
+                    subject="Vérifiez votre email - ARTCI",
+                    body=(
+                        f"Bonjour {compte.dg_prenom} {compte.dg_nom},\n\n"
+                        f"Une demande d'inscription a été déposée sur la plateforme "
+                        f"Cartographie DCP de l'ARTCI au nom de l'entreprise "
+                        f"« {compte.denomination} » avec votre email comme email du Représentant légal.\n\n"
+                        f"Le Demandeur ({compte.dpo_prenom} {compte.dpo_nom}, {compte.dpo_email}) "
+                        f"a indiqué agir en votre nom.\n\n"
+                        f"Pour confirmer que cet email vous appartient et que vous mandatez "
+                        f"effectivement le Demandeur, cliquez sur le lien suivant "
+                        f"(valable 72 heures) :\n\n{verif_url}\n\n"
+                        f"Si vous n'êtes pas à l'origine de cette inscription, ignorez ce message "
+                        f"ou signalez-le à l'ARTCI.\n\n"
+                        f"Cordialement,\nL'équipe ARTCI"
+                    ),
+                )
+
+                # Mail au Demandeur : accuse de reception
+                send_email(
+                    to=dpo_email,
+                    subject="Inscription enregistrée - ARTCI",
+                    body=(
+                        f"Bonjour {compte.dpo_prenom} {compte.dpo_nom},\n\n"
+                        f"Votre demande d'inscription pour l'entreprise "
+                        f"« {compte.denomination} » a bien été reçue par l'ARTCI.\n\n"
+                        f"Le processus d'inscription est en cours. Un email de vérification "
+                        f"vient d'être envoyé au Représentant légal ({compte.dg_email}) pour "
+                        f"confirmer l'existence de l'entreprise et votre mandat.\n\n"
+                        f"Une fois la vérification effectuée par les équipes ARTCI, vous recevrez "
+                        f"avec le Représentant légal un email contenant vos accès personnels à la "
+                        f"plateforme.\n\n"
+                        f"Cordialement,\nL'équipe ARTCI"
+                    ),
+                )
         except Exception:
-            current_app.logger.exception("Envoi mails inscription RL/Demandeur echoue")
+            current_app.logger.exception("Envoi mails inscription echoue")
 
         # Notifier tous les admins+ via la table notifications (un par admin)
         try:
@@ -168,13 +211,18 @@ class AuthService:
             admins = User.query.filter(
                 User.role.in_([RoleEnum.admin, RoleEnum.super_admin, RoleEnum.editor])
             ).all()
+            notif_message = (
+                f"{compte.denomination} (Personne physique) - {compte.dg_email}"
+                if is_physique else
+                f"{compte.denomination} (CC {compte.numero_cc}) - DG: {compte.dg_email}"
+            )
             for u in admins:
                 n = Notification(
                     destinataire_type='artci',
                     destinataire_id=u.id,
                     type='nouvelle_inscription',
                     titre='Nouvelle inscription a verifier',
-                    message=f"{compte.denomination} (CC {compte.numero_cc}) - DG: {compte.dg_email}",
+                    message=notif_message,
                     lue=False,
                 )
                 db.session.add(n)
@@ -183,6 +231,20 @@ class AuthService:
             db.session.rollback()
 
         return compte, None
+
+    @staticmethod
+    def _build_identite_physique(data):
+        """Synthetise denomination/numero_cc pour une personne physique, qui
+        n'a ni raison sociale ni N° CC. Meme principe que le placeholder
+        genere par l'import Boloforms pour ce meme cas
+        (app/services/import_boloforms_service.py::_generate_cc_placeholder),
+        afin de ne pas toucher aux contraintes NOT NULL/UNIQUE existantes sur
+        CompteEntreprise.denomination/numero_cc ni au reste du code aval qui
+        s'appuie dessus (creation differee d'EntiteBase notamment)."""
+        import uuid
+        denomination = f"{data['dg_prenom']} {data['dg_nom']}".strip()[:255]
+        numero_cc = f"PHYS-{uuid.uuid4().hex[:12].upper()}"
+        return denomination, numero_cc
 
     @staticmethod
     def verify_rl_email_token(token):

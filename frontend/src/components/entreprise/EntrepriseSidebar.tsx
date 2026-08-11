@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, FileText, FolderOpen, Bell,
-  RefreshCw, X, ChevronDown, ChevronRight, AlertTriangle, Folder, Activity,
+  X, ChevronDown, ChevronRight, AlertTriangle, Folder, Activity, ExternalLink,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { useApi } from '@/hooks/useApi';
@@ -19,8 +19,14 @@ interface SidebarLink {
   label: string;
   icon: React.ElementType;
   end?: boolean;
+  external?: boolean;
+  subtitle?: string;
   children?: { to: string; label: string; children?: SidebarChild[] }[];
 }
+
+// Plateforme externe qui prend en charge les demandes de declaration et
+// d'autorisation depuis que celles-ci ne sont plus traitees sur ce site.
+const CERTINUM_APDP_URL = 'https://certinumapdp.ci/';
 
 const sidebarLinks: SidebarLink[] = [
   { to: ROUTES.ENTREPRISE_DASHBOARD, label: 'Tableau de bord', icon: LayoutDashboard, end: true },
@@ -32,26 +38,11 @@ const sidebarLinks: SidebarLink[] = [
   { to: ROUTES.ENTREPRISE_NOTIFICATIONS, label: 'Notifications', icon: Bell },
   { to: ROUTES.ENTREPRISE_SIGNALER_ERREUR, label: 'Signaler une erreur', icon: AlertTriangle },
   {
-    label: 'Formalités',
-    icon: RefreshCw,
-    children: [
-      {
-        to: '#declaration',
-        label: 'Déclaration',
-        children: [
-          { to: ROUTES.ENTREPRISE_DECLARATION_CORRESPONDANT, label: 'Correspondant à la protection des données' },
-          { to: ROUTES.ENTREPRISE_DECLARATION_TRAITEMENT, label: 'Traitement' },
-        ],
-      },
-      {
-        to: '#autorisation',
-        label: 'Autorisation',
-        children: [
-          { to: ROUTES.ENTREPRISE_AUTORISATION_TRAITEMENT, label: 'Traitement' },
-          { to: ROUTES.ENTREPRISE_AUTORISATION_TRANSFERTS, label: 'Transferts internationaux' },
-        ],
-      },
-    ],
+    to: CERTINUM_APDP_URL,
+    label: 'Déclaration & Autorisation',
+    icon: ExternalLink,
+    external: true,
+    subtitle: 'Vous serez redirigé sur : certinumapdp.ci',
   },
 ];
 
@@ -118,7 +109,29 @@ export default function EntrepriseSidebar({ mobileOpen, onClose }: EntrepriseSid
         </div>
 
         <nav className="p-3 space-y-1">
-          {sidebarLinks.map(({ to, label, icon: Icon, end, children }) => {
+          {sidebarLinks.map(({ to, label, icon: Icon, end, children, external, subtitle }) => {
+            // Lien externe (hors SPA - ouvre dans un nouvel onglet)
+            if (to && external) {
+              return (
+                <a
+                  key={to}
+                  href={to}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={onClose}
+                  className="flex flex-col gap-0.5 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 no-underline"
+                >
+                  <span className="flex items-center gap-3">
+                    <Icon className="w-4 h-4 flex-shrink-0" />
+                    <span className="flex-1">{label}</span>
+                  </span>
+                  {subtitle && (
+                    <span className="pl-7 text-[11px] font-normal text-gray-400">{subtitle}</span>
+                  )}
+                </a>
+              );
+            }
+
             // Lien simple
             if (to && !children) {
               return (

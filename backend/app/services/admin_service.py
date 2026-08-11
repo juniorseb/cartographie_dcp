@@ -642,6 +642,7 @@ class AdminService:
         query = query.order_by(CompteEntreprise.createdAt.desc())
         return [{
             'id': c.id,
+            'statut_juridique': c.statut_juridique,
             'denomination': c.denomination,
             'numero_cc': c.numero_cc,
             'email': c.email,

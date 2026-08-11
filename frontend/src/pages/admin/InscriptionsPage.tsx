@@ -17,6 +17,12 @@ const STATUT_LABEL: Record<Statut, string> = {
   rejected: 'Rejetées',
 };
 
+const STATUT_JURIDIQUE_LABEL: Record<string, string> = {
+  personne_physique: 'Personne physique',
+  pm_droit_prive: 'Personne morale — droit privé',
+  pm_droit_public: 'Personne morale — droit public',
+};
+
 export default function InscriptionsPage() {
   const [statut, setStatut] = useState<Statut>('pending');
 
@@ -114,7 +120,7 @@ function InscriptionCard({ item, onChanged }: { item: InscriptionItem; onChanged
     <div className="card">
       <div className="flex items-start justify-between gap-3 cursor-pointer" onClick={() => setExpanded(!expanded)}>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
             <h3 className="font-bold text-base">{item.denomination}</h3>
             <span className={cn(
               'badge text-xs',
@@ -122,9 +128,15 @@ function InscriptionCard({ item, onChanged }: { item: InscriptionItem; onChanged
               item.inscription_statut === 'approved' && 'badge-conforme',
               item.inscription_statut === 'rejected' && 'badge-encours',
             )}>{item.inscription_statut}</span>
+            {item.statut_juridique && (
+              <span className="badge badge-encours text-xs">
+                {STATUT_JURIDIQUE_LABEL[item.statut_juridique] ?? item.statut_juridique}
+              </span>
+            )}
           </div>
           <div className="text-xs text-gray-500">
-            CC {item.numero_cc} • {item.email} • {formatDateTime(item.createdAt)}
+            {item.statut_juridique !== 'personne_physique' && <>CC {item.numero_cc} • </>}
+            {item.email} • {formatDateTime(item.createdAt)}
           </div>
         </div>
         {expanded ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
@@ -132,10 +144,11 @@ function InscriptionCard({ item, onChanged }: { item: InscriptionItem; onChanged
 
       {expanded && (
         <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Section 1 - DG */}
+          {/* Section 1 - DG (ou la personne physique elle-meme) */}
           <div>
             <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
-              <UserCheck className="w-4 h-4 text-[var(--artci-orange)]" /> Représentant légal
+              <UserCheck className="w-4 h-4 text-[var(--artci-orange)]" />
+              {item.statut_juridique === 'personne_physique' ? 'Déclarant' : 'Représentant légal'}
             </h4>
             <div className="text-sm text-gray-700 space-y-1">
               <div><strong>{item.dg_prenom} {item.dg_nom}</strong></div>
@@ -145,17 +158,19 @@ function InscriptionCard({ item, onChanged }: { item: InscriptionItem; onChanged
             </div>
           </div>
 
-          {/* Section 2 - Demandeur (mappage des champs dpo_*) */}
-          <div>
-            <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
-              <Building2 className="w-4 h-4 text-[var(--artci-green)]" /> Demandeur
-            </h4>
-            <div className="text-sm text-gray-700 space-y-1">
-              <div><strong>{item.dpo_prenom} {item.dpo_nom}</strong></div>
-              <div>{item.dpo_email ?? '-'}</div>
-              {item.dpo_telephone && <div className="text-xs">{item.dpo_telephone}</div>}
+          {/* Section 2 - Demandeur (mappage des champs dpo_*) - absent pour une personne physique */}
+          {item.dpo_nom && (
+            <div>
+              <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-[var(--artci-green)]" /> Demandeur
+              </h4>
+              <div className="text-sm text-gray-700 space-y-1">
+                <div><strong>{item.dpo_prenom} {item.dpo_nom}</strong></div>
+                <div>{item.dpo_email ?? '-'}</div>
+                {item.dpo_telephone && <div className="text-xs">{item.dpo_telephone}</div>}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Section 3 - Acces */}
           <div>
@@ -163,8 +178,10 @@ function InscriptionCard({ item, onChanged }: { item: InscriptionItem; onChanged
               <Lock className="w-4 h-4 text-[var(--artci-orange)]" /> Emails d'accès
             </h4>
             <div className="text-sm text-gray-700 space-y-1">
-              <div><span className="text-xs text-gray-500">Représentant légal :</span> {item.acces_email_referant ?? item.dg_email ?? '-'}</div>
-              <div><span className="text-xs text-gray-500">Demandeur :</span> {item.acces_email_dpo ?? item.dpo_email ?? '-'}</div>
+              <div><span className="text-xs text-gray-500">{item.statut_juridique === 'personne_physique' ? 'Déclarant' : 'Représentant légal'} :</span> {item.acces_email_referant ?? item.dg_email ?? '-'}</div>
+              {item.dpo_nom && (
+                <div><span className="text-xs text-gray-500">Demandeur :</span> {item.acces_email_dpo ?? item.dpo_email ?? '-'}</div>
+              )}
             </div>
           </div>
 
@@ -180,6 +197,7 @@ function InscriptionCard({ item, onChanged }: { item: InscriptionItem; onChanged
                   const labelByType: Record<string, string> = {
                     doc_rccm: 'RCCM (Registre du Commerce)',
                     doc_dfe: 'DFE (Déclaration Fiscale)',
+                    doc_decret_creation: 'Décret/Arrêté de création',
                     doc_autre: 'Autre document',
                   };
                   const label = labelByType[doc.type ?? ''] ?? doc.type ?? 'Document';
@@ -207,6 +225,10 @@ function InscriptionCard({ item, onChanged }: { item: InscriptionItem; onChanged
                     </div>
                   );
                 })}
+              </div>
+            ) : item.statut_juridique === 'personne_physique' ? (
+              <div className="text-xs text-gray-500 italic">
+                Aucun document requis pour une inscription en personne physique.
               </div>
             ) : (
               <div className="alert alert-warning text-xs flex items-center gap-2">
