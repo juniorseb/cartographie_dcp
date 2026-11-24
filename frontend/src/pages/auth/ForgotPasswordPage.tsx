@@ -28,7 +28,7 @@ export default function ForgotPasswordPage() {
   if (sent) {
     return (
       <div className="text-center">
-        <Mail className="w-12 h-12 text-[var(--artci-orange)] mx-auto mb-4" />
+        <Mail className="w-12 h-12 text-[var(--brand-primary)] mx-auto mb-4" />
         <h2 className="text-xl font-bold mb-2" style={{ color: 'var(--artci-black)' }}>
           Email envoyé
         </h2>
@@ -41,7 +41,7 @@ export default function ForgotPasswordPage() {
         >
           J'ai reçu le code
         </button>
-        <Link to={ROUTES.LOGIN} className="text-sm text-[var(--artci-orange)] hover:underline">
+        <Link to={ROUTES.LOGIN} className="text-sm text-[var(--brand-primary)] hover:underline">
           Retour à la connexion
         </Link>
       </div>
@@ -85,7 +85,7 @@ export default function ForgotPasswordPage() {
       </form>
 
       <p className="text-sm text-center mt-6">
-        <Link to={ROUTES.LOGIN} className="text-[var(--artci-orange)] hover:underline">
+        <Link to={ROUTES.LOGIN} className="text-[var(--brand-primary)] hover:underline">
           Retour à la connexion
         </Link>
       </p>

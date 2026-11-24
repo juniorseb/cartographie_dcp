@@ -1,47 +1,51 @@
 import { NavLink, Link } from 'react-router-dom';
-import { Menu, X, LogIn, LayoutDashboard } from 'lucide-react';
+import { Menu, X, LogIn, LayoutDashboard, UserPlus } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/utils/cn';
 import { ROUTES } from '@/utils/constants';
-import logoArtci from '@/assets/logo_artci.png';
+import logoDcp from '@/assets/logo-cartographie-dcp.png';
 
 const navLinks = [
+  { to: ROUTES.HOME, label: 'Accueil' },
   { to: ROUTES.MAP, label: 'Carte' },
-  { to: ROUTES.ENTITES, label: 'Liste' },
+  { to: ROUTES.ENTITES, label: 'Organismes' },
   { to: ROUTES.STATISTIQUES, label: 'Statistiques' },
-  { to: ROUTES.A_PROPOS, label: 'À Propos' },
+  { to: ROUTES.A_PROPOS, label: 'À propos' },
   { to: ROUTES.CONTACT, label: 'Contact' },
 ];
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { isAuthenticated, userType } = useAuth();
+  const isEntreprise = isAuthenticated && userType === 'entreprise';
 
   return (
     <nav className="navbar-artci fixed top-0 left-0 right-0 z-[1000] h-[60px] md:h-[70px]">
-      <div className="h-full px-4 md:px-[30px] flex items-center justify-between">
-        {/* Logo + Titre */}
-        <Link to="/" className="nav-logo flex items-center gap-2 md:gap-[15px] no-underline">
-          <img src={logoArtci} alt="Logo ARTCI" className="w-10 h-10 md:w-14 md:h-14 object-contain" />
-          <span className="hidden sm:inline font-bold text-lg text-black">
-            Cartographie DCP
-          </span>
+      <div className="h-full max-w-[1440px] mx-auto px-4 md:px-8 flex items-center justify-between gap-4">
+        {/* Logo + titre */}
+        <Link to={ROUTES.HOME} className="nav-logo flex items-center gap-3 no-underline min-w-0">
+          <img
+            src={logoDcp}
+            alt="ARTCI — Cartographie DCP"
+            className="h-9 md:h-11 w-auto max-w-[200px] md:max-w-none object-contain"
+          />
         </Link>
 
-        {/* Desktop nav - liens texte sans icônes */}
-        <div className="hidden md:flex items-center h-full">
+        {/* Liens desktop */}
+        <div className="hidden lg:flex items-center gap-1 h-full">
           {navLinks.map(({ to, label }) => (
             <NavLink
               key={to}
               to={to}
-              end={to === '/'}
+              end={to === ROUTES.HOME}
               className={({ isActive }) =>
                 cn(
-                  'inline-flex items-center h-[70px] px-5 text-base font-semibold transition-all duration-200 no-underline border-b-[3px] border-transparent',
+                  'relative inline-flex items-center h-full px-3 font-display text-[13px] font-bold uppercase tracking-[0.03em] no-underline transition-colors',
+                  'after:absolute after:left-3 after:right-3 after:bottom-0 after:h-[3px] after:rounded-t after:transition-transform after:origin-left',
                   isActive
-                    ? 'bg-[var(--artci-orange)] text-white border-[var(--artci-orange)]'
-                    : 'text-black hover:bg-[var(--artci-orange)] hover:text-white'
+                    ? 'text-[var(--brand-primary)] after:bg-[var(--brand-primary)] after:scale-x-100'
+                    : 'text-[var(--brand-text)] hover:text-[var(--brand-primary)] after:bg-[var(--brand-primary)] after:scale-x-0 hover:after:scale-x-100'
                 )
               }
             >
@@ -52,75 +56,74 @@ export default function Navbar() {
 
         {/* Actions — la navbar publique est 100% cote ENTREPRISE.
             La plateforme admin est un univers separe (acces via /admin/connexion). */}
-        <div className="flex items-center gap-2">
-          {isAuthenticated && userType === 'entreprise' ? (
-            <Link
-              to={ROUTES.ENTREPRISE_DASHBOARD}
-              className="hidden md:flex items-center gap-2 btn btn-primary py-2 px-4 text-sm no-underline"
-            >
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {isEntreprise ? (
+            <Link to={ROUTES.ENTREPRISE_DASHBOARD} className="hidden md:inline-flex btn btn-primary py-2 px-4 text-sm">
               <LayoutDashboard className="w-4 h-4" />
-              Mon Espace
+              Mon espace
             </Link>
           ) : (
-            <Link
-              to={ROUTES.LOGIN}
-              className="hidden md:flex items-center gap-2 btn btn-outline py-2 px-4 text-sm no-underline"
-            >
-              <LogIn className="w-4 h-4" />
-              Connexion
-            </Link>
+            <>
+              <Link to={ROUTES.LOGIN} className="hidden md:inline-flex btn btn-outline py-2 px-4 text-sm">
+                <LogIn className="w-4 h-4" />
+                Se connecter
+              </Link>
+              <Link to={ROUTES.REGISTER} className="hidden md:inline-flex btn btn-primary py-2 px-4 text-sm">
+                <UserPlus className="w-4 h-4" />
+                S'inscrire
+              </Link>
+            </>
           )}
 
-          {/* Mobile hamburger */}
           <button
-            className="md:hidden p-2"
+            className="lg:hidden p-2 rounded-lg text-[var(--brand-dark)] hover:bg-[var(--brand-primary-soft)]"
             onClick={() => setMobileOpen(!mobileOpen)}
+            aria-label={mobileOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+            aria-expanded={mobileOpen}
           >
             {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
       </div>
 
-      {/* Mobile menu */}
+      {/* Menu mobile / tablette */}
       {mobileOpen && (
-        <div className="md:hidden bg-white border-t shadow-lg">
+        <div className="lg:hidden bg-white border-t shadow-lg max-h-[calc(100vh-60px)] overflow-y-auto">
           {navLinks.map(({ to, label }) => (
             <NavLink
               key={to}
               to={to}
-              end={to === '/'}
+              end={to === ROUTES.HOME}
               onClick={() => setMobileOpen(false)}
               className={({ isActive }) =>
                 cn(
-                  'flex items-center px-6 py-3 text-base font-semibold no-underline',
+                  'flex items-center px-6 py-3 font-display text-sm font-bold uppercase tracking-[0.03em] no-underline border-l-4',
                   isActive
-                    ? 'bg-[var(--artci-orange)] text-white'
-                    : 'text-black'
+                    ? 'border-[var(--brand-primary)] bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]'
+                    : 'border-transparent text-[var(--brand-text)]'
                 )
               }
             >
               {label}
             </NavLink>
           ))}
-          {isAuthenticated && userType === 'entreprise' ? (
-            <Link
-              to={ROUTES.ENTREPRISE_DASHBOARD}
-              onClick={() => setMobileOpen(false)}
-              className="flex items-center gap-3 px-6 py-3 text-sm font-semibold text-[var(--artci-orange)] no-underline border-t"
-            >
-              <LayoutDashboard className="w-4 h-4" />
-              Mon Espace
-            </Link>
-          ) : (
-            <Link
-              to={ROUTES.LOGIN}
-              onClick={() => setMobileOpen(false)}
-              className="flex items-center gap-3 px-6 py-3 text-sm font-semibold text-[var(--artci-orange)] no-underline border-t"
-            >
-              <LogIn className="w-4 h-4" />
-              Connexion
-            </Link>
-          )}
+          <div className="flex gap-2 p-4 border-t md:hidden">
+            {isEntreprise ? (
+              <Link to={ROUTES.ENTREPRISE_DASHBOARD} onClick={() => setMobileOpen(false)} className="btn btn-primary flex-1 text-sm">
+                <LayoutDashboard className="w-4 h-4" />
+                Mon espace
+              </Link>
+            ) : (
+              <>
+                <Link to={ROUTES.LOGIN} onClick={() => setMobileOpen(false)} className="btn btn-outline flex-1 text-sm">
+                  Se connecter
+                </Link>
+                <Link to={ROUTES.REGISTER} onClick={() => setMobileOpen(false)} className="btn btn-primary flex-1 text-sm">
+                  S'inscrire
+                </Link>
+              </>
+            )}
+          </div>
         </div>
       )}
     </nav>

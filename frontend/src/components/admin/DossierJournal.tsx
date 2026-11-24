@@ -74,9 +74,9 @@ function getEventVisual(ev: JournalDossierItem): {
   }
   return {
     Icon: Activity,
-    iconClass: 'text-[var(--artci-orange)]',
+    iconClass: 'text-[var(--brand-primary)]',
     badgeLabel: 'Workflow',
-    badgeClass: 'bg-[var(--artci-orange-light,#fff1e6)] text-[var(--artci-orange)]',
+    badgeClass: 'bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]',
   };
 }
 
@@ -100,7 +100,7 @@ export default function DossierJournal({ entiteId, defaultOpen = false }: Props)
         className="w-full flex items-center justify-between text-left"
       >
         <span className="font-bold text-sm flex items-center gap-2">
-          <History className="w-4 h-4 text-[var(--artci-orange)]" />
+          <History className="w-4 h-4 text-[var(--brand-primary)]" />
           Journal d'événements du dossier
           {events.length > 0 && (
             <span className="text-xs text-gray-500 font-normal">({events.length})</span>

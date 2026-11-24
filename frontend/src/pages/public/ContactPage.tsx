@@ -65,7 +65,7 @@ export default function ContactPage() {
             <h3 className="font-bold text-base mb-4">Coordonnées ARTCI</h3>
             <div className="space-y-3 text-sm">
               <div className="flex items-start gap-3">
-                <MapPin className="w-4 h-4 text-[var(--artci-orange)] flex-shrink-0 mt-0.5" />
+                <MapPin className="w-4 h-4 text-[var(--brand-primary)] flex-shrink-0 mt-0.5" />
                 <div>
                   <div className="font-semibold">Siège social</div>
                   <div className="text-gray-500">
@@ -76,7 +76,7 @@ export default function ContactPage() {
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <Phone className="w-4 h-4 text-[var(--artci-orange)] flex-shrink-0 mt-0.5" />
+                <Phone className="w-4 h-4 text-[var(--brand-primary)] flex-shrink-0 mt-0.5" />
                 <div>
                   <div className="font-semibold">Téléphone</div>
                   <div className="text-gray-600">
@@ -89,10 +89,10 @@ export default function ContactPage() {
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <Mail className="w-4 h-4 text-[var(--artci-orange)] flex-shrink-0 mt-0.5" />
+                <Mail className="w-4 h-4 text-[var(--brand-primary)] flex-shrink-0 mt-0.5" />
                 <div>
                   <div className="font-semibold">Email</div>
-                  <a href="mailto:courrier@artci.ci" className="text-[var(--artci-orange)] hover:underline">
+                  <a href="mailto:courrier@artci.ci" className="text-[var(--brand-primary)] hover:underline">
                     courrier@artci.ci
                   </a>
                 </div>

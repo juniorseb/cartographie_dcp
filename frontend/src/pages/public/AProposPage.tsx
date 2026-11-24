@@ -60,7 +60,7 @@ export default function AProposPage() {
       {/* Mission ARTCI */}
       <section className="mb-10">
         <h1 className="text-3xl font-bold mb-4 flex items-center gap-3">
-          <BookOpen className="w-8 h-8 text-[var(--artci-orange)]" />
+          <BookOpen className="w-8 h-8 text-[var(--brand-primary)]" />
           À Propos
         </h1>
         <div className="card card-orange">
@@ -80,7 +80,7 @@ export default function AProposPage() {
       {/* Définitions clés (Loi N°2013-450) */}
       <section className="mb-10">
         <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-          <Scale className="w-6 h-6 text-[var(--artci-orange)]" />
+          <Scale className="w-6 h-6 text-[var(--brand-primary)]" />
           Définitions clés (Loi N°2013-450)
         </h2>
         <div className="card">
@@ -118,7 +118,7 @@ export default function AProposPage() {
       <section className="mb-10">
         <h2 className="text-xl font-bold mb-4">Plateforme DCP</h2>
         <div className="card">
-          <h3 className="font-bold mb-2 text-[var(--artci-green)]">Objectifs</h3>
+          <h3 className="font-bold mb-2 text-[var(--brand-secondary)]">Objectifs</h3>
           <ul className="space-y-2 text-sm text-gray-700">
             <li>Recenser les responsables de traitement de données personnelles</li>
             <li>Cartographier les entités conformes sur le territoire ivoirien</li>
@@ -137,15 +137,15 @@ export default function AProposPage() {
           </p>
           <ul className="space-y-3 text-sm">
             <li className="flex items-start gap-2">
-              <span className="font-bold text-[var(--artci-orange)] flex-shrink-0">1.</span>
+              <span className="font-bold text-[var(--brand-primary)] flex-shrink-0">1.</span>
               <span><strong>Loi N°2013-450 du 19 juin 2013</strong> — Relative à la protection des données à caractère personnel</span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="font-bold text-[var(--artci-orange)] flex-shrink-0">2.</span>
+              <span className="font-bold text-[var(--brand-primary)] flex-shrink-0">2.</span>
               <span><strong>Décret N°2014-105</strong> — Portant application de la loi N°2013-450</span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="font-bold text-[var(--artci-orange)] flex-shrink-0">3.</span>
+              <span className="font-bold text-[var(--brand-primary)] flex-shrink-0">3.</span>
               <span><strong>Convention de l'Union Africaine</strong> — Sur la cyber-sécurité et la protection des données personnelles (Convention de Malabo)</span>
             </li>
           </ul>
@@ -155,7 +155,7 @@ export default function AProposPage() {
       {/* FAQ */}
       <section className="mb-10">
         <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-          <HelpCircle className="w-5 h-5 text-[var(--artci-orange)]" />
+          <HelpCircle className="w-5 h-5 text-[var(--brand-primary)]" />
           Questions Fréquentes
         </h2>
         <div className="space-y-2">
@@ -186,7 +186,7 @@ export default function AProposPage() {
         <div className="card card-green">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
-              <h3 className="font-bold text-[var(--artci-green)]">ARTCI — Direction de la Protection des Données</h3>
+              <h3 className="font-bold text-[var(--brand-secondary)]">ARTCI — Direction de la Protection des Données</h3>
               <div className="flex items-center gap-3 text-sm">
                 <MapPin className="w-4 h-4 text-gray-500 flex-shrink-0" />
                 <span>18 BP 2203 Abidjan 18, Côte d'Ivoire</span>
@@ -197,7 +197,7 @@ export default function AProposPage() {
               </div>
               <div className="flex items-center gap-3 text-sm">
                 <Mail className="w-4 h-4 text-gray-500 flex-shrink-0" />
-                <a href="mailto:dcp@artci.ci" className="text-[var(--artci-green)] hover:underline">dcp@artci.ci</a>
+                <a href="mailto:dcp@artci.ci" className="text-[var(--brand-secondary)] hover:underline">dcp@artci.ci</a>
               </div>
             </div>
             <div className="space-y-3">
@@ -207,7 +207,7 @@ export default function AProposPage() {
                   href="https://www.artci.ci"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm text-[var(--artci-green)] hover:underline"
+                  className="flex items-center gap-2 text-sm text-[var(--brand-secondary)] hover:underline"
                 >
                   <ExternalLink className="w-3 h-3" /> Site officiel ARTCI
                 </a>
@@ -215,7 +215,7 @@ export default function AProposPage() {
                   href="https://www.artci.ci/index.php/protection-des-donnees-personnelles"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm text-[var(--artci-green)] hover:underline"
+                  className="flex items-center gap-2 text-sm text-[var(--brand-secondary)] hover:underline"
                 >
                   <ExternalLink className="w-3 h-3" /> Espace Protection des Données
                 </a>
@@ -223,7 +223,7 @@ export default function AProposPage() {
                   href="https://www.artci.ci/images/stories/pdf/lois/loi_2013_450.pdf"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm text-[var(--artci-green)] hover:underline"
+                  className="flex items-center gap-2 text-sm text-[var(--brand-secondary)] hover:underline"
                 >
                   <ExternalLink className="w-3 h-3" /> Loi N°2013-450 (PDF)
                 </a>

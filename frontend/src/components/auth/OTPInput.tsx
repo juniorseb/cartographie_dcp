@@ -72,7 +72,7 @@ export default function OTPInput({ length = 6, onComplete, disabled }: OTPInputP
           onChange={(e) => handleChange(index, e.target.value)}
           onKeyDown={(e) => handleKeyDown(index, e)}
           onPaste={index === 0 ? handlePaste : undefined}
-          className="w-12 h-14 text-center text-2xl font-bold border-2 border-gray-300 rounded-lg focus:border-[var(--artci-orange)] focus:outline-none transition-colors disabled:opacity-50"
+          className="w-12 h-14 text-center text-2xl font-bold border-2 border-gray-300 rounded-lg focus:border-[var(--brand-primary)] focus:outline-none transition-colors disabled:opacity-50"
           autoComplete="off"
         />
       ))}

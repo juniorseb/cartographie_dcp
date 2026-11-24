@@ -202,7 +202,7 @@ export function FormSection({
 }) {
   return (
     <fieldset className="border border-gray-200 bg-white rounded-lg px-5 sm:px-7 pt-3 pb-6 mb-6 shadow-sm">
-      <legend className="px-3 font-bold text-base text-[var(--artci-orange)] mx-auto">
+      <legend className="px-3 font-bold text-base text-[var(--brand-primary)] mx-auto">
         {title}
       </legend>
       {children}

@@ -59,7 +59,7 @@ export default function ChangePasswordPage() {
     <div className="max-w-md mx-auto mt-10">
       <div className="card card-orange">
         <div className="flex justify-center mb-4">
-          <KeyRound className="w-10 h-10 text-[var(--artci-orange)]" />
+          <KeyRound className="w-10 h-10 text-[var(--brand-primary)]" />
         </div>
         <h2 className="text-xl font-bold text-center mb-1" style={{ color: 'var(--artci-black)' }}>
           Changer le mot de passe

@@ -181,7 +181,7 @@ export default function TraiterDossierPage() {
     <div className="max-w-5xl mx-auto pb-12">
       <Link
         to={ROUTES.ADMIN_PANIER}
-        className="inline-flex items-center gap-2 text-[var(--artci-green)] hover:underline text-sm mb-4"
+        className="inline-flex items-center gap-2 text-[var(--brand-secondary)] hover:underline text-sm mb-4"
       >
         <ArrowLeft className="w-4 h-4" /> Retour au panier
       </Link>
@@ -194,7 +194,7 @@ export default function TraiterDossierPage() {
           </div>
           <div className="text-right">
             <div className="text-xs text-gray-500 mb-1">Score automatique</div>
-            <div className="text-3xl font-bold text-[var(--artci-orange)]">
+            <div className="text-3xl font-bold text-[var(--brand-primary)]">
               {traitement.score_automatique ?? '-'}<span className="text-lg">/100</span>
             </div>
           </div>
@@ -247,7 +247,7 @@ export default function TraiterDossierPage() {
         <div className="card mb-4">
           <details>
             <summary className="cursor-pointer font-bold text-sm flex items-center gap-2 mb-2">
-              <MessageSquare className="w-4 h-4 text-[var(--artci-orange)]" />
+              <MessageSquare className="w-4 h-4 text-[var(--brand-primary)]" />
               Vos feedbacks consolidés
               <ChevronDown className="w-3 h-3 ml-auto" />
             </summary>
@@ -270,14 +270,14 @@ export default function TraiterDossierPage() {
       {/* Etape 4 : Saisie manuelle du score par rubrique + total (K5 + K7) */}
       <div className="card mb-4">
         <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
-          <Award className="w-5 h-5 text-[var(--artci-green)]" />
+          <Award className="w-5 h-5 text-[var(--brand-secondary)]" />
           Score final et niveau de conformité
         </h2>
 
         {/* K5 : Grille des criteres en TABLEAU */}
         <details className="border border-gray-200 rounded mb-4">
           <summary className="cursor-pointer p-3 hover:bg-gray-50 flex items-center gap-2 text-sm font-semibold text-gray-700">
-            <BookOpen className="w-4 h-4 text-[var(--artci-orange)]" />
+            <BookOpen className="w-4 h-4 text-[var(--brand-primary)]" />
             Consulter la grille des critères de scoring
           </summary>
           <div className="p-3 border-t border-gray-100 bg-gray-50">
@@ -318,7 +318,7 @@ export default function TraiterDossierPage() {
         {/* K6 : Evaluation detaillee par critere (bareme officiel ARTCI) */}
         <details className="border border-gray-200 rounded mb-4">
           <summary className="cursor-pointer p-3 hover:bg-gray-50 flex items-center gap-2 text-sm font-semibold text-gray-700">
-            <Award className="w-4 h-4 text-[var(--artci-green)]" />
+            <Award className="w-4 h-4 text-[var(--brand-secondary)]" />
             Évaluation détaillée par critère (barème officiel, 7 critères)
             <span className="ml-auto text-xs text-gray-500 font-normal">
               Total saisi : {Object.values(scoresParCritere).reduce((s, v) => s + (Number(v?.note) || 0), 0)} / 100
@@ -421,7 +421,7 @@ export default function TraiterDossierPage() {
                 <td className="p-2 border border-gray-200">Score total</td>
                 <td className="p-2 border border-gray-200 text-center text-gray-500">100</td>
                 <td className="p-2 border border-gray-200 text-center">
-                  <span className="text-xl text-[var(--artci-orange)]">{scoreManuel}/100</span>
+                  <span className="text-xl text-[var(--brand-primary)]">{scoreManuel}/100</span>
                 </td>
               </tr>
             </tbody>
@@ -435,7 +435,7 @@ export default function TraiterDossierPage() {
           </div>
           <div>
             <p className="text-xs text-gray-500">Score manuel (somme des rubriques)</p>
-            <p className="text-lg font-bold text-[var(--artci-orange)]">{scoreManuel} / 100</p>
+            <p className="text-lg font-bold text-[var(--brand-primary)]">{scoreManuel} / 100</p>
           </div>
           <div>
             <p className="text-xs text-gray-500">Niveau de conformité</p>
@@ -483,9 +483,9 @@ export default function TraiterDossierPage() {
 
       {/* Etape 7 : Validation (Admin / Super Admin) */}
       {showValidation && (
-        <div className="card border-l-4 border-[var(--artci-orange)]">
+        <div className="card border-l-4 border-[var(--brand-primary)]">
           <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-[var(--artci-orange)]" />
+            <AlertTriangle className="w-5 h-5 text-[var(--brand-primary)]" />
             Validation (Admin)
           </h2>
           <p className="text-sm text-gray-600 mb-4">

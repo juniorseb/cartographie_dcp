@@ -98,7 +98,7 @@ export default function LoginPage() {
         <div className="flex justify-end mb-4">
           <Link
             to={ROUTES.FORGOT_PASSWORD}
-            className="text-sm text-[var(--artci-orange)] hover:underline"
+            className="text-sm text-[var(--brand-primary)] hover:underline"
           >
             Mot de passe oublié ?
           </Link>
@@ -122,7 +122,7 @@ export default function LoginPage() {
 
       <p className="text-sm text-center mt-6 text-gray-500">
         Pas encore de compte ?{' '}
-        <Link to={ROUTES.REGISTER} className="text-[var(--artci-orange)] font-semibold hover:underline">
+        <Link to={ROUTES.REGISTER} className="text-[var(--brand-primary)] font-semibold hover:underline">
           S'inscrire
         </Link>
       </p>
@@ -150,7 +150,7 @@ export default function LoginPage() {
               key={acc.email}
               type="button"
               onClick={() => fillTestAccount(acc.email)}
-              className="text-xs text-left px-2 py-1 bg-white border border-gray-200 rounded hover:border-[var(--artci-orange)] hover:bg-orange-50 transition-colors"
+              className="text-xs text-left px-2 py-1 bg-white border border-gray-200 rounded hover:border-[var(--brand-primary)] hover:bg-orange-50 transition-colors"
               title={`Pré-remplir avec ${acc.email}`}
             >
               <span className="font-semibold text-gray-700">{acc.label}</span>

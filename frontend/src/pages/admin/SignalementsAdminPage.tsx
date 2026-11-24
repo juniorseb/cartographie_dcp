@@ -96,7 +96,7 @@ export default function SignalementsAdminPage() {
               onClick={() => setFilter(p.key)}
               className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
                 active
-                  ? 'bg-[var(--artci-green)] text-white border-[var(--artci-green)]'
+                  ? 'bg-[var(--brand-secondary)] text-white border-[var(--brand-secondary)]'
                   : `${p.className} border-transparent hover:opacity-80`
               }`}
             >
@@ -126,7 +126,7 @@ export default function SignalementsAdminPage() {
                   <div className="flex-1">
                     <h3 className="font-semibold text-sm">{s.sujet}</h3>
                     <p className="text-xs text-gray-500 mt-0.5">
-                      <Link to={`/admin/entites/${s.entite_id}`} className="text-[var(--artci-green)] hover:underline">
+                      <Link to={`/admin/entites/${s.entite_id}`} className="text-[var(--brand-secondary)] hover:underline">
                         {s.entite_denomination ?? s.entite_id}
                       </Link>
                       {s.rubrique_concernee && <span> · {s.rubrique_concernee}</span>}

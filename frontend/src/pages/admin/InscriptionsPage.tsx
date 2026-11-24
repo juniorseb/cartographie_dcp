@@ -33,7 +33,7 @@ export default function InscriptionsPage() {
     <div>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
         <h1 className="text-2xl flex items-center gap-3">
-          <UserCheck className="w-7 h-7 text-[var(--artci-orange)]" />
+          <UserCheck className="w-7 h-7 text-[var(--brand-primary)]" />
           Inscriptions à valider
         </h1>
       </div>
@@ -47,7 +47,7 @@ export default function InscriptionsPage() {
             className={cn(
               'flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap',
               statut === s
-                ? 'border-[var(--artci-orange)] text-[var(--artci-orange)]'
+                ? 'border-[var(--brand-primary)] text-[var(--brand-primary)]'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             )}
           >
@@ -147,7 +147,7 @@ function InscriptionCard({ item, onChanged }: { item: InscriptionItem; onChanged
           {/* Section 1 - DG (ou la personne physique elle-meme) */}
           <div>
             <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
-              <UserCheck className="w-4 h-4 text-[var(--artci-orange)]" />
+              <UserCheck className="w-4 h-4 text-[var(--brand-primary)]" />
               {item.statut_juridique === 'personne_physique' ? 'Déclarant' : 'Représentant légal'}
             </h4>
             <div className="text-sm text-gray-700 space-y-1">
@@ -162,7 +162,7 @@ function InscriptionCard({ item, onChanged }: { item: InscriptionItem; onChanged
           {item.dpo_nom && (
             <div>
               <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-[var(--artci-green)]" /> Demandeur
+                <Building2 className="w-4 h-4 text-[var(--brand-secondary)]" /> Demandeur
               </h4>
               <div className="text-sm text-gray-700 space-y-1">
                 <div><strong>{item.dpo_prenom} {item.dpo_nom}</strong></div>
@@ -175,7 +175,7 @@ function InscriptionCard({ item, onChanged }: { item: InscriptionItem; onChanged
           {/* Section 3 - Acces */}
           <div>
             <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
-              <Lock className="w-4 h-4 text-[var(--artci-orange)]" /> Emails d'accès
+              <Lock className="w-4 h-4 text-[var(--brand-primary)]" /> Emails d'accès
             </h4>
             <div className="text-sm text-gray-700 space-y-1">
               <div><span className="text-xs text-gray-500">{item.statut_juridique === 'personne_physique' ? 'Déclarant' : 'Représentant légal'} :</span> {item.acces_email_referant ?? item.dg_email ?? '-'}</div>
@@ -188,7 +188,7 @@ function InscriptionCard({ item, onChanged }: { item: InscriptionItem; onChanged
           {/* Documents administratifs deposes a l'inscription */}
           <div className="lg:col-span-3">
             <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
-              <FileText className="w-4 h-4 text-[var(--artci-orange)]" />
+              <FileText className="w-4 h-4 text-[var(--brand-primary)]" />
               Documents administratifs déposés
             </h4>
             {item.documents_inscription && item.documents_inscription.length > 0 ? (
@@ -215,7 +215,7 @@ function InscriptionCard({ item, onChanged }: { item: InscriptionItem; onChanged
                           href={doc.download_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-xs text-[var(--artci-green)] hover:underline flex items-center gap-1 flex-shrink-0"
+                          className="text-xs text-[var(--brand-secondary)] hover:underline flex items-center gap-1 flex-shrink-0"
                         >
                           <Download className="w-3 h-3" /> Voir
                         </a>

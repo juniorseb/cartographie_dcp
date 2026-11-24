@@ -140,7 +140,7 @@ export default function RevisionsDiff({ entiteId }: RevisionsDiffProps) {
   return (
     <details className="card mb-4" open={!!(diff && diff.total_rubriques_modifiees > 0)}>
       <summary className="cursor-pointer font-bold text-lg flex items-center gap-2 flex-wrap">
-        <GitBranch className="w-5 h-5 text-[var(--artci-orange)]" />
+        <GitBranch className="w-5 h-5 text-[var(--brand-primary)]" />
         Historique & diff des révisions
         <span className="text-xs font-normal text-gray-500 ml-2">
           ({revisions.length} révision{revisions.length > 1 ? 's' : ''})
@@ -163,7 +163,7 @@ export default function RevisionsDiff({ entiteId }: RevisionsDiffProps) {
               key={r.id}
               className="flex items-center gap-2 text-sm border border-gray-200 rounded p-2"
             >
-              <span className="bg-[var(--artci-orange)] text-white text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0">
+              <span className="bg-[var(--brand-primary)] text-white text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0">
                 #{r.numero_revision}
               </span>
               <span className="text-xs text-gray-500 flex-1">
@@ -232,7 +232,7 @@ export default function RevisionsDiff({ entiteId }: RevisionsDiffProps) {
                     <a
                       key={cle}
                       href={`#diff-${cle}`}
-                      className="inline-block mr-2 text-[var(--artci-orange)] hover:underline"
+                      className="inline-block mr-2 text-[var(--brand-primary)] hover:underline"
                     >
                       {RUBRIQUES_LABELS[cle] ?? cle}
                     </a>

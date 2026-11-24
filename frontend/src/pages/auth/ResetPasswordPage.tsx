@@ -56,7 +56,7 @@ export default function ResetPasswordPage() {
   return (
     <div>
       <div className="flex justify-center mb-4">
-        <KeyRound className="w-12 h-12 text-[var(--artci-orange)]" />
+        <KeyRound className="w-12 h-12 text-[var(--brand-primary)]" />
       </div>
       <h2 className="text-xl font-bold text-center mb-1" style={{ color: 'var(--artci-black)' }}>
         Réinitialiser le mot de passe
@@ -130,7 +130,7 @@ export default function ResetPasswordPage() {
       </form>
 
       <p className="text-sm text-center mt-6">
-        <Link to={ROUTES.LOGIN} className="text-[var(--artci-orange)] hover:underline">
+        <Link to={ROUTES.LOGIN} className="text-[var(--brand-primary)] hover:underline">
           Retour à la connexion
         </Link>
       </p>

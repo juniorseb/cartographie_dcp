@@ -57,7 +57,7 @@ export default function ParametresPage() {
   return (
     <div className="max-w-3xl mx-auto">
       <h1 className="text-2xl mb-6 flex items-center gap-3">
-        <Settings className="w-7 h-7 text-[var(--artci-green)]" />
+        <Settings className="w-7 h-7 text-[var(--brand-secondary)]" />
         Paramètres du système
       </h1>
 
@@ -67,7 +67,7 @@ export default function ParametresPage() {
       {/* Section 1 : Seuils de conformité */}
       <div className="card mb-6">
         <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-          <Sliders className="w-5 h-5 text-[var(--artci-orange)]" />
+          <Sliders className="w-5 h-5 text-[var(--brand-primary)]" />
           Seuils de conformité
         </h2>
 
@@ -76,13 +76,13 @@ export default function ParametresPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
           <div className="border border-green-200 bg-green-50 rounded-lg p-4 text-center">
             <p className="text-xs font-semibold text-gray-600 uppercase mb-1">Score conforme (%)</p>
-            <p className="text-3xl font-bold text-[var(--artci-green)]">
+            <p className="text-3xl font-bold text-[var(--brand-secondary)]">
               {params.seuil_conforme === 100 ? '100' : `≥ ${params.seuil_conforme}`}
             </p>
           </div>
           <div className="border border-orange-200 bg-orange-50 rounded-lg p-4 text-center">
             <p className="text-xs font-semibold text-gray-600 uppercase mb-1">Score partiellement conforme (%)</p>
-            <p className="text-3xl font-bold text-[var(--artci-orange)]">
+            <p className="text-3xl font-bold text-[var(--brand-primary)]">
               {params.seuil_partiellement_conforme} – {params.seuil_conforme - 1}
             </p>
           </div>
@@ -136,7 +136,7 @@ export default function ParametresPage() {
       {/* Section 2 : Délais */}
       <div className="card mb-6">
         <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-          <Clock className="w-5 h-5 text-[var(--artci-orange)]" />
+          <Clock className="w-5 h-5 text-[var(--brand-primary)]" />
           Délais
         </h2>
 
@@ -179,7 +179,7 @@ export default function ParametresPage() {
       {/* Section 3 : Emails */}
       <div className="card mb-6">
         <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-          <Mail className="w-5 h-5 text-[var(--artci-orange)]" />
+          <Mail className="w-5 h-5 text-[var(--brand-primary)]" />
           Emails
         </h2>
 
@@ -211,7 +211,7 @@ export default function ParametresPage() {
       {/* Section 4 : Upload */}
       <div className="card mb-6">
         <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-          <Upload className="w-5 h-5 text-[var(--artci-orange)]" />
+          <Upload className="w-5 h-5 text-[var(--brand-primary)]" />
           Upload
         </h2>
 

@@ -1,0 +1,15 @@
+{
+  "name": "Cartographie DCP — ARTCI",
+  "short_name": "Cartographie DCP",
+  "description": "Cartographie nationale des organismes conformes à la protection des données personnelles en Côte d'Ivoire.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#0F172A",
+  "lang": "fr",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icon-256.png", "sizes": "256x256", "type": "image/png" }
+  ]
+}

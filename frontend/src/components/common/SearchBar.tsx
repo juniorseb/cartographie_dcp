@@ -37,7 +37,7 @@ export default function SearchBar({
         value={localValue}
         onChange={(e) => setLocalValue(e.target.value)}
         placeholder={placeholder}
-        className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:border-[var(--artci-orange)]"
+        className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:border-[var(--brand-primary)]"
       />
     </div>
   );

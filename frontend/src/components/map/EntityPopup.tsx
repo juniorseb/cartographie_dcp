@@ -49,7 +49,7 @@ export default function EntityPopup({ entite }: EntityPopupProps) {
       {/* Bouton Voir Détails */}
       <Link
         to={`/entites/${entite.id}`}
-        className="popup-btn block w-full text-center py-3 bg-[#FF8C00] text-white font-bold text-sm rounded hover:bg-[#E67E00] transition-colors no-underline"
+        className="popup-btn block w-full text-center py-3 bg-[var(--brand-primary)] text-white font-bold text-sm rounded hover:bg-[var(--brand-primary-hover)] transition-colors no-underline"
       >
         Voir Détails
       </Link>

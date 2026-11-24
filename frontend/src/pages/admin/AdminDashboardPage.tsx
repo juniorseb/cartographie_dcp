@@ -174,7 +174,7 @@ export default function AdminDashboardPage() {
               onClick={() => setPeriod(p.value)}
               className={`px-3 py-1.5 text-xs font-medium transition-colors ${
                 period === p.value
-                  ? 'bg-[var(--artci-green)] text-white'
+                  ? 'bg-[var(--brand-secondary)] text-white'
                   : 'text-gray-700 hover:bg-gray-50'
               }`}
             >
@@ -308,7 +308,7 @@ export default function AdminDashboardPage() {
               <div className="mt-2 border-t border-gray-100 pt-2">
                 <button
                   onClick={() => setShowAutres((v) => !v)}
-                  className="text-xs text-[var(--artci-orange)] hover:underline"
+                  className="text-xs text-[var(--brand-primary)] hover:underline"
                 >
                   {showAutres ? 'Masquer' : 'Voir'} le détail de la catégorie "Autres"
                 </button>
@@ -334,7 +334,7 @@ export default function AdminDashboardPage() {
       <div className="mb-6">
         <div className="card">
           <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-            <Activity className="w-5 h-5 text-[var(--artci-green)]" />
+            <Activity className="w-5 h-5 text-[var(--brand-secondary)]" />
             Activité récente
           </h3>
           {activite.length === 0 ? (
@@ -376,7 +376,7 @@ export default function AdminDashboardPage() {
       {/* Stats secondaires : assignations + agents */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="card text-center">
-          <Briefcase className="w-8 h-8 mx-auto mb-2 text-[var(--artci-green)]" />
+          <Briefcase className="w-8 h-8 mx-auto mb-2 text-[var(--brand-secondary)]" />
           <p className="text-2xl font-bold">{globalStats.demandes_en_cours}</p>
           <p className="text-sm text-gray-500">Demandes assignées</p>
         </div>

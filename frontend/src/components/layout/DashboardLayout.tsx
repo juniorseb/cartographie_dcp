@@ -5,7 +5,7 @@ import EntrepriseSidebar from '@/components/entreprise/EntrepriseSidebar';
 import UserMenuDropdown from '@/components/common/UserMenuDropdown';
 import { useAuth } from '@/hooks/useAuth';
 import { ROUTES } from '@/utils/constants';
-import logoArtci from '@/assets/logo_artci.png';
+import logoDcp from '@/assets/logo-cartographie-dcp.png';
 
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -29,11 +29,10 @@ export default function DashboardLayout() {
               <Menu className="w-6 h-6" />
             </button>
             <Link to="/" className="nav-logo flex items-center gap-3 no-underline">
-              <img src={logoArtci} alt="Cartographie DCP" className="w-10 h-10 object-contain" />
-              <div className="hidden sm:block">
-                <div className="font-bold text-sm text-[var(--artci-black)]">Cartographie DCP</div>
-                <div className="text-xs text-gray-500">Espace Entité</div>
-              </div>
+              <img src={logoDcp} alt="ARTCI — Cartographie DCP" className="h-8 sm:h-10 w-auto object-contain" />
+              <span className="hidden md:inline-flex items-center rounded-full bg-[var(--brand-primary-soft)] text-[var(--brand-primary-hover)] px-2.5 py-0.5 text-xs font-bold font-display">
+                Espace organisme
+              </span>
             </Link>
           </div>
 

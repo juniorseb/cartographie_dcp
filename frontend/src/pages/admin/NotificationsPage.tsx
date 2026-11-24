@@ -31,7 +31,7 @@ const TYPE_COLORS: Record<string, string> = {
   echeance: 'text-orange-500',
   validation: 'text-green-500',
   renouvellement: 'text-purple-500',
-  dossier_resoumis: 'text-[var(--artci-orange)]',
+  dossier_resoumis: 'text-[var(--brand-primary)]',
   signalement_recu: 'text-yellow-600',
   validation_n_plus_1_approuve: 'text-green-600',
   validation_n_plus_1_retourne: 'text-red-600',
@@ -100,7 +100,7 @@ export default function NotificationsPage() {
     <div>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <h1 className="text-2xl flex items-center gap-3">
-          <Bell className="w-7 h-7 text-[var(--artci-orange)]" />
+          <Bell className="w-7 h-7 text-[var(--brand-primary)]" />
           Notifications
           {unreadCount > 0 && (
             <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">
@@ -173,7 +173,7 @@ export default function NotificationsPage() {
             return (
               <div
                 key={notif.id}
-                className={`card ${!notif.lue ? 'border-l-4 border-l-[var(--artci-orange)]' : ''}`}
+                className={`card ${!notif.lue ? 'border-l-4 border-l-[var(--brand-primary)]' : ''}`}
               >
                 <div className="flex items-start gap-4">
                   <div className={`mt-1 ${iconColor}`}>
@@ -203,7 +203,7 @@ export default function NotificationsPage() {
                         {notif.entite_id && (
                           <Link
                             to={ROUTES.ADMIN_TRAITER.replace(':entiteId', notif.entite_id)}
-                            className="text-xs text-[var(--artci-orange)] hover:underline flex items-center gap-1"
+                            className="text-xs text-[var(--brand-primary)] hover:underline flex items-center gap-1"
                           >
                             <ArrowRightCircle className="w-3.5 h-3.5" />
                             Voir le dossier
@@ -211,7 +211,7 @@ export default function NotificationsPage() {
                         )}
                         {!notif.lue && (
                           <button
-                            className="text-xs text-[var(--artci-green)] hover:underline"
+                            className="text-xs text-[var(--brand-secondary)] hover:underline"
                             onClick={() => handleMarkRead(notif.id)}
                           >
                             Marquer comme lue

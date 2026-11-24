@@ -4,7 +4,7 @@ import { LogIn, Shield } from 'lucide-react';
 import PasswordInput from '@/components/auth/PasswordInput';
 import { useAuth } from '@/hooks/useAuth';
 import { ROUTES } from '@/utils/constants';
-import logoArtci from '@/assets/logo_artci.png';
+import logoDcp from '@/assets/logo-cartographie-dcp.png';
 
 // Spec : pas de toggle "Espace Entreprise" depuis l'espace admin (separation stricte)
 
@@ -31,16 +31,12 @@ export default function AdminLoginPage() {
   return (
     <div className="min-h-screen bg-[var(--artci-gray-light)] flex flex-col items-center justify-center p-4">
       <Link to="/" className="mb-8 flex items-center gap-3 no-underline">
-        <img src={logoArtci} alt="ARTCI" className="w-12 h-12 object-contain" />
-        <div>
-          <div className="font-bold text-lg text-[var(--artci-black)]">Cartographie DCP</div>
-          <div className="text-sm text-gray-500">Administration</div>
-        </div>
+        <img src={logoDcp} alt="ARTCI — Cartographie DCP" className="h-14 w-auto object-contain" />
       </Link>
 
-      <div className="card w-full max-w-md" style={{ borderTop: '4px solid var(--artci-green)' }}>
+      <div className="card w-full max-w-md" style={{ borderTop: '4px solid var(--brand-secondary)' }}>
         <div className="flex items-center gap-2 justify-center mb-1">
-          <Shield className="w-5 h-5 text-[var(--artci-green)]" />
+          <Shield className="w-5 h-5 text-[var(--brand-secondary)]" />
           <h2 className="text-xl font-bold text-center" style={{ color: 'var(--artci-black)' }}>
             Espace Administration
           </h2>

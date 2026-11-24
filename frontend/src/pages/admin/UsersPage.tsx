@@ -44,7 +44,7 @@ export default function UsersPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl flex items-center gap-3">
-          <Users className="w-7 h-7 text-[var(--artci-green)]" />
+          <Users className="w-7 h-7 text-[var(--brand-secondary)]" />
           Utilisateurs
         </h1>
         <Link

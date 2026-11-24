@@ -38,7 +38,7 @@ export default function VerifyOTPPage() {
     return (
       <div className="text-center">
         <p className="text-gray-500 mb-4">Aucun email fourni.</p>
-        <Link to={ROUTES.REGISTER} className="text-[var(--artci-orange)] hover:underline">
+        <Link to={ROUTES.REGISTER} className="text-[var(--brand-primary)] hover:underline">
           Retour à l'inscription
         </Link>
       </div>
@@ -48,7 +48,7 @@ export default function VerifyOTPPage() {
   return (
     <div>
       <div className="flex justify-center mb-4">
-        <ShieldCheck className="w-12 h-12 text-[var(--artci-orange)]" />
+        <ShieldCheck className="w-12 h-12 text-[var(--brand-primary)]" />
       </div>
       <h2 className="text-xl font-bold text-center mb-1" style={{ color: 'var(--artci-black)' }}>
         Vérification OTP

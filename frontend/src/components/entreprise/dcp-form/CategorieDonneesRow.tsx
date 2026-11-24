@@ -57,7 +57,7 @@ export default function CategorieDonneesRow({
   return (
     <div className="border border-gray-200 p-4 mb-3 bg-gray-50 rounded">
       <div className="flex items-start justify-between gap-3 mb-3 flex-wrap">
-        <h4 className="font-bold text-sm uppercase text-[var(--artci-green)]">{titre}</h4>
+        <h4 className="font-bold text-sm uppercase text-[var(--brand-secondary)]">{titre}</h4>
         {/* Spec B11 : toggle N/A pour la categorie entiere */}
         <label className="flex items-center gap-2 text-xs cursor-pointer text-gray-700 bg-white border border-gray-300 rounded px-2 py-1">
           <input

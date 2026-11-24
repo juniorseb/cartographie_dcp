@@ -37,7 +37,7 @@ export default function SuiviAgentsPage() {
   return (
     <div className="max-w-6xl mx-auto">
       <h1 className="text-2xl mb-6 flex items-center gap-3">
-        <Activity className="w-7 h-7 text-[var(--artci-orange)]" />
+        <Activity className="w-7 h-7 text-[var(--brand-primary)]" />
         Suivi d'activité des agents
       </h1>
 

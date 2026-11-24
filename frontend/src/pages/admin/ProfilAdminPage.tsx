@@ -44,7 +44,7 @@ export default function ProfilAdminPage() {
   return (
     <div className="max-w-2xl">
       <h1 className="text-2xl mb-6 flex items-center gap-3">
-        <User className="w-6 h-6 text-[var(--artci-green)]" />
+        <User className="w-6 h-6 text-[var(--brand-secondary)]" />
         Mon Profil
       </h1>
 
@@ -58,7 +58,7 @@ export default function ProfilAdminPage() {
           </div>
           <div className="flex flex-col sm:flex-row gap-1">
             <span className="text-sm font-semibold text-gray-600 sm:w-40">Rôle</span>
-            <span className="text-sm font-semibold text-[var(--artci-green)]">
+            <span className="text-sm font-semibold text-[var(--brand-secondary)]">
               {ROLE_LABELS[user.role] ?? user.role}
             </span>
           </div>

@@ -433,7 +433,7 @@ export default function MonEnregistrementPage({ mode = 'entreprise', entiteId: e
   return (
     <div className="max-w-5xl mx-auto pb-20">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[var(--artci-orange)]">
+        <h1 className="text-2xl font-bold text-[var(--brand-primary)]">
           {isAdminMode
             ? (adminEntiteId ? "Édition d'une entité" : 'Nouveau recensement (saisie ARTCI)')
             : 'Mon enregistrement'}
@@ -469,7 +469,7 @@ export default function MonEnregistrementPage({ mode = 'entreprise', entiteId: e
             Étape {currentStep} sur {STEPS.length}
           </span>
           <span className="text-xs text-gray-500">
-            Progression globale : <strong className="text-[var(--artci-orange)]">{progress.percent}%</strong>
+            Progression globale : <strong className="text-[var(--brand-primary)]">{progress.percent}%</strong>
             <span className="ml-1">({progress.filled}/{progress.total} questions)</span>
           </span>
         </div>
@@ -483,14 +483,14 @@ export default function MonEnregistrementPage({ mode = 'entreprise', entiteId: e
                   type="button"
                   onClick={() => { setCurrentStep(s.num as StepNum); setError(''); setSuccess(''); }}
                   className={`flex flex-col items-center gap-1 px-2 py-1 rounded transition-colors ${
-                    isCurrent ? 'bg-[var(--artci-orange)] text-white'
-                    : isDone ? 'text-[var(--artci-green)] hover:bg-green-50'
+                    isCurrent ? 'bg-[var(--brand-primary)] text-white'
+                    : isDone ? 'text-[var(--brand-secondary)] hover:bg-green-50'
                     : 'text-gray-400 hover:bg-gray-50'
                   }`}
                 >
                   <span className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${
-                    isCurrent ? 'bg-white text-[var(--artci-orange)]'
-                    : isDone ? 'bg-[var(--artci-green)] text-white'
+                    isCurrent ? 'bg-white text-[var(--brand-primary)]'
+                    : isDone ? 'bg-[var(--brand-secondary)] text-white'
                     : 'bg-gray-200 text-gray-500'
                   }`}>
                     {isDone ? <CheckCircle2 className="w-4 h-4" /> : s.num}
@@ -498,7 +498,7 @@ export default function MonEnregistrementPage({ mode = 'entreprise', entiteId: e
                   <span className="text-[10px] font-semibold whitespace-nowrap hidden sm:block">{s.label}</span>
                 </button>
                 {idx < STEPS.length - 1 && (
-                  <div className={`h-0.5 w-4 sm:w-8 mx-1 ${isDone ? 'bg-[var(--artci-green)]' : 'bg-gray-200'}`} />
+                  <div className={`h-0.5 w-4 sm:w-8 mx-1 ${isDone ? 'bg-[var(--brand-secondary)]' : 'bg-gray-200'}`} />
                 )}
               </div>
             );
@@ -506,7 +506,7 @@ export default function MonEnregistrementPage({ mode = 'entreprise', entiteId: e
         </div>
         <div className="w-full h-1 bg-gray-100 rounded-full overflow-hidden mt-3">
           <div
-            className="h-full bg-[var(--artci-orange)] transition-all duration-300"
+            className="h-full bg-[var(--brand-primary)] transition-all duration-300"
             style={{ width: `${progress.percent}%` }}
           />
         </div>
@@ -763,7 +763,7 @@ export default function MonEnregistrementPage({ mode = 'entreprise', entiteId: e
 
             {/* 2a. DPO interne : formulaire personne physique */}
             {cj.dpo_type === 'interne' && (
-              <div className="border-l-2 border-[var(--artci-orange)] pl-4 mt-3">
+              <div className="border-l-2 border-[var(--brand-primary)] pl-4 mt-3">
                 <p className="text-xs font-semibold text-gray-700 mb-2">Renseignements du DPO interne</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <TextField label="Nom et prénom(s)" required
@@ -787,7 +787,7 @@ export default function MonEnregistrementPage({ mode = 'entreprise', entiteId: e
 
             {/* 2b. DPO externe : sous-question physique ou morale */}
             {cj.dpo_type === 'externe' && (
-              <div className="border-l-2 border-[var(--artci-green)] pl-4 mt-3">
+              <div className="border-l-2 border-[var(--brand-secondary)] pl-4 mt-3">
                 <RadioGroup
                   legend="Le DPO externe est-il une personne physique ou une personne morale ?"
                   required
@@ -1691,7 +1691,7 @@ export default function MonEnregistrementPage({ mode = 'entreprise', entiteId: e
             <button
               onClick={handleSave}
               disabled={saving}
-              className="btn btn-outline flex items-center gap-2 text-[var(--artci-green)] border-[var(--artci-green)]"
+              className="btn btn-outline flex items-center gap-2 text-[var(--brand-secondary)] border-[var(--brand-secondary)]"
             >
               {saving ? (
                 <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} />
@@ -1768,7 +1768,7 @@ export default function MonEnregistrementPage({ mode = 'entreprise', entiteId: e
                 onClick={handleSubmit}
                 disabled={submitting}
                 className="btn btn-secondary flex items-center gap-2 text-base px-5 py-2.5"
-                style={{ backgroundColor: 'var(--artci-green)', color: 'white', borderColor: 'var(--artci-green)' }}
+                style={{ backgroundColor: 'var(--brand-secondary)', color: 'white', borderColor: 'var(--brand-secondary)' }}
               >
                 {submitting ? (
                   <div className="spinner" style={{ width: 20, height: 20, borderWidth: 2 }} />
@@ -1884,10 +1884,10 @@ export function RecapView({ form, onEdit }: { form: FormulaireDCP; onEdit: (step
     return (
       <div className="bg-white border border-gray-200 rounded-lg mb-4 overflow-hidden">
         <div className="flex items-center justify-between bg-gray-50 px-4 py-3 border-b border-gray-200">
-          <h3 className="font-bold text-sm text-[var(--artci-orange)]">{titre}</h3>
+          <h3 className="font-bold text-sm text-[var(--brand-primary)]">{titre}</h3>
           <button
             onClick={() => onEdit(stepNum)}
-            className="text-xs text-[var(--artci-green)] hover:underline"
+            className="text-xs text-[var(--brand-secondary)] hover:underline"
           >
             Modifier →
           </button>

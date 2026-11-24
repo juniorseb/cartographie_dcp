@@ -3,25 +3,46 @@
 @tailwind utilities;
 
 /* ============================================
-   CHARTE GRAPHIQUE ARTCI
+   CHARTE GRAPHIQUE — Kit de marque « Cartographie DCP » (ARTCI)
+   Orange ARTCI (principal) · Vert Cote d'Ivoire (secondaire)
+   Bleu nuit (textes/titres) · Gris clair (fonds)
+   Montserrat (titres, boutons, navigation) · Inter (textes)
    ============================================ */
 
 :root {
-  /* Couleurs principales */
-  --artci-orange: #FF8C00;
-  --artci-green: #228B22;
-  --artci-black: #000000;
+  /* Marque */
+  --brand-primary: #FF8C00;        /* Orange ARTCI : actions, liens, etat actif */
+  --brand-primary-hover: #E67E00;
+  --brand-primary-soft: #FFF4E5;   /* fonds de mise en avant */
+  --brand-secondary: #009E49;      /* Vert Cote d'Ivoire */
+  --brand-secondary-hover: #00853D;
+  --brand-secondary-soft: #E6F6EE;
+  --brand-dark: #0F172A;           /* Bleu nuit : textes, titres, structure */
+  --brand-dark-hover: #1E293B;
+  --brand-accent: #009E49;         /* accents ponctuels (vert) */
+  --brand-gray: #E5E7EB;           /* Gris clair du kit : bordures, separateurs */
+  --brand-bg: #F3F4F6;             /* fond de page (gris clair adouci) */
+  --brand-text: #0F172A;
+  --brand-muted: #64748B;
+  --font-display: 'Montserrat', 'Inter', 'Segoe UI', system-ui, sans-serif;
+  --radius-card: 15px;
+  --shadow-card: 0 4px 20px rgba(15, 23, 42, 0.07);
+  --shadow-hover: 0 10px 30px rgba(15, 23, 42, 0.13);
+
+  /* Alias historiques (compatibilite) */
+  --artci-orange: var(--brand-primary);
+  --artci-green: var(--brand-secondary);
+  --artci-black: var(--brand-text);
   --artci-white: #FFFFFF;
-  --artci-gray-light: #F5F5F5;
+  --artci-gray-light: var(--brand-bg);
   --artci-gray: #666666;
-  
-  /* Statuts de conformité */
+
+  /* Statuts de conformite (semantiques) */
   --status-conforme: #228B22;
   --status-achevee: #FF8C00;
   --status-encours: #4A90E2;
   --status-rejete: #DC143C;
-  
-  /* Autres couleurs */
+
   --color-warning: #FFA500;
   --color-info: #4A90E2;
 }
@@ -34,93 +55,90 @@
 }
 
 body {
-  font-family: Arial, sans-serif;
-  background-color: var(--artci-gray-light);
-  color: var(--artci-black);
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  background-color: var(--brand-bg);
+  color: var(--brand-text);
   font-size: 16px;
   line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* Typography */
-h1 {
-  font-size: 32px;
-  font-weight: bold;
-  color: var(--artci-orange);
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--brand-dark);
 }
+h1 { font-size: 30px; }
+h2 { font-size: 26px; }
+h3 { font-size: 22px; }
 
-h2 {
-  font-size: 28px;
-  font-weight: bold;
-  color: var(--artci-green);
-}
-
-h3 {
-  font-size: 24px;
-  font-weight: bold;
-  color: var(--artci-black);
-}
-
-/* Navbar ARTCI Standard */
+/* Navbar */
 .navbar-artci {
-  background-color: var(--artci-white);
-  border-bottom: 3px solid var(--artci-orange);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-.navbar-artci a {
-  color: var(--artci-black);
-  font-weight: 600;
-  transition: all 0.2s;
-}
-
-.navbar-artci a:hover {
-  background-color: var(--artci-orange);
-  color: var(--artci-white);
+  background-color: #fff;
+  box-shadow: var(--shadow-card);
 }
 
 .navbar-artci a.nav-logo:hover {
   background-color: transparent;
-  color: var(--artci-black);
 }
 
-/* Buttons */
+/* Buttons — dans @layer components pour que les utilitaires Tailwind
+   (hidden, md:inline-flex, px-*, border-*) puissent les surcharger. */
+@layer components {
 .btn {
-  padding: 12px 24px;
-  border-radius: 4px;
-  font-size: 16px;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 22px;
+  border-radius: 10px;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s;
-  border: none;
+  transition: all 0.25s ease;
+  border: 2px solid transparent;
+  text-decoration: none;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
 }
 
 .btn-primary {
-  background-color: var(--artci-orange);
-  color: var(--artci-white);
+  background-color: var(--brand-primary);
+  color: #fff;
 }
 
-.btn-primary:hover {
-  background-color: #E67E00;
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--brand-primary-hover);
+  transform: translateY(-2px);
 }
 
 .btn-secondary {
-  background-color: var(--artci-green);
-  color: var(--artci-white);
+  background-color: var(--brand-secondary);
+  color: #fff;
 }
 
-.btn-secondary:hover {
-  background-color: #1a6b1a;
+.btn-secondary:hover:not(:disabled) {
+  background-color: var(--brand-secondary-hover);
+  transform: translateY(-2px);
 }
 
 .btn-outline {
   background-color: transparent;
-  color: var(--artci-orange);
-  border: 2px solid var(--artci-orange);
+  color: var(--brand-primary);
+  border-color: var(--brand-primary);
 }
 
-.btn-outline:hover {
-  background-color: var(--artci-orange);
-  color: var(--artci-white);
+.btn-outline:hover:not(:disabled) {
+  background-color: var(--brand-primary);
+  color: #fff;
+}
 }
 
 /* Badges */
@@ -153,16 +171,21 @@ h3 {
 }
 
 /* Cards */
+@layer components {
 .card {
-  background-color: var(--artci-white);
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  padding: 20px;
-  transition: all 0.2s;
+  background-color: #fff;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  padding: 24px;
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
 }
 
 .card:hover {
-  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  box-shadow: var(--shadow-hover);
+}
+
+.card-lift:hover {
+  transform: translateY(-6px);
 }
 
 .card-orange {
@@ -172,20 +195,21 @@ h3 {
 .card-green {
   border-left: 4px solid var(--artci-green);
 }
+}
 
 /* Table */
 .table-container {
   background-color: var(--artci-white);
-  border-radius: 8px;
+  border-radius: var(--radius-card);
   overflow-x: auto;
   overflow-y: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: var(--shadow-card);
   -webkit-overflow-scrolling: touch;
 }
 
 table thead {
-  background-color: var(--artci-orange);
-  color: var(--artci-white);
+  background-color: var(--brand-dark);
+  color: #fff;
 }
 
 table th, table td {
@@ -215,16 +239,18 @@ table tbody tr:hover {
 .form-group textarea {
   width: 100%;
   padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
   font-size: 14px;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: var(--artci-orange);
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.18);
 }
 
 /* Leaflet Map Customization */
@@ -261,7 +287,7 @@ table tbody tr:hover {
 
 .progress-bar {
   height: 100%;
-  background: linear-gradient(90deg, var(--artci-orange), var(--artci-green));
+  background: linear-gradient(90deg, var(--brand-primary), var(--brand-secondary));
   transition: width 0.3s;
   display: flex;
   align-items: center;
@@ -355,7 +381,7 @@ table tbody tr:hover {
 
 /* Loading Spinner */
 .spinner {
-  border: 4px solid rgba(255, 140, 0, 0.1);
+  border: 4px solid rgba(255, 140, 0, 0.12);
   border-top: 4px solid var(--artci-orange);
   border-radius: 50%;
   width: 40px;

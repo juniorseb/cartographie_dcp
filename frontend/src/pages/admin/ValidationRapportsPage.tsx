@@ -74,7 +74,7 @@ export default function ValidationRapportsPage() {
   return (
     <div>
       <h1 className="text-2xl mb-6 flex items-center gap-3">
-        <FileCheck className="w-7 h-7 text-[var(--artci-green)]" />
+        <FileCheck className="w-7 h-7 text-[var(--brand-secondary)]" />
         Validation des rapports d'activite
       </h1>
 
@@ -136,7 +136,7 @@ export default function ValidationRapportsPage() {
                         <div className="flex gap-2">
                           <button
                             className="btn text-sm py-1.5 px-3 flex items-center gap-1"
-                            style={{ backgroundColor: 'var(--artci-green)', color: 'white' }}
+                            style={{ backgroundColor: 'var(--brand-secondary)', color: 'white' }}
                             onClick={() => handleValider(rapport.id)}
                             disabled={processing === rapport.id}
                           >

@@ -73,7 +73,7 @@ export default function MesDocumentsPage() {
     return (
       <div className="max-w-4xl mx-auto">
         <h1 className="text-2xl mb-6 flex items-center gap-3">
-          <Folder className="w-7 h-7 text-[var(--artci-orange)]" />
+          <Folder className="w-7 h-7 text-[var(--brand-primary)]" />
           Mes documents
         </h1>
         <EmptyState
@@ -97,7 +97,7 @@ export default function MesDocumentsPage() {
   function renderCard(doc: entrepriseApi.MesDocumentItem) {
     return (
       <div key={doc.id} className="border border-gray-200 rounded-lg p-4 flex items-start gap-3 bg-white">
-        <FileText className="w-6 h-6 text-[var(--artci-orange)] flex-shrink-0 mt-1" />
+        <FileText className="w-6 h-6 text-[var(--brand-primary)] flex-shrink-0 mt-1" />
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm truncate">{labelType(doc.type_document)}</p>
           <p className="text-xs text-gray-500 truncate">{doc.nom_fichier || '—'}</p>
@@ -128,7 +128,7 @@ export default function MesDocumentsPage() {
   return (
     <div className="max-w-4xl mx-auto">
       <h1 className="text-2xl mb-6 flex items-center gap-3">
-        <Folder className="w-7 h-7 text-[var(--artci-orange)]" />
+        <Folder className="w-7 h-7 text-[var(--brand-primary)]" />
         Mes documents
       </h1>
 
@@ -140,7 +140,7 @@ export default function MesDocumentsPage() {
       {inscriptionDocs.length > 0 && (
         <section className="mb-8">
           <h2 className="text-sm font-bold uppercase text-gray-500 tracking-wider mb-3 flex items-center gap-2">
-            <ClipboardCheck className="w-4 h-4 text-[var(--artci-green)]" />
+            <ClipboardCheck className="w-4 h-4 text-[var(--brand-secondary)]" />
             Documents d'inscription ({inscriptionDocs.length})
           </h2>
           <div className="space-y-2">
@@ -152,7 +152,7 @@ export default function MesDocumentsPage() {
       {enregistrementDocs.length > 0 && (
         <section>
           <h2 className="text-sm font-bold uppercase text-gray-500 tracking-wider mb-3 flex items-center gap-2">
-            <FileText className="w-4 h-4 text-[var(--artci-orange)]" />
+            <FileText className="w-4 h-4 text-[var(--brand-primary)]" />
             Documents de mon enregistrement ({enregistrementDocs.length})
           </h2>
           <div className="space-y-2">

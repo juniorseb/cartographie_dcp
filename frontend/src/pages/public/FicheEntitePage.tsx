@@ -19,7 +19,7 @@ export default function FicheEntitePage() {
   if (error || !entite) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-6">
-        <Link to="/entites" className="flex items-center gap-2 text-[var(--artci-orange)] mb-4 hover:underline">
+        <Link to="/entites" className="flex items-center gap-2 text-[var(--brand-primary)] mb-4 hover:underline">
           <ArrowLeft className="w-4 h-4" /> Retour à la liste
         </Link>
         <ErrorDisplay message={error ?? 'Entité non trouvée ou non conforme.'} />
@@ -30,7 +30,7 @@ export default function FicheEntitePage() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">
       {/* Navigation */}
-      <Link to="/entites" className="flex items-center gap-2 text-[var(--artci-orange)] mb-6 hover:underline">
+      <Link to="/entites" className="flex items-center gap-2 text-[var(--brand-primary)] mb-6 hover:underline">
         <ArrowLeft className="w-4 h-4" /> Retour à la liste
       </Link>
 
@@ -48,7 +48,7 @@ export default function FicheEntitePage() {
         {/* Identification */}
         <div className="card">
           <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-            <FileText className="w-5 h-5 text-[var(--artci-orange)]" />
+            <FileText className="w-5 h-5 text-[var(--brand-primary)]" />
             Identification
           </h3>
           <div className="space-y-3">
@@ -69,7 +69,7 @@ export default function FicheEntitePage() {
           {(entite.latitude || entite.longitude) && (
             <div className="card">
               <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-[var(--artci-orange)]" />
+                <MapPin className="w-5 h-5 text-[var(--brand-primary)]" />
                 Localisation
               </h3>
               <div className="space-y-2">
@@ -83,7 +83,7 @@ export default function FicheEntitePage() {
                   href={`https://www.google.com/maps?q=${entite.latitude},${entite.longitude}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-sm text-[var(--artci-orange)] hover:underline mt-2"
+                  className="inline-flex items-center gap-1 text-sm text-[var(--brand-primary)] hover:underline mt-2"
                 >
                   <MapPin className="w-4 h-4" />
                   Voir sur Google Maps
@@ -95,7 +95,7 @@ export default function FicheEntitePage() {
           {/* Conformité */}
           <div className="card">
             <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-              <Shield className="w-5 h-5 text-[var(--artci-green)]" />
+              <Shield className="w-5 h-5 text-[var(--brand-secondary)]" />
               Conformité
             </h3>
             <div className="space-y-3">
@@ -127,7 +127,7 @@ export default function FicheEntitePage() {
                         href={`${import.meta.env.VITE_API_URL || '/api'}${entite.autorisation_pdf_url.replace('/api', '')}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-white bg-[var(--artci-orange)] px-2.5 py-1 rounded hover:bg-[#E67E00] transition-colors no-underline"
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-white bg-[var(--brand-primary)] px-2.5 py-1 rounded hover:bg-[#E67E00] transition-colors no-underline"
                       >
                         <Download className="w-3.5 h-3.5" />
                         PDF
@@ -143,7 +143,7 @@ export default function FicheEntitePage() {
           {entite.dpos && entite.dpos.length > 0 && (
             <div className="card">
               <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                <UserCheck className="w-5 h-5 text-[var(--artci-green)]" />
+                <UserCheck className="w-5 h-5 text-[var(--brand-secondary)]" />
                 Correspondant Protection des Données (DPO)
               </h3>
               <div className="space-y-4">
@@ -159,7 +159,7 @@ export default function FicheEntitePage() {
                           <span className="text-sm font-semibold text-gray-600 sm:w-40 flex-shrink-0">Email</span>
                           <a
                             href={`mailto:${dpo.email}`}
-                            className="text-sm text-[var(--artci-orange)] hover:underline flex items-center gap-1"
+                            className="text-sm text-[var(--brand-primary)] hover:underline flex items-center gap-1"
                           >
                             <Mail className="w-3.5 h-3.5" />
                             {dpo.email}
@@ -171,7 +171,7 @@ export default function FicheEntitePage() {
                           <span className="text-sm font-semibold text-gray-600 sm:w-40 flex-shrink-0">Téléphone</span>
                           <a
                             href={`tel:${dpo.telephone}`}
-                            className="text-sm text-[var(--artci-orange)] hover:underline flex items-center gap-1"
+                            className="text-sm text-[var(--brand-primary)] hover:underline flex items-center gap-1"
                           >
                             <Phone className="w-3.5 h-3.5" />
                             {dpo.telephone}
@@ -193,7 +193,7 @@ export default function FicheEntitePage() {
         {entite.contact && (
           <div className="card">
             <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-              <Users className="w-5 h-5 text-[var(--artci-orange)]" />
+              <Users className="w-5 h-5 text-[var(--brand-primary)]" />
               Contact
             </h3>
             <div className="space-y-3">

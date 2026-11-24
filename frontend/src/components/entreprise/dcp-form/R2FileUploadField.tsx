@@ -111,7 +111,7 @@ export default function R2FileUploadField({
                 href={downloadUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[var(--artci-green)] hover:text-green-800 flex items-center gap-1 text-xs"
+                className="text-[var(--brand-secondary)] hover:text-green-800 flex items-center gap-1 text-xs"
                 title="Télécharger le document"
               >
                 <Download className="w-3 h-3" /> Voir

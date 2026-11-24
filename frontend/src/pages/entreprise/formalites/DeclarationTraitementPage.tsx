@@ -4,7 +4,7 @@ export default function DeclarationTraitementPage() {
   return (
     <div className="max-w-3xl mx-auto">
       <h1 className="text-2xl mb-2 flex items-center gap-2">
-        <FileText className="w-6 h-6 text-[var(--artci-orange)]" />
+        <FileText className="w-6 h-6 text-[var(--brand-primary)]" />
         Déclaration — Traitement
       </h1>
       <p className="text-sm text-gray-500 mb-6">

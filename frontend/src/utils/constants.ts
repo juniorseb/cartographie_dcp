@@ -3,10 +3,13 @@ import type { StatutConformite } from '@/types/enums';
 /** Routes de l'application */
 export const ROUTES = {
   // Public
-  MAP: '/',
+  HOME: '/',
+  MAP: '/carte',
   ENTITES: '/entites',
   ENTITE_DETAIL: '/entites/:id',
   STATISTIQUES: '/statistiques',
+  // Plateforme externe des formalites (declarations / autorisations)
+  CERTINUM_URL: 'https://certinumapdp.ci/',
   // Auth
   LOGIN: '/connexion',
   REGISTER: '/inscription',

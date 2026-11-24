@@ -316,9 +316,9 @@ export default function RegisterPage() {
               key={value}
               type="button"
               onClick={() => setStatutJuridique(value)}
-              className="w-full text-left border border-gray-300 rounded-lg p-4 flex items-start gap-3 hover:border-[var(--artci-orange)] hover:bg-orange-50 transition-colors"
+              className="w-full text-left border border-gray-300 rounded-lg p-4 flex items-start gap-3 hover:border-[var(--brand-primary)] hover:bg-orange-50 transition-colors"
             >
-              <Icon className="w-6 h-6 text-[var(--artci-orange)] flex-shrink-0 mt-0.5" />
+              <Icon className="w-6 h-6 text-[var(--brand-primary)] flex-shrink-0 mt-0.5" />
               <div>
                 <div className="font-bold text-sm">{label}</div>
                 <div className="text-xs text-gray-500 mt-0.5">{description}</div>
@@ -328,7 +328,7 @@ export default function RegisterPage() {
         </div>
         <p className="text-sm text-center mt-6 text-gray-500">
           Déjà un compte ?{' '}
-          <Link to={ROUTES.LOGIN} className="text-[var(--artci-orange)] font-semibold hover:underline">
+          <Link to={ROUTES.LOGIN} className="text-[var(--brand-primary)] font-semibold hover:underline">
             Se connecter
           </Link>
         </p>
@@ -340,7 +340,7 @@ export default function RegisterPage() {
   if (statutJuridique === 'personne_physique') {
     return (
       <div>
-        <button type="button" onClick={resetType} className="text-xs text-gray-500 hover:text-[var(--artci-orange)] flex items-center gap-1 mb-3">
+        <button type="button" onClick={resetType} className="text-xs text-gray-500 hover:text-[var(--brand-primary)] flex items-center gap-1 mb-3">
           <ChevronLeft className="w-3 h-3" /> Changer de type de compte
         </button>
         <h2 className="text-xl font-bold text-center mb-1" style={{ color: 'var(--artci-black)' }}>
@@ -365,7 +365,7 @@ export default function RegisterPage() {
 
         <p className="text-sm text-center mt-6 text-gray-500">
           Déjà un compte ?{' '}
-          <Link to={ROUTES.LOGIN} className="text-[var(--artci-orange)] font-semibold hover:underline">
+          <Link to={ROUTES.LOGIN} className="text-[var(--brand-primary)] font-semibold hover:underline">
             Se connecter
           </Link>
         </p>
@@ -376,7 +376,7 @@ export default function RegisterPage() {
   // Personne morale (droit privé / droit public) : wizard 3 étapes.
   return (
     <div>
-      <button type="button" onClick={resetType} className="text-xs text-gray-500 hover:text-[var(--artci-orange)] flex items-center gap-1 mb-3">
+      <button type="button" onClick={resetType} className="text-xs text-gray-500 hover:text-[var(--brand-primary)] flex items-center gap-1 mb-3">
         <ChevronLeft className="w-3 h-3" /> Changer de type de compte
       </button>
       <h2 className="text-xl font-bold text-center mb-1" style={{ color: 'var(--artci-black)' }}>
@@ -395,7 +395,7 @@ export default function RegisterPage() {
               <div
                 className={cn(
                   'w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm border-2',
-                  section === num && 'bg-[var(--artci-orange)] text-white border-[var(--artci-orange)]',
+                  section === num && 'bg-[var(--brand-primary)] text-white border-[var(--brand-primary)]',
                   section > num && 'bg-green-500 text-white border-green-500',
                   section < num && 'bg-white text-gray-400 border-gray-300'
                 )}
@@ -450,7 +450,7 @@ export default function RegisterPage() {
 
       <p className="text-sm text-center mt-6 text-gray-500">
         Déjà un compte ?{' '}
-        <Link to={ROUTES.LOGIN} className="text-[var(--artci-orange)] font-semibold hover:underline">
+        <Link to={ROUTES.LOGIN} className="text-[var(--brand-primary)] font-semibold hover:underline">
           Se connecter
         </Link>
       </p>
@@ -493,7 +493,7 @@ function SectionEntreprise({
   return (
     <fieldset className="border border-gray-300 px-5 pt-2 pb-4">
       <legend className="px-3 font-bold text-base flex items-center gap-2 mx-auto">
-        <Building2 className="w-4 h-4 text-[var(--artci-orange)]" />
+        <Building2 className="w-4 h-4 text-[var(--brand-primary)]" />
         {isDroitPublic ? "Informations sur l'entité publique" : "Informations sur l'entreprise"}
       </legend>
 
@@ -535,7 +535,7 @@ function SectionEntreprise({
       {/* Spec 2.3 : Documents administratifs obligatoires */}
       <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded">
         <p className="text-sm font-bold mb-2 flex items-center gap-2">
-          <FileText className="w-4 h-4 text-[var(--artci-orange)]" />
+          <FileText className="w-4 h-4 text-[var(--brand-primary)]" />
           Documents administratifs <span className="text-red-500">*</span>
         </p>
 
@@ -612,7 +612,7 @@ function SectionRL({ form, updateField }: SectionProps) {
   return (
     <fieldset className="border border-gray-300 px-5 pt-2 pb-4">
       <legend className="px-3 font-bold text-base flex items-center gap-2 mx-auto">
-        <UserCheck className="w-4 h-4 text-[var(--artci-orange)]" />
+        <UserCheck className="w-4 h-4 text-[var(--brand-primary)]" />
         Représentant légal
       </legend>
       <div className="alert alert-info mb-4 flex items-start gap-2 text-sm">
@@ -659,7 +659,7 @@ function SectionDemandeur({ form, updateField }: SectionProps) {
   return (
     <fieldset className="border border-gray-300 px-5 pt-2 pb-4">
       <legend className="px-3 font-bold text-base flex items-center gap-2 mx-auto">
-        <UserCheck className="w-4 h-4 text-[var(--artci-orange)]" />
+        <UserCheck className="w-4 h-4 text-[var(--brand-primary)]" />
         Demandeur
       </legend>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -699,7 +699,7 @@ function SectionPersonnePhysique({ form, updateField }: SectionProps) {
   return (
     <fieldset className="border border-gray-300 px-5 pt-2 pb-4">
       <legend className="px-3 font-bold text-base flex items-center gap-2 mx-auto">
-        <User className="w-4 h-4 text-[var(--artci-orange)]" />
+        <User className="w-4 h-4 text-[var(--brand-primary)]" />
         Vos informations
       </legend>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

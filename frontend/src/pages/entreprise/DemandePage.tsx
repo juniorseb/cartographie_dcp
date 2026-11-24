@@ -770,7 +770,7 @@ function Partie2CadreJuridique({
 
           {/* Conditionnel : Si DPO = Oui → Coordonnées DPO */}
           {hasDpo && (
-            <div className="border-l-4 border-[var(--artci-orange)] pl-4 mt-3 space-y-4">
+            <div className="border-l-4 border-[var(--brand-primary)] pl-4 mt-3 space-y-4">
               <p className="text-xs text-gray-500 font-semibold">Coordonnées du CPD/DPO :</p>
               {(formData.dpos ?? []).map((dpo, i) => (
                 <div key={i} className="p-3 bg-white rounded border relative">
@@ -841,7 +841,7 @@ function Partie2CadreJuridique({
 
           {/* Conditionnel : Si déclaration = Oui → Détails */}
           {ca.declaration_artci && (
-            <div className="border-l-4 border-[var(--artci-green)] pl-4 mt-3">
+            <div className="border-l-4 border-[var(--brand-secondary)] pl-4 mt-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="form-group mb-2">
                   <label className="text-xs">N° de déclaration</label>
@@ -874,7 +874,7 @@ function Partie2CadreJuridique({
 
           {/* Conditionnel : Si autorisation = Oui → Détails */}
           {ca.autorisation_artci && (
-            <div className="border-l-4 border-[var(--artci-green)] pl-4 mt-3">
+            <div className="border-l-4 border-[var(--brand-secondary)] pl-4 mt-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="form-group mb-2">
                   <label className="text-xs">N° d'autorisation</label>
@@ -935,7 +935,7 @@ function Partie3Registre({
 
         {/* Conditionnel : Si registre = Oui → Détails des traitements */}
         {hasRegistre && (
-          <div className="border-l-4 border-[var(--artci-orange)] pl-4 mt-3 space-y-3">
+          <div className="border-l-4 border-[var(--brand-primary)] pl-4 mt-3 space-y-3">
             {(formData.registre_traitements ?? []).map((rt, i) => (
               <div key={i} className="p-3 bg-white rounded border relative">
                 <button className="absolute top-2 right-2 text-red-400 hover:text-red-600" onClick={() => removeFromList('registre_traitements', i)}>
@@ -1120,7 +1120,7 @@ function Partie4SousTraitance({
 
         {/* Conditionnel : Si sous-traitants = Oui → Détails + clauses */}
         {hasSousTraitants && (
-          <div className="border-l-4 border-[var(--artci-orange)] pl-4 mt-3 space-y-3">
+          <div className="border-l-4 border-[var(--brand-primary)] pl-4 mt-3 space-y-3">
             {(formData.sous_traitants ?? []).map((st, i) => (
               <div key={i} className="p-3 bg-white rounded border relative">
                 <button className="absolute top-2 right-2 text-red-400 hover:text-red-600" onClick={() => removeFromList('sous_traitants', i)}>
@@ -1189,7 +1189,7 @@ function Partie4SousTraitance({
 
         {/* Conditionnel : Si transferts = Oui → Détails */}
         {hasTransferts && (
-          <div className="border-l-4 border-[var(--artci-orange)] pl-4 mt-3 space-y-3">
+          <div className="border-l-4 border-[var(--brand-primary)] pl-4 mt-3 space-y-3">
             {(formData.transferts ?? []).map((t, i) => (
               <div key={i} className="p-3 bg-white rounded border relative">
                 <button className="absolute top-2 right-2 text-red-400 hover:text-red-600" onClick={() => removeFromList('transferts', i)}>
@@ -1422,7 +1422,7 @@ function Partie5Securite({
 
         {/* Conditionnel : Si formation = Oui → Fréquence */}
         {sec.formation_personnel && (
-          <div className="border-l-4 border-[var(--artci-green)] pl-4 mt-3">
+          <div className="border-l-4 border-[var(--brand-secondary)] pl-4 mt-3">
             <div className="form-group mb-2">
               <label className="text-xs">Fréquence des formations</label>
               <select value={sec.frequence_formation ?? ''} onChange={(e) => updateNestedField('securite', 'frequence_formation', e.target.value)}>

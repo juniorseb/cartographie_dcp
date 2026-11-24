@@ -24,7 +24,7 @@ export default function HistoriqueImportsPage() {
   return (
     <div>
       <h1 className="text-2xl mb-6 flex items-center gap-3">
-        <FileSpreadsheet className="w-7 h-7 text-[var(--artci-green)]" />
+        <FileSpreadsheet className="w-7 h-7 text-[var(--brand-secondary)]" />
         Historique des Imports
       </h1>
 

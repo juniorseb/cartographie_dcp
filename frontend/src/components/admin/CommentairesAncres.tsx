@@ -140,7 +140,7 @@ export default function CommentairesAncres({
     <div className="card mb-4">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-lg font-bold flex items-center gap-2">
-          <MessageCircle className="w-5 h-5 text-[var(--artci-orange)]" />
+          <MessageCircle className="w-5 h-5 text-[var(--brand-primary)]" />
           Commentaires ancrés
           {openCount > 0 && (
             <span className="text-xs font-medium bg-orange-100 text-orange-800 px-2 py-0.5 rounded">
@@ -155,7 +155,7 @@ export default function CommentairesAncres({
               onClick={() => setFilter(f)}
               className={`px-2 py-1 font-medium transition-colors ${
                 filter === f
-                  ? 'bg-[var(--artci-green)] text-white'
+                  ? 'bg-[var(--brand-secondary)] text-white'
                   : 'text-gray-700 hover:bg-gray-50'
               }`}
             >
@@ -305,7 +305,7 @@ export default function CommentairesAncres({
                           ) : (
                             <button
                               onClick={() => { setReplyingToId(c.id); setReplyText(''); }}
-                              className="ml-6 mt-1 text-[10px] text-gray-500 hover:text-[var(--artci-orange)] flex items-center gap-1"
+                              className="ml-6 mt-1 text-[10px] text-gray-500 hover:text-[var(--brand-primary)] flex items-center gap-1"
                             >
                               <Reply className="w-3 h-3" /> Répondre
                             </button>
@@ -429,7 +429,7 @@ function CommentBlock({
         {canEdit && !editing && (
           <button
             onClick={onStartEdit}
-            className="text-[10px] text-gray-500 hover:text-[var(--artci-orange)] flex items-center gap-1"
+            className="text-[10px] text-gray-500 hover:text-[var(--brand-primary)] flex items-center gap-1"
             title="Éditer (auteur uniquement, avant résolution)"
           >
             <Pencil className="w-3 h-3" /> Éditer

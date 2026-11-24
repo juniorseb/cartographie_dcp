@@ -88,7 +88,7 @@ export default function RenouvellementAdminPage() {
   return (
     <div>
       <h1 className="text-2xl mb-6 flex items-center gap-3">
-        <RefreshCw className="w-7 h-7 text-[var(--artci-green)]" />
+        <RefreshCw className="w-7 h-7 text-[var(--brand-secondary)]" />
         Renouvellements
       </h1>
 
@@ -159,7 +159,7 @@ export default function RenouvellementAdminPage() {
                           <div className="flex gap-2">
                             <button
                               className="btn text-sm py-1.5 px-3 flex items-center gap-1"
-                              style={{ backgroundColor: 'var(--artci-green)', color: 'white' }}
+                              style={{ backgroundColor: 'var(--brand-secondary)', color: 'white' }}
                               onClick={() => handleApprouver(item.id)}
                               disabled={processing === item.id}
                             >

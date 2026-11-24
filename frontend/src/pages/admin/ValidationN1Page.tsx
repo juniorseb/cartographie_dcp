@@ -37,7 +37,7 @@ export default function ValidationN1Page() {
   return (
     <div>
       <h1 className="text-2xl mb-6 flex items-center gap-3">
-        <CheckSquare className="w-7 h-7 text-[var(--artci-green)]" />
+        <CheckSquare className="w-7 h-7 text-[var(--brand-secondary)]" />
         Validation
       </h1>
 

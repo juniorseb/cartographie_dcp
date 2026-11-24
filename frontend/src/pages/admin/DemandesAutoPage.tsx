@@ -46,7 +46,7 @@ export default function DemandesAutoPage() {
   return (
     <div>
       <h1 className="text-2xl mb-6 flex items-center gap-3">
-        <ClipboardList className="w-7 h-7 text-[var(--artci-orange)]" />
+        <ClipboardList className="w-7 h-7 text-[var(--brand-primary)]" />
         Demandes auto-recensement
       </h1>
 
@@ -144,14 +144,14 @@ export default function DemandesAutoPage() {
                       <div className="flex gap-2">
                         <Link
                           to={`/admin/entites/${entite.id}`}
-                          className="text-[var(--artci-green)] hover:underline flex items-center gap-1 no-underline"
+                          className="text-[var(--brand-secondary)] hover:underline flex items-center gap-1 no-underline"
                         >
                           <Eye className="w-4 h-4" />
                           <span className="text-sm">Voir</span>
                         </Link>
                         <Link
                           to={ROUTES.ADMIN_ASSIGNATION}
-                          className="text-[var(--artci-orange)] hover:underline flex items-center gap-1 no-underline"
+                          className="text-[var(--brand-primary)] hover:underline flex items-center gap-1 no-underline"
                         >
                           <UserCheck className="w-4 h-4" />
                           <span className="text-sm">Assigner</span>

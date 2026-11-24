@@ -83,7 +83,7 @@ export default function AssignationPage() {
     <div className="max-w-5xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <h1 className="text-2xl flex items-center gap-3">
-          <UserCheck className="w-7 h-7 text-[var(--artci-green)]" />
+          <UserCheck className="w-7 h-7 text-[var(--brand-secondary)]" />
           Assignation
         </h1>
         <div className="flex items-center gap-2">
@@ -183,7 +183,7 @@ export default function AssignationPage() {
                     <td>
                       <Link
                         to={`/admin/entites/${a.entite_id}`}
-                        className="text-[var(--artci-green)] hover:underline text-sm"
+                        className="text-[var(--brand-secondary)] hover:underline text-sm"
                       >
                         Voir l'entité
                       </Link>

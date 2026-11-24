@@ -4,7 +4,7 @@ export default function AutorisationTransfertsPage() {
   return (
     <div className="max-w-3xl mx-auto">
       <h1 className="text-2xl mb-2 flex items-center gap-2">
-        <Globe className="w-6 h-6 text-[var(--artci-green)]" />
+        <Globe className="w-6 h-6 text-[var(--brand-secondary)]" />
         Autorisation — Transferts internationaux
       </h1>
       <p className="text-sm text-gray-500 mb-6">

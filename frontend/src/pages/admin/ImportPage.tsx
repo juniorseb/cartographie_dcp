@@ -128,7 +128,7 @@ export default function ImportPage() {
   return (
     <div className="max-w-3xl mx-auto">
       <h1 className="text-2xl mb-6 flex items-center gap-3">
-        <Upload className="w-7 h-7 text-[var(--artci-orange)]" />
+        <Upload className="w-7 h-7 text-[var(--brand-primary)]" />
         Import des entites
       </h1>
 
@@ -147,12 +147,12 @@ export default function ImportPage() {
                 className={cn(
                   'text-left p-4 rounded-lg border-2 transition-colors',
                   active
-                    ? 'border-[var(--artci-orange)] bg-orange-50'
+                    ? 'border-[var(--brand-primary)] bg-orange-50'
                     : 'border-gray-200 hover:border-gray-300 bg-white'
                 )}
               >
                 <div className="flex items-start gap-3">
-                  <ModeIcon className={cn('w-5 h-5 flex-shrink-0 mt-0.5', active ? 'text-[var(--artci-orange)]' : 'text-gray-400')} />
+                  <ModeIcon className={cn('w-5 h-5 flex-shrink-0 mt-0.5', active ? 'text-[var(--brand-primary)]' : 'text-gray-400')} />
                   <div>
                     <div className="font-semibold text-sm">{c.label}</div>
                     <div className="text-xs text-gray-500 mt-1">{c.description}</div>
@@ -170,7 +170,7 @@ export default function ImportPage() {
       {mode === 'excel' && (
         <div className="card mb-6">
           <h3 className="text-lg font-bold mb-2 flex items-center gap-2">
-            <span className="w-7 h-7 rounded-full bg-[var(--artci-orange)] text-white flex items-center justify-center text-sm font-bold">1</span>
+            <span className="w-7 h-7 rounded-full bg-[var(--brand-primary)] text-white flex items-center justify-center text-sm font-bold">1</span>
             Telecharger le template
           </h3>
           <p className="text-sm text-gray-600 mb-4">
@@ -210,7 +210,7 @@ export default function ImportPage() {
       {/* Upload */}
       <div className="card mb-6">
         <h3 className="text-lg font-bold mb-2 flex items-center gap-2">
-          <span className="w-7 h-7 rounded-full bg-[var(--artci-orange)] text-white flex items-center justify-center text-sm font-bold">
+          <span className="w-7 h-7 rounded-full bg-[var(--brand-primary)] text-white flex items-center justify-center text-sm font-bold">
             {mode === 'excel' ? '2' : '1'}
           </span>
           Televerser le fichier
@@ -219,15 +219,15 @@ export default function ImportPage() {
         <div
           className={cn(
             'border-2 border-dashed rounded-lg p-10 text-center transition-colors cursor-pointer',
-            dragOver ? 'border-[var(--artci-orange)] bg-orange-50' : 'border-gray-300 bg-gray-50'
+            dragOver ? 'border-[var(--brand-primary)] bg-orange-50' : 'border-gray-300 bg-gray-50'
           )}
           onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
           onClick={() => fileRef.current?.click()}
         >
-          <Icon className="w-12 h-12 mx-auto mb-3 text-[var(--artci-orange)]" />
-          <p className="text-lg font-semibold text-[var(--artci-orange)] mb-2">
+          <Icon className="w-12 h-12 mx-auto mb-3 text-[var(--brand-primary)]" />
+          <p className="text-lg font-semibold text-[var(--brand-primary)] mb-2">
             Glisser-deposer le fichier ici
           </p>
           <p className="text-gray-500 mb-4">ou</p>
@@ -275,7 +275,7 @@ export default function ImportPage() {
       {result && (
         <div className="card">
           <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-            <span className="w-7 h-7 rounded-full bg-[var(--artci-orange)] text-white flex items-center justify-center text-sm font-bold">
+            <span className="w-7 h-7 rounded-full bg-[var(--brand-primary)] text-white flex items-center justify-center text-sm font-bold">
               {mode === 'excel' ? '3' : '2'}
             </span>
             Resultat de l'import
@@ -283,7 +283,7 @@ export default function ImportPage() {
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
             <div className="text-center">
-              <p className="text-2xl font-bold text-[var(--artci-orange)]">{totalLines}</p>
+              <p className="text-2xl font-bold text-[var(--brand-primary)]">{totalLines}</p>
               <p className="text-xs text-gray-500">Lignes totales</p>
             </div>
             <div className="text-center">

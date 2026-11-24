@@ -108,7 +108,7 @@ export default function EntiteDetailAdminPage() {
           <div className="flex items-center justify-between gap-3">
             <button
               onClick={() => navigate(ROUTES.ADMIN_ENTITES)}
-              className="flex items-center gap-2 text-sm text-gray-600 hover:text-[var(--artci-orange)]"
+              className="flex items-center gap-2 text-sm text-gray-600 hover:text-[var(--brand-primary)]"
             >
               <ArrowLeft className="w-4 h-4" /> Retour aux entites
             </button>

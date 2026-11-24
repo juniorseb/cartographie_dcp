@@ -76,10 +76,10 @@ export default function EditorDashboardPage({ data }: EditorDashboardPageProps) 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
         <div className="card">
           <div className="flex items-center gap-3 mb-2">
-            <TrendingUp className="w-5 h-5 text-[var(--artci-green)]" />
+            <TrendingUp className="w-5 h-5 text-[var(--brand-secondary)]" />
             <h3 className="font-bold text-sm">Taux de traitement</h3>
           </div>
-          <p className="text-3xl font-bold text-[var(--artci-green)]">
+          <p className="text-3xl font-bold text-[var(--brand-secondary)]">
             {taux_traitement_pct}%
           </p>
           <p className="text-xs text-gray-500 mt-1">
@@ -87,7 +87,7 @@ export default function EditorDashboardPage({ data }: EditorDashboardPageProps) 
           </p>
           <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden mt-3">
             <div
-              className="h-full bg-[var(--artci-green)] transition-all duration-300"
+              className="h-full bg-[var(--brand-secondary)] transition-all duration-300"
               style={{ width: `${Math.min(100, taux_traitement_pct)}%` }}
             />
           </div>
@@ -95,10 +95,10 @@ export default function EditorDashboardPage({ data }: EditorDashboardPageProps) 
 
         <div className="card">
           <div className="flex items-center gap-3 mb-2">
-            <Clock className="w-5 h-5 text-[var(--artci-orange)]" />
+            <Clock className="w-5 h-5 text-[var(--brand-primary)]" />
             <h3 className="font-bold text-sm">Délai moyen de traitement</h3>
           </div>
-          <p className="text-3xl font-bold text-[var(--artci-orange)]">
+          <p className="text-3xl font-bold text-[var(--brand-primary)]">
             {delai_moyen_traitement_jours !== null
               ? `${delai_moyen_traitement_jours} j`
               : '—'}
@@ -114,7 +114,7 @@ export default function EditorDashboardPage({ data }: EditorDashboardPageProps) 
       {/* Mon panier actuel */}
       <div className="card mb-6">
         <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
-          <Briefcase className="w-5 h-5 text-[var(--artci-orange)]" />
+          <Briefcase className="w-5 h-5 text-[var(--brand-primary)]" />
           Mes dossiers en cours
         </h3>
         {panier_actuel.length === 0 ? (
@@ -151,7 +151,7 @@ export default function EditorDashboardPage({ data }: EditorDashboardPageProps) 
                       <td className="text-right">
                         <Link
                           to={`/admin/traiter/${a.entite_id}`}
-                          className="text-[var(--artci-green)] hover:underline text-sm inline-flex items-center gap-1"
+                          className="text-[var(--brand-secondary)] hover:underline text-sm inline-flex items-center gap-1"
                         >
                           <Eye className="w-3.5 h-3.5" /> Traiter
                         </Link>
@@ -168,7 +168,7 @@ export default function EditorDashboardPage({ data }: EditorDashboardPageProps) 
       {/* Derniers dossiers traites */}
       <div className="card">
         <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
-          <CheckCircle2 className="w-5 h-5 text-[var(--artci-green)]" />
+          <CheckCircle2 className="w-5 h-5 text-[var(--brand-secondary)]" />
           Mes derniers dossiers traités
         </h3>
         {derniers_traites.length === 0 ? (
@@ -197,7 +197,7 @@ export default function EditorDashboardPage({ data }: EditorDashboardPageProps) 
                     <td className="text-right">
                       <Link
                         to={`/admin/entites/${a.entite_id}`}
-                        className="text-[var(--artci-green)] hover:underline text-sm inline-flex items-center gap-1"
+                        className="text-[var(--brand-secondary)] hover:underline text-sm inline-flex items-center gap-1"
                       >
                         <Eye className="w-3.5 h-3.5" /> Voir
                       </Link>

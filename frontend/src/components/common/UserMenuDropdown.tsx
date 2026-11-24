@@ -43,7 +43,7 @@ export default function UserMenuDropdown({
         onClick={() => setOpen((v) => !v)}
         className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors"
       >
-        <div className="w-8 h-8 rounded-full bg-[var(--artci-orange)] text-white flex items-center justify-center text-xs font-bold">
+        <div className="w-8 h-8 rounded-full bg-[var(--brand-primary)] text-white flex items-center justify-center text-xs font-bold">
           {initials || 'U'}
         </div>
         <div className="hidden sm:block text-left">

@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Eye, MapPin, Phone, Mail, User, Download } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import * as publicApi from '@/api/public.api';
@@ -16,7 +16,12 @@ import type { EntiteFilter } from '@/types/entite';
 const PER_PAGE_PUBLIC_LIST = 10;
 
 export default function ListeEntitesPage() {
-  const [filters, setFilters] = useState<EntiteFilter>({});
+  // ?search=... : recherche lancee depuis la page d'accueil ("Verifier la conformite")
+  const [searchParams] = useSearchParams();
+  const [filters, setFilters] = useState<EntiteFilter>(() => {
+    const q = searchParams.get('search');
+    return q ? { search: q } : {};
+  });
   const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState(false);
 
@@ -160,7 +165,7 @@ export default function ListeEntitesPage() {
                           href={`https://www.google.com/maps?q=${entite.latitude},${entite.longitude}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-[var(--artci-orange)] hover:underline"
+                          className="text-[var(--brand-primary)] hover:underline"
                           title="Voir sur Google Maps"
                         >
                           <MapPin className="w-4 h-4" />
@@ -175,7 +180,7 @@ export default function ListeEntitesPage() {
                     {/* CPD (DPO) */}
                     <td className="text-sm">
                       {entite.a_dpo ? (
-                        <span className="text-[var(--artci-green)] font-semibold">Oui</span>
+                        <span className="text-[var(--brand-secondary)] font-semibold">Oui</span>
                       ) : (
                         <span className="text-gray-400">Non</span>
                       )}
@@ -195,7 +200,7 @@ export default function ListeEntitesPage() {
                               <Mail className="w-3 h-3 text-gray-400 flex-shrink-0" />
                               <a
                                 href={`mailto:${entite.dpo_email}`}
-                                className="text-[var(--artci-orange)] hover:underline truncate"
+                                className="text-[var(--brand-primary)] hover:underline truncate"
                               >
                                 {entite.dpo_email}
                               </a>
@@ -206,7 +211,7 @@ export default function ListeEntitesPage() {
                               <Phone className="w-3 h-3 text-gray-400 flex-shrink-0" />
                               <a
                                 href={`tel:${entite.dpo_telephone}`}
-                                className="text-[var(--artci-orange)] hover:underline"
+                                className="text-[var(--brand-primary)] hover:underline"
                               >
                                 {entite.dpo_telephone}
                               </a>
@@ -227,7 +232,7 @@ export default function ListeEntitesPage() {
                               href={`${import.meta.env.VITE_API_URL || '/api'}${entite.autorisation_pdf_url.replace('/api', '')}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="flex items-center gap-1 text-[var(--artci-orange)] hover:underline text-xs font-semibold"
+                              className="flex items-center gap-1 text-[var(--brand-primary)] hover:underline text-xs font-semibold"
                               title="Télécharger l'autorisation PDF"
                             >
                               <Download className="w-3.5 h-3.5" />
@@ -245,7 +250,7 @@ export default function ListeEntitesPage() {
                     <td>
                       <Link
                         to={`/entites/${entite.id}`}
-                        className="text-[var(--artci-orange)] hover:underline flex items-center gap-1 whitespace-nowrap"
+                        className="text-[var(--brand-primary)] hover:underline flex items-center gap-1 whitespace-nowrap"
                       >
                         <Eye className="w-4 h-4" />
                         <span className="text-sm">Voir</span>

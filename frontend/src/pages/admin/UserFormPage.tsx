@@ -94,7 +94,7 @@ export default function UserFormPage() {
   return (
     <div className="max-w-2xl mx-auto">
       <h1 className="text-2xl mb-6 flex items-center gap-3">
-        <UserPlus className="w-7 h-7 text-[var(--artci-green)]" />
+        <UserPlus className="w-7 h-7 text-[var(--brand-secondary)]" />
         {isEdit ? 'Modifier l\'utilisateur' : 'Nouvel utilisateur'}
       </h1>
 

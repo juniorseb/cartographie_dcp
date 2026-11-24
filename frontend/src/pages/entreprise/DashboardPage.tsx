@@ -63,7 +63,7 @@ export default function DashboardPage() {
           <span>
             Vous avez <strong>{dashboard.feedbacks_non_lus}</strong> notification{dashboard.feedbacks_non_lus > 1 ? 's' : ''} non lue{dashboard.feedbacks_non_lus > 1 ? 's' : ''}.
           </span>
-          <Link to={ROUTES.ENTREPRISE_NOTIFICATIONS} className="text-[var(--artci-orange)] font-semibold hover:underline ml-auto">
+          <Link to={ROUTES.ENTREPRISE_NOTIFICATIONS} className="text-[var(--brand-primary)] font-semibold hover:underline ml-auto">
             Voir
           </Link>
         </div>
@@ -74,7 +74,7 @@ export default function DashboardPage() {
         {!dashboard.has_demande && (
           <Link to={ROUTES.ENTREPRISE_ENREGISTREMENT} className="card hover:shadow-lg transition-shadow no-underline">
             <div className="flex items-center gap-3">
-              <FileText className="w-8 h-8 text-[var(--artci-orange)]" />
+              <FileText className="w-8 h-8 text-[var(--brand-primary)]" />
               <div>
                 <p className="font-bold text-sm text-[var(--artci-black)]">Nouvel Enregistrement</p>
                 <p className="text-xs text-gray-500">Remplir le formulaire</p>
@@ -86,7 +86,7 @@ export default function DashboardPage() {
         {dashboard.has_demande && dashboard.can_edit && (
           <Link to={ROUTES.ENTREPRISE_ENREGISTREMENT} className="card hover:shadow-lg transition-shadow no-underline">
             <div className="flex items-center gap-3">
-              <FileText className="w-8 h-8 text-[var(--artci-orange)]" />
+              <FileText className="w-8 h-8 text-[var(--brand-primary)]" />
               <div>
                 <p className="font-bold text-sm text-[var(--artci-black)]">Modifier mon Enregistrement</p>
                 <p className="text-xs text-gray-500">Reprendre le brouillon</p>
@@ -99,7 +99,7 @@ export default function DashboardPage() {
           <div className="card opacity-60">
             <div className="flex items-center gap-3">
               {termine ? (
-                <CheckCircle className="w-8 h-8 text-[var(--artci-green)]" />
+                <CheckCircle className="w-8 h-8 text-[var(--brand-secondary)]" />
               ) : (
                 <Lock className="w-8 h-8 text-gray-400" />
               )}
@@ -115,7 +115,7 @@ export default function DashboardPage() {
 
         <Link to={ROUTES.ENTREPRISE_DOSSIER} className="card hover:shadow-lg transition-shadow no-underline">
           <div className="flex items-center gap-3">
-            <FolderOpen className="w-8 h-8 text-[var(--artci-green)]" />
+            <FolderOpen className="w-8 h-8 text-[var(--brand-secondary)]" />
             <div>
               <p className="font-bold text-sm text-[var(--artci-black)]">Mon Dossier</p>
               <p className="text-xs text-gray-500">Voir mon dossier complet</p>

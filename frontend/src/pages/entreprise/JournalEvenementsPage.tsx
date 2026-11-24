@@ -93,10 +93,10 @@ function getEventVisual(ev: JournalEvenementItem): {
   // historique_statut par defaut
   return {
     Icon: Activity,
-    iconClass: 'text-[var(--artci-orange)]',
-    bulletClass: 'bg-[var(--artci-orange)]',
+    iconClass: 'text-[var(--brand-primary)]',
+    bulletClass: 'bg-[var(--brand-primary)]',
     badgeLabel: 'Workflow',
-    badgeClass: 'bg-[var(--artci-orange-light,#fff1e6)] text-[var(--artci-orange)]',
+    badgeClass: 'bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]',
   };
 }
 
@@ -112,7 +112,7 @@ export default function JournalEvenementsPage() {
   return (
     <div className="max-w-4xl mx-auto">
       <h1 className="text-2xl mb-6 flex items-center gap-3">
-        <Activity className="w-7 h-7 text-[var(--artci-orange)]" />
+        <Activity className="w-7 h-7 text-[var(--brand-primary)]" />
         Journal d'événements
       </h1>
 

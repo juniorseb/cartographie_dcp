@@ -221,7 +221,7 @@ export default function AdminSidebar({ mobileOpen, onClose }: AdminSidebarProps)
                         cn(
                           'flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-colors no-underline',
                           isActive
-                            ? 'bg-[var(--artci-green)] text-white'
+                            ? 'bg-[var(--brand-secondary)] text-white'
                             : 'text-gray-700 hover:bg-gray-100'
                         )
                       }

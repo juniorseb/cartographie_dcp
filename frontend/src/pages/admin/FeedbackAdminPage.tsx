@@ -68,7 +68,7 @@ export default function FeedbackAdminPage() {
   return (
     <div className="max-w-2xl mx-auto">
       <h1 className="text-2xl mb-6 flex items-center gap-3">
-        <MessageSquare className="w-7 h-7 text-[var(--artci-green)]" />
+        <MessageSquare className="w-7 h-7 text-[var(--brand-secondary)]" />
         Feedback de vérification
       </h1>
 

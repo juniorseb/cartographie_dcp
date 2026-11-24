@@ -62,7 +62,7 @@ export default function PanierPage() {
     <div>
       <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
         <h1 className="text-2xl flex items-center gap-3">
-          <Inbox className="w-7 h-7 text-[var(--artci-green)]" />
+          <Inbox className="w-7 h-7 text-[var(--brand-secondary)]" />
           Mon Panier
         </h1>
         {canAssigner && (
@@ -83,12 +83,12 @@ export default function PanierPage() {
           {canAssigner && nouvelles.length > 0 && (
             <section className="mb-8">
               <h2 className="text-sm font-bold uppercase text-gray-500 tracking-wider mb-3 flex items-center gap-2">
-                <FilePlus2 className="w-4 h-4 text-[var(--artci-orange)]" />
+                <FilePlus2 className="w-4 h-4 text-[var(--brand-primary)]" />
                 Nouvelles soumissions à assigner ({nouvelles.length})
               </h2>
               <div className="space-y-3">
                 {nouvelles.map((n) => (
-                  <div key={n.entite_id} className="card border-l-4 border-l-[var(--artci-orange)]">
+                  <div key={n.entite_id} className="card border-l-4 border-l-[var(--brand-primary)]">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3 flex-wrap">
@@ -162,7 +162,7 @@ export default function PanierPage() {
           {assignations.length > 0 && (
             <section>
               <h2 className="text-sm font-bold uppercase text-gray-500 tracking-wider mb-3 flex items-center gap-2">
-                <Inbox className="w-4 h-4 text-[var(--artci-green)]" />
+                <Inbox className="w-4 h-4 text-[var(--brand-secondary)]" />
                 Mes assignations ({assignations.length})
               </h2>
               <div className="space-y-3">

@@ -152,7 +152,7 @@ export default function CartePage() {
             value={searchInput}
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Rechercher une entité..."
-            className={`w-full pl-10 pr-4 border border-gray-300 rounded-lg focus:outline-none focus:border-[var(--artci-orange)] ${
+            className={`w-full pl-10 pr-4 border border-gray-300 rounded-lg focus:outline-none focus:border-[var(--brand-primary)] ${
               isMobile ? 'py-3 text-base' : 'py-2.5 text-sm'
             }`}
           />
@@ -199,7 +199,7 @@ export default function CartePage() {
           <select
             value={secteur}
             onChange={(e) => setSecteur(e.target.value)}
-            className={`w-full px-3 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:border-[var(--artci-orange)] ${
+            className={`w-full px-3 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:border-[var(--brand-primary)] ${
               isMobile ? 'py-3 text-base' : 'py-2.5 text-sm'
             }`}
           >
@@ -221,7 +221,7 @@ export default function CartePage() {
           <select
             value={region}
             onChange={(e) => setRegion(e.target.value)}
-            className={`w-full px-3 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:border-[var(--artci-orange)] ${
+            className={`w-full px-3 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:border-[var(--brand-primary)] ${
               isMobile ? 'py-3 text-base' : 'py-2.5 text-sm'
             }`}
           >
@@ -345,12 +345,12 @@ export default function CartePage() {
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-[998] bg-white border-t border-gray-200 px-4 py-2.5 shadow-[0_-2px_8px_rgba(0,0,0,0.1)]">
         <button
           onClick={() => setBottomSheetOpen(true)}
-          className="w-full flex items-center justify-center gap-2 py-3 bg-[#FF8C00] text-white font-bold text-base rounded-lg active:bg-[#E67E00] transition-colors"
+          className="w-full flex items-center justify-center gap-2 py-3 bg-[var(--brand-primary)] text-white font-bold text-base rounded-lg active:bg-[var(--brand-primary-hover)] transition-colors"
         >
           <Filter className="w-5 h-5" />
           Filtres
           {activeFilterCount > 0 && (
-            <span className="ml-1 bg-white text-[#FF8C00] text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+            <span className="ml-1 bg-white text-[var(--brand-primary)] text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
               {activeFilterCount}
             </span>
           )}
@@ -408,13 +408,13 @@ export default function CartePage() {
             <div className="flex gap-3 px-5 py-4 border-t border-gray-200 bg-white">
               <button
                 onClick={resetFilters}
-                className="flex-[4] py-3 border-2 border-[#FF8C00] text-[#FF8C00] font-bold text-base rounded-lg active:bg-orange-50 transition-colors"
+                className="flex-[4] py-3 border-2 border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold text-base rounded-lg active:bg-[var(--brand-primary-soft)] transition-colors"
               >
                 Réinitialiser
               </button>
               <button
                 onClick={() => setBottomSheetOpen(false)}
-                className="flex-[6] py-3 bg-[#FF8C00] text-white font-bold text-base rounded-lg active:bg-[#E67E00] transition-colors"
+                className="flex-[6] py-3 bg-[var(--brand-primary)] text-white font-bold text-base rounded-lg active:bg-[var(--brand-primary-hover)] transition-colors"
               >
                 Appliquer
               </button>

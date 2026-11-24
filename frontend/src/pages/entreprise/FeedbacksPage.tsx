@@ -78,11 +78,11 @@ export default function FeedbacksPage() {
       {hasNotifs && (
         <div className="space-y-3 mb-8">
           <h2 className="text-lg font-bold flex items-center gap-2">
-            <Bell className="w-5 h-5 text-[var(--artci-orange)]" />
+            <Bell className="w-5 h-5 text-[var(--brand-primary)]" />
             Notifications récentes
           </h2>
           {notifs!.map((n) => (
-            <div key={n.id} className={`card ${!n.lue ? 'border-l-4 border-l-[var(--artci-orange)]' : 'opacity-80'}`}>
+            <div key={n.id} className={`card ${!n.lue ? 'border-l-4 border-l-[var(--brand-primary)]' : 'opacity-80'}`}>
               <div className="flex items-start justify-between gap-3 mb-1">
                 <p className="font-semibold text-sm">{n.titre}</p>
                 {!n.lue ? (
@@ -90,7 +90,7 @@ export default function FeedbacksPage() {
                     type="button"
                     onClick={() => handleMarkRead(n.id)}
                     disabled={markingId === n.id}
-                    className="text-xs text-[var(--artci-green)] hover:underline flex-shrink-0"
+                    className="text-xs text-[var(--brand-secondary)] hover:underline flex-shrink-0"
                   >
                     Marquer comme lue
                   </button>
@@ -113,13 +113,13 @@ export default function FeedbacksPage() {
       {hasFeedbacks && (
         <div className="space-y-4 mb-8">
           <h2 className="text-lg font-bold flex items-center gap-2">
-            <MessageSquare className="w-5 h-5 text-[var(--artci-orange)]" />
+            <MessageSquare className="w-5 h-5 text-[var(--brand-primary)]" />
             Retours de l'ARTCI
           </h2>
           {feedbacks!.map((fb) => (
             <div key={fb.id} className="card card-orange">
               <div className="flex items-start gap-3">
-                <MessageSquare className="w-5 h-5 text-[var(--artci-orange)] flex-shrink-0 mt-0.5" />
+                <MessageSquare className="w-5 h-5 text-[var(--brand-primary)] flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-2">
                     <span className="badge badge-encours">{fb.type}</span>

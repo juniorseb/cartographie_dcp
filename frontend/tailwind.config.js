@@ -7,7 +7,16 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Couleurs ARTCI officielles
+        // Charte ARTCI / CERTINUM APDP
+        brand: {
+          primary: '#FF8C00',
+          'primary-hover': '#E67E00',
+          soft: '#FFF4E5',
+          secondary: '#009E49',
+          dark: '#0F172A',
+          gray: '#E5E7EB',
+          bg: '#F3F4F6',
+        },
         artci: {
           orange: '#FF8C00',
           green: '#228B22',
@@ -28,7 +37,8 @@ export default {
         }
       },
       fontFamily: {
-        sans: ['Arial', 'sans-serif'],
+        sans: ['Inter', 'Segoe UI', 'system-ui', 'sans-serif'],
+        display: ['Montserrat', 'Inter', 'Segoe UI', 'sans-serif'],
       },
       fontSize: {
         'h1': '32px',
@@ -39,8 +49,8 @@ export default {
         'navbar-height': '70px',
       },
       boxShadow: {
-        'card': '0 2px 8px rgba(0,0,0,0.1)',
-        'hover': '0 4px 16px rgba(0,0,0,0.15)',
+        'card': '0 4px 20px rgba(0,0,0,0.08)',
+        'hover': '0 10px 30px rgba(0,0,0,0.14)',
       }
     },
   },

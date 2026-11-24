@@ -84,7 +84,7 @@ export default function EcheancesFeedbacksPage() {
               onClick={() => { setFilter(f.key); setPage(1); }}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
                 active
-                  ? 'bg-[var(--artci-green)] text-white border-[var(--artci-green)]'
+                  ? 'bg-[var(--brand-secondary)] text-white border-[var(--brand-secondary)]'
                   : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
               }`}
             >
@@ -159,7 +159,7 @@ export default function EcheancesFeedbacksPage() {
                       <td>
                         <Link
                           to={`/admin/entites/${fb.entite_id}`}
-                          className="text-[var(--artci-green)] hover:underline flex items-center justify-end gap-1"
+                          className="text-[var(--brand-secondary)] hover:underline flex items-center justify-end gap-1"
                         >
                           <Eye className="w-4 h-4" />
                           <span className="text-sm">Voir</span>

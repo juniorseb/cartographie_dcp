@@ -26,7 +26,7 @@ interface SidebarLink {
 
 // Plateforme externe qui prend en charge les demandes de declaration et
 // d'autorisation depuis que celles-ci ne sont plus traitees sur ce site.
-const CERTINUM_APDP_URL = 'https://certinumapdp.ci/';
+const CERTINUM_APDP_URL = ROUTES.CERTINUM_URL;
 
 const sidebarLinks: SidebarLink[] = [
   { to: ROUTES.ENTREPRISE_DASHBOARD, label: 'Tableau de bord', icon: LayoutDashboard, end: true },
@@ -42,7 +42,7 @@ const sidebarLinks: SidebarLink[] = [
     label: 'Déclaration & Autorisation',
     icon: ExternalLink,
     external: true,
-    subtitle: 'Vous serez redirigé sur : certinumapdp.ci',
+    subtitle: 'Sur la plateforme CERTINUM APDP',
   },
 ];
 
@@ -119,14 +119,14 @@ export default function EntrepriseSidebar({ mobileOpen, onClose }: EntrepriseSid
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={onClose}
-                  className="flex flex-col gap-0.5 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 no-underline"
+                  className="mt-3 flex flex-col gap-1 px-4 py-3 rounded-xl text-sm font-semibold no-underline text-white bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-secondary)] hover:shadow-hover hover:-translate-y-0.5 transition-all"
                 >
                   <span className="flex items-center gap-3">
                     <Icon className="w-4 h-4 flex-shrink-0" />
                     <span className="flex-1">{label}</span>
                   </span>
                   {subtitle && (
-                    <span className="pl-7 text-[11px] font-normal text-gray-400">{subtitle}</span>
+                    <span className="pl-7 text-[11px] font-normal text-white/80">{subtitle}</span>
                   )}
                 </a>
               );
@@ -144,7 +144,7 @@ export default function EntrepriseSidebar({ mobileOpen, onClose }: EntrepriseSid
                     cn(
                       'flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors no-underline',
                       isActive
-                        ? 'bg-[var(--artci-orange)] text-white'
+                        ? 'bg-[var(--brand-primary)] text-white'
                         : 'text-gray-700 hover:bg-gray-100'
                     )
                   }
@@ -198,7 +198,7 @@ export default function EntrepriseSidebar({ mobileOpen, onClose }: EntrepriseSid
                                       cn(
                                         'block px-3 py-1.5 rounded text-xs no-underline',
                                         isActive
-                                          ? 'bg-[var(--artci-orange)] text-white'
+                                          ? 'bg-[var(--brand-primary)] text-white'
                                           : 'text-gray-600 hover:bg-gray-100'
                                       )
                                     }
@@ -220,7 +220,7 @@ export default function EntrepriseSidebar({ mobileOpen, onClose }: EntrepriseSid
                             cn(
                               'block px-3 py-1.5 rounded text-xs no-underline',
                               isActive
-                                ? 'bg-[var(--artci-orange)] text-white'
+                                ? 'bg-[var(--brand-primary)] text-white'
                                 : 'text-gray-600 hover:bg-gray-100'
                             )
                           }

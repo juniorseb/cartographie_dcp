@@ -11,6 +11,7 @@ import apiClient from '@/api/client';
 
 // Lazy loading des pages publiques
 const CartePage = lazy(() => import('@/pages/public/CartePage'));
+const HomePage = lazy(() => import('@/pages/public/HomePage'));
 const ListeEntitesPage = lazy(() => import('@/pages/public/ListeEntitesPage'));
 const StatistiquesPage = lazy(() => import('@/pages/public/StatistiquesPage'));
 const FicheEntitePage = lazy(() => import('@/pages/public/FicheEntitePage'));
@@ -86,11 +87,12 @@ export default function App() {
         <Routes>
           {/* Carte (sans footer) */}
           <Route element={<PublicLayoutNoFooter />}>
-            <Route index element={<CartePage />} />
+            <Route path="carte" element={<CartePage />} />
           </Route>
 
           {/* Routes publiques (avec footer) */}
           <Route element={<PublicLayout />}>
+            <Route index element={<HomePage />} />
             <Route path="entites" element={<ListeEntitesPage />} />
             <Route path="entites/:id" element={<FicheEntitePage />} />
             <Route path="statistiques" element={<StatistiquesPage />} />

@@ -52,7 +52,7 @@ export default function BackupPage() {
   return (
     <div className="max-w-4xl mx-auto">
       <h1 className="text-2xl mb-6 flex items-center gap-3">
-        <Database className="w-7 h-7 text-[var(--artci-green)]" />
+        <Database className="w-7 h-7 text-[var(--brand-secondary)]" />
         Backup & Restauration
       </h1>
 
@@ -61,7 +61,7 @@ export default function BackupPage() {
 
       <div className="card mb-6">
         <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-          <RefreshCw className="w-5 h-5 text-[var(--artci-orange)]" />
+          <RefreshCw className="w-5 h-5 text-[var(--brand-primary)]" />
           Backup automatique
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -101,7 +101,7 @@ export default function BackupPage() {
 
       <div className="card mb-6">
         <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-          <Download className="w-5 h-5 text-[var(--artci-orange)]" />
+          <Download className="w-5 h-5 text-[var(--brand-primary)]" />
           Créer un backup manuel
         </h2>
         <p className="text-sm text-gray-600 mb-4">

@@ -195,7 +195,7 @@ export default function EntitesAdminPage() {
                     <td>
                       <Link
                         to={`/admin/entites/${entite.id}`}
-                        className="text-[var(--artci-green)] hover:underline flex items-center gap-1"
+                        className="text-[var(--brand-secondary)] hover:underline flex items-center gap-1"
                       >
                         <Eye className="w-4 h-4" />
                         <span className="text-sm">Voir</span>

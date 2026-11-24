@@ -69,7 +69,7 @@ export default function MonDossierPage() {
 
   return (
     <div className="max-w-5xl mx-auto">
-      <Link to={ROUTES.ENTREPRISE_DASHBOARD} className="flex items-center gap-2 text-[var(--artci-orange)] mb-4 hover:underline text-sm">
+      <Link to={ROUTES.ENTREPRISE_DASHBOARD} className="flex items-center gap-2 text-[var(--brand-primary)] mb-4 hover:underline text-sm">
         <ArrowLeft className="w-4 h-4" /> Retour au tableau de bord
       </Link>
 
@@ -96,7 +96,7 @@ export default function MonDossierPage() {
                 className={cn(
                   'flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap',
                   active
-                    ? 'border-[var(--artci-orange)] text-[var(--artci-orange)]'
+                    ? 'border-[var(--brand-primary)] text-[var(--brand-primary)]'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
                 )}
               >
@@ -123,7 +123,7 @@ function IdentiteTab({ dossier }: { dossier: DossierComplet }) {
       {/* Identification */}
       <div>
         <h3 className="text-base font-bold mb-3 flex items-center gap-2">
-          <FileText className="w-4 h-4 text-[var(--artci-orange)]" />
+          <FileText className="w-4 h-4 text-[var(--brand-primary)]" />
           Identification
         </h3>
         <div className="space-y-2">
@@ -143,7 +143,7 @@ function IdentiteTab({ dossier }: { dossier: DossierComplet }) {
       {dossier.workflow && (
         <div>
           <h3 className="text-base font-bold mb-3 flex items-center gap-2">
-            <Shield className="w-4 h-4 text-[var(--artci-green)]" />
+            <Shield className="w-4 h-4 text-[var(--brand-secondary)]" />
             Workflow
           </h3>
           <div className="space-y-2">
@@ -164,7 +164,7 @@ function IdentiteTab({ dossier }: { dossier: DossierComplet }) {
       {dossier.contact && (
         <div>
           <h3 className="text-base font-bold mb-3 flex items-center gap-2">
-            <Users className="w-4 h-4 text-[var(--artci-orange)]" />
+            <Users className="w-4 h-4 text-[var(--brand-primary)]" />
             Contact
           </h3>
           <div className="space-y-2">
@@ -181,7 +181,7 @@ function IdentiteTab({ dossier }: { dossier: DossierComplet }) {
       {dossier.localisation && (
         <div>
           <h3 className="text-base font-bold mb-3 flex items-center gap-2">
-            <MapPin className="w-4 h-4 text-[var(--artci-orange)]" />
+            <MapPin className="w-4 h-4 text-[var(--brand-primary)]" />
             Localisation
           </h3>
           <div className="space-y-2">
@@ -196,7 +196,7 @@ function IdentiteTab({ dossier }: { dossier: DossierComplet }) {
       {dossier.dpos && dossier.dpos.length > 0 && (
         <div>
           <h3 className="text-base font-bold mb-3 flex items-center gap-2">
-            <Lock className="w-4 h-4 text-[var(--artci-green)]" />
+            <Lock className="w-4 h-4 text-[var(--brand-secondary)]" />
             DPO / CPD
           </h3>
           {dossier.dpos.map((dpo, i) => (
@@ -214,7 +214,7 @@ function IdentiteTab({ dossier }: { dossier: DossierComplet }) {
       {dossier.finalites && dossier.finalites.length > 0 && (
         <div className="lg:col-span-2">
           <h3 className="text-base font-bold mb-3 flex items-center gap-2">
-            <Globe className="w-4 h-4 text-[var(--artci-orange)]" />
+            <Globe className="w-4 h-4 text-[var(--brand-primary)]" />
             Finalités de traitement
           </h3>
           <div className="table-container">
@@ -277,7 +277,7 @@ function RapportsTab() {
         {rapports.map((r) => (
           <div key={r.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
             <div className="flex items-center gap-3 min-w-0">
-              <FileCheck className="w-5 h-5 text-[var(--artci-green)] flex-shrink-0" />
+              <FileCheck className="w-5 h-5 text-[var(--brand-secondary)] flex-shrink-0" />
               <div className="min-w-0">
                 <div className="text-sm font-semibold truncate">{r.nom_fichier}</div>
                 <div className="text-xs text-gray-500">
@@ -357,7 +357,7 @@ function DocumentsTab() {
                 {group.map((d) => (
                   <div key={d.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
                     <div className="flex items-center gap-3 min-w-0">
-                      <FileCheck className="w-5 h-5 text-[var(--artci-green)] flex-shrink-0" />
+                      <FileCheck className="w-5 h-5 text-[var(--brand-secondary)] flex-shrink-0" />
                       <div className="min-w-0">
                         <div className="text-sm font-semibold truncate">{d.nom_fichier}</div>
                         <div className="text-xs text-gray-500">
@@ -418,7 +418,7 @@ function JournalTab() {
         {events.map((e) => {
           const cls = e.nouveau_statut ? STATUT_BADGE[e.nouveau_statut] ?? 'badge-encours' : 'badge-encours';
           return (
-            <div key={e.id} className="border-l-4 border-[var(--artci-orange)] pl-4 py-2">
+            <div key={e.id} className="border-l-4 border-[var(--brand-primary)] pl-4 py-2">
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2">
                   {e.ancien_statut && (

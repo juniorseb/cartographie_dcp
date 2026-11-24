@@ -69,7 +69,7 @@ export default function ProfilPage() {
       {/* Infos non modifiables */}
       <div className="card mb-6">
         <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-          <User className="w-5 h-5 text-[var(--artci-orange)]" />
+          <User className="w-5 h-5 text-[var(--brand-primary)]" />
           Informations du compte
         </h3>
         <div className="space-y-3">
@@ -174,7 +174,7 @@ export default function ProfilPage() {
       <div className="card">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <KeyRound className="w-5 h-5 text-[var(--artci-orange)]" />
+            <KeyRound className="w-5 h-5 text-[var(--brand-primary)]" />
             <span className="font-bold">Mot de passe</span>
           </div>
           <Link

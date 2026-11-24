@@ -31,8 +31,8 @@ export default function StatistiquesPage() {
   const villeData = toChartData(stats.par_ville).slice(0, 15);
 
   const summaryCards = [
-    { label: 'Entités Conformes', value: stats.total_entites_conformes, icon: CheckCircle, color: 'var(--artci-green)', cardClass: 'card card-green' },
-    { label: 'Partiellement Conformes', value: stats.total_partiellement_conformes ?? 0, icon: Clock, color: 'var(--artci-orange)', cardClass: 'card card-orange' },
+    { label: 'Entités Conformes', value: stats.total_entites_conformes, icon: CheckCircle, color: 'var(--brand-secondary)', cardClass: 'card card-green' },
+    { label: 'Partiellement Conformes', value: stats.total_partiellement_conformes ?? 0, icon: Clock, color: 'var(--brand-primary)', cardClass: 'card card-orange' },
   ];
 
   return (
