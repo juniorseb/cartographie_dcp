@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ShieldCheck, Map as MapIcon, Search, UserPlus, ClipboardList, BadgeCheck,
@@ -7,6 +7,15 @@ import {
 import { useApi } from '@/hooks/useApi';
 import * as publicApi from '@/api/public.api';
 import { ROUTES } from '@/utils/constants';
+import heroInstitution from '@/assets/hero-institution.webp';
+import heroInstitutionSm from '@/assets/hero-institution-960.webp';
+import heroSecurite from '@/assets/hero-securite.webp';
+import heroSecuriteSm from '@/assets/hero-securite-960.webp';
+
+const SLIDES = [
+  { src: heroInstitution, srcSmall: heroInstitutionSm },
+  { src: heroSecurite, srcSmall: heroSecuriteSm },
+];
 
 const ETAPES = [
   {
@@ -59,6 +68,16 @@ export default function HomePage() {
   const [query, setQuery] = useState('');
   const { data: stats } = useApi(() => publicApi.getStats(), []);
 
+  // Diaporama : fondu toutes les 7 s, en pause si onglet masque ou mouvement reduit
+  const [slide, setSlide] = useState(0);
+  useEffect(() => {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    const id = setInterval(() => {
+      if (!document.hidden) setSlide((s) => (s + 1) % SLIDES.length);
+    }, 7000);
+    return () => clearInterval(id);
+  }, []);
+
   const conformes = stats?.total_entites_conformes ?? 0;
   const partiels = stats?.total_partiellement_conformes ?? 0;
   const secteurs = Object.keys(stats?.par_secteur ?? {}).length;
@@ -71,73 +90,97 @@ export default function HomePage() {
 
   return (
     <div className="bg-[var(--brand-bg)]">
-      {/* ========== HERO ========== */}
-      <section className="relative overflow-hidden bg-[var(--brand-dark)] text-white">
+      {/* ========== HERO (visuels clairs en fondu) ========== */}
+      <section className="relative overflow-hidden bg-[#F7F9FD] min-h-[560px] md:min-h-[640px] flex items-center">
+        {/* Grand ecran (xl+) : l'image occupe la partie droite : l'illustration ne passe jamais sous le texte */}
+        <div aria-hidden className="absolute inset-0 xl:left-[38%] 2xl:left-[30%]">
+          {SLIDES.map((sl, i) => (
+            <img
+              key={sl.src}
+              src={sl.src}
+              srcSet={`${sl.srcSmall} 960w, ${sl.src} 1672w`}
+              sizes="(min-width: 1280px) 70vw, 100vw"
+              alt=""
+              decoding="async"
+              className="absolute inset-0 w-full h-full object-cover object-[72%_center] xl:object-right transition-opacity duration-[1200ms] ease-in-out"
+              style={{ opacity: i === slide ? 1 : 0 }}
+            />
+          ))}
+        </div>
+        {/* Voile de lisibilite : fort a gauche (texte), transparent a droite (illustration) */}
         <div
           aria-hidden
-          className="absolute inset-0 opacity-[0.08]"
+          className="absolute inset-0 hidden xl:block"
           style={{
-            backgroundImage:
-              'radial-gradient(circle at 1px 1px, #fff 1px, transparent 0)',
-            backgroundSize: '28px 28px',
+            background:
+              'linear-gradient(90deg, rgba(247,249,253,1) 0%, rgba(247,249,253,0.95) 36%, rgba(247,249,253,0.4) 48%, rgba(247,249,253,0) 58%)',
           }}
         />
-        <div
-          aria-hidden
-          className="absolute -right-32 -top-32 w-[520px] h-[520px] rounded-full bg-[var(--brand-primary)] opacity-25 blur-3xl"
-        />
-        <div
-          aria-hidden
-          className="absolute -left-40 -bottom-48 w-[460px] h-[460px] rounded-full bg-[var(--brand-secondary)] opacity-20 blur-3xl"
-        />
-        <div className="relative max-w-7xl mx-auto px-4 md:px-8 py-14 md:py-24 grid lg:grid-cols-[1.25fr_1fr] gap-10 items-center">
-          <div>
-            <span className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs font-semibold tracking-wide uppercase">
-              <ShieldCheck className="w-4 h-4 text-[var(--brand-primary)]" />
+        <div aria-hidden className="absolute inset-0 xl:hidden bg-[rgba(247,249,253,0.86)]" />
+
+        <div className="relative w-full max-w-7xl mx-auto px-4 md:px-8 pt-12 pb-20 md:pt-16 md:pb-24">
+          <div className="max-w-[600px]">
+            <span className="inline-flex items-center gap-2 rounded-full bg-white border border-[var(--brand-gray)] shadow-sm px-3 py-1 text-xs font-bold tracking-wide uppercase text-[var(--brand-dark)]">
+              <ShieldCheck className="w-4 h-4 text-[var(--brand-secondary)]" />
               Plateforme officielle de l'ARTCI
             </span>
-            <h1 className="mt-5 text-3xl md:text-[46px] font-extrabold leading-tight text-white">
-              Cartographie nationale des organismes conformes à la protection des données personnelles
+            <h1 className="mt-5 text-[30px] md:text-[44px] font-extrabold leading-[1.15] text-[var(--brand-dark)]">
+              Cartographie nationale des organismes{' '}
+              <span className="text-[var(--brand-primary)]">conformes</span> à la protection des
+              données personnelles
             </h1>
-            <p className="mt-5 text-base md:text-lg text-white/80 max-w-2xl">
+            <p className="mt-5 text-base md:text-lg text-[#334155]">
               Consultez librement les organismes publics et privés évalués par l'ARTCI, et
               inscrivez votre organisme pour figurer sur la carte de la conformité en Côte d'Ivoire.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-3">
-              <Link to={ROUTES.MAP} className="btn btn-primary text-base px-6 py-3">
+              <Link to={ROUTES.MAP} className="btn btn-primary text-base px-6 py-3 shadow-[0_8px_20px_rgba(255,140,0,0.3)]">
                 <MapIcon className="w-5 h-5" />
                 Explorer la carte
               </Link>
               <Link
                 to={ROUTES.REGISTER}
-                className="btn text-base px-6 py-3 border-white/70 text-white hover:bg-white hover:border-white hover:text-[var(--brand-dark)]"
+                className="btn text-base px-6 py-3 bg-white border-[var(--brand-dark)] text-[var(--brand-dark)] hover:bg-[var(--brand-dark)] hover:text-white"
               >
                 <UserPlus className="w-5 h-5" />
                 Inscrire mon organisme
               </Link>
             </div>
+
+            {/* Chiffres cles, ou message tant qu'aucun organisme n'est publie */}
+            {conformes + partiels > 0 ? (
+              <dl className="mt-10 flex flex-wrap gap-x-8 gap-y-4">
+                <HeroStat valeur={conformes + partiels} label="Organismes publiés" />
+                <HeroStat valeur={conformes} label="Conformes" dot="var(--status-conforme)" />
+                <HeroStat valeur={partiels} label="Partiellement conformes" dot="var(--status-achevee)" />
+                <HeroStat valeur={secteurs} label="Secteurs d'activité" />
+              </dl>
+            ) : (
+              <p className="mt-10 inline-flex items-start gap-3 rounded-xl bg-white/90 border border-[var(--brand-gray)] shadow-sm px-4 py-3 text-sm text-[#334155] max-w-md">
+                <BadgeCheck className="w-5 h-5 mt-0.5 flex-shrink-0 text-[var(--brand-secondary)]" />
+                <span>
+                  <strong className="text-[var(--brand-dark)]">Évaluations en cours.</strong>{' '}
+                  Les organismes recensés apparaîtront sur la carte dès leur validation par l'ARTCI.
+                </span>
+              </p>
+            )}
           </div>
 
-          {/* Chiffres cles (ou message tant qu'aucun organisme n'est publie) */}
-          {conformes + partiels > 0 ? (
-            <div className="grid grid-cols-2 gap-4">
-              <StatTile valeur={conformes + partiels} label="Organismes publiés" large />
-              <StatTile valeur={conformes} label="Conformes" dot="var(--status-conforme)" />
-              <StatTile valeur={partiels} label="Partiellement conformes" dot="var(--status-achevee)" />
-              <StatTile valeur={secteurs} label="Secteurs d'activité" />
-            </div>
-          ) : (
-            <div className="rounded-[var(--radius-card)] bg-white/10 border border-white/15 backdrop-blur-sm p-6 md:p-8">
-              <span className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center">
-                <BadgeCheck className="w-6 h-6 text-[var(--brand-primary)]" />
-              </span>
-              <h2 className="mt-4 text-xl text-white">Évaluations en cours</h2>
-              <p className="mt-2 text-sm text-white/80">
-                Les organismes recensés sont actuellement en cours d'évaluation par l'ARTCI.
-                Ils apparaîtront sur la carte dès leur publication.
-              </p>
-            </div>
-          )}
+          {/* Indicateurs du diaporama */}
+          <div className="absolute bottom-14 md:bottom-16 right-4 md:right-8 flex gap-2">
+            {SLIDES.map((sl, i) => (
+              <button
+                key={sl.src}
+                type="button"
+                onClick={() => setSlide(i)}
+                aria-label={`Afficher le visuel ${i + 1}`}
+                aria-current={i === slide}
+                className={`h-2.5 rounded-full transition-all ${
+                  i === slide ? 'w-8 bg-[var(--brand-primary)]' : 'w-2.5 bg-slate-400/70 hover:bg-slate-500'
+                }`}
+              />
+            ))}
+          </div>
         </div>
       </section>
 
@@ -271,22 +314,17 @@ function SectionTitle({ surtitre, titre }: { surtitre: string; titre: string }) 
   );
 }
 
-function StatTile({
-  valeur, label, large, dot,
-}: { valeur: number; label: string; large?: boolean; dot?: string }) {
+function HeroStat({ valeur, label, dot }: { valeur: number; label: string; dot?: string }) {
   return (
-    <div
-      className={`rounded-[var(--radius-card)] bg-white/10 border border-white/15 backdrop-blur-sm p-5 ${
-        large ? 'col-span-2' : ''
-      }`}
-    >
-      <div className={`font-extrabold ${large ? 'text-5xl' : 'text-3xl'}`}>
+    <div>
+      <dt className="sr-only">{label}</dt>
+      <dd className="font-display text-3xl font-extrabold text-[var(--brand-dark)]">
         {valeur.toLocaleString('fr-FR')}
-      </div>
-      <div className="mt-1 flex items-center gap-2 text-sm text-white/80">
+      </dd>
+      <dd className="mt-0.5 flex items-center gap-2 text-sm text-[var(--brand-muted)]" aria-hidden>
         {dot && <span className="w-2.5 h-2.5 rounded-full" style={{ background: dot }} />}
         {label}
-      </div>
+      </dd>
     </div>
   );
 }

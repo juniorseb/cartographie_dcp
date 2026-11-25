@@ -33,7 +33,7 @@ export default function Navbar() {
         </Link>
 
         {/* Liens desktop */}
-        <div className="hidden lg:flex items-center gap-1 h-full">
+        <div className="hidden xl:flex items-center gap-1 h-full">
           {navLinks.map(({ to, label }) => (
             <NavLink
               key={to}
@@ -76,7 +76,7 @@ export default function Navbar() {
           )}
 
           <button
-            className="lg:hidden p-2 rounded-lg text-[var(--brand-dark)] hover:bg-[var(--brand-primary-soft)]"
+            className="xl:hidden p-2 rounded-lg text-[var(--brand-dark)] hover:bg-[var(--brand-primary-soft)]"
             onClick={() => setMobileOpen(!mobileOpen)}
             aria-label={mobileOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
             aria-expanded={mobileOpen}
@@ -88,7 +88,7 @@ export default function Navbar() {
 
       {/* Menu mobile / tablette */}
       {mobileOpen && (
-        <div className="lg:hidden bg-white border-t shadow-lg max-h-[calc(100vh-60px)] overflow-y-auto">
+        <div className="xl:hidden bg-white border-t shadow-lg max-h-[calc(100vh-60px)] overflow-y-auto">
           {navLinks.map(({ to, label }) => (
             <NavLink
               key={to}
