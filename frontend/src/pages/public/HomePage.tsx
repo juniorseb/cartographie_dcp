@@ -219,8 +219,13 @@ export default function HomePage() {
         <ol className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {ETAPES.map(({ icon: Icon, titre, texte }, i) => (
             <li key={titre} className="card card-lift relative">
-              <span aria-hidden className="absolute top-4 right-5 font-display text-5xl font-extrabold leading-none text-[var(--brand-primary)] opacity-30 select-none">
-                {i + 1}
+              <span className="absolute top-5 right-5 flex flex-col items-end leading-none select-none">
+                <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--brand-dark)]">
+                  Étape
+                </span>
+                <span className="mt-1 font-display text-4xl font-extrabold text-[var(--brand-primary-hover)]">
+                  {String(i + 1).padStart(2, '0')}
+                </span>
               </span>
               <span className="w-12 h-12 rounded-xl bg-[var(--brand-primary)] text-white flex items-center justify-center mb-4">
                 <Icon className="w-6 h-6" />

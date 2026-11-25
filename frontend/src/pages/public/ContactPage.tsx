@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Mail, MapPin, Phone, Send, CheckCircle, AlertCircle } from 'lucide-react';
 import * as publicApi from '@/api/public.api';
+import PageHeader from '@/components/common/PageHeader';
+import { MessageCircle } from 'lucide-react';
 
 const SUJETS = [
   'Question générale',
@@ -50,13 +52,15 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto py-8 px-4">
-      <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold mb-2">Nous contacter</h1>
-        <p className="text-gray-500">
-          Une question, un problème ou une suggestion ? Notre équipe est à votre écoute.
-        </p>
-      </div>
+    <>
+    <PageHeader
+      variant="band"
+      icon={MessageCircle}
+      eyebrow="Assistance"
+      title="Nous contacter"
+      description="Une question, un problème ou une suggestion ? Les équipes de l'ARTCI vous répondent."
+    />
+    <div className="max-w-5xl mx-auto py-8 md:py-10 px-4 md:px-8">
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Coordonnées */}
@@ -218,5 +222,6 @@ export default function ContactPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

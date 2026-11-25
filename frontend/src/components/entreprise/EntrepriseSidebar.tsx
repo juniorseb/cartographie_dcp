@@ -119,7 +119,7 @@ export default function EntrepriseSidebar({ mobileOpen, onClose }: EntrepriseSid
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={onClose}
-                  className="mt-3 flex flex-col gap-1 px-4 py-3 rounded-xl text-sm font-semibold no-underline text-white bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-secondary)] hover:shadow-hover hover:-translate-y-0.5 transition-all"
+                  className="mt-3 flex flex-col gap-1 px-4 py-3 rounded-xl text-sm font-semibold no-underline text-white bg-[var(--brand-secondary)] hover:bg-[var(--brand-secondary-hover)] hover:shadow-hover hover:-translate-y-0.5 transition-all"
                 >
                   <span className="flex items-center gap-3">
                     <Icon className="w-4 h-4 flex-shrink-0" />

@@ -33,11 +33,11 @@ export default function SearchBar({
     <div className="relative">
       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
       <input
-        type="text"
+        type="search"
         value={localValue}
         onChange={(e) => setLocalValue(e.target.value)}
         placeholder={placeholder}
-        className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded focus:outline-none focus:border-[var(--brand-primary)]"
+        className="block w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-[10px] bg-white focus:outline-none focus:border-[var(--brand-primary)] focus:ring-[3px] focus:ring-[rgba(255,140,0,0.18)]"
       />
     </div>
   );

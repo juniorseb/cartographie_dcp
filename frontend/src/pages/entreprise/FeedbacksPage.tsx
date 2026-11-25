@@ -6,6 +6,7 @@ import type { SignalementErreurItem } from '@/api/entreprise.api';
 import Loading from '@/components/common/Loading';
 import ErrorDisplay from '@/components/common/ErrorDisplay';
 import EmptyState from '@/components/common/EmptyState';
+import PageHeader from '@/components/common/PageHeader';
 import { formatDateTime } from '@/utils/format';
 
 const SIGNALEMENT_STATUT: Record<SignalementErreurItem['statut'], { label: string; className: string }> = {
@@ -64,15 +65,19 @@ export default function FeedbacksPage() {
   if (!hasFeedbacks && !hasSignalements && !hasNotifs) {
     return (
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-2xl mb-6">Notifications</h1>
-        <EmptyState title="Aucune notification" description="" />
+        <PageHeader icon={Bell} title="Notifications" description="Retours de l'ARTCI sur votre dossier, validations et suites données à vos signalements." />
+        <EmptyState
+          icon={Bell}
+          title="Aucune notification"
+          description="Vous serez prévenu ici dès que l'ARTCI vous enverra un retour sur votre dossier."
+        />
       </div>
     );
   }
 
   return (
     <div className="max-w-3xl mx-auto">
-      <h1 className="text-2xl mb-6">Notifications</h1>
+      <PageHeader icon={Bell} title="Notifications" description="Retours de l'ARTCI sur votre dossier, validations et suites données à vos signalements." />
 
       {/* E5 : Notifications globales (depublications auto, validations, signalements traites...) */}
       {hasNotifs && (

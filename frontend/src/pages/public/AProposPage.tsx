@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import PageHeader from '@/components/common/PageHeader';
 import { BookOpen, HelpCircle, Phone, Mail, MapPin, ExternalLink, ChevronDown, Scale } from 'lucide-react';
 
 const DEFINITIONS = [
@@ -56,13 +57,17 @@ export default function AProposPage() {
   const [openDef, setOpenDef] = useState<number | null>(null);
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <>
+    <PageHeader
+      variant="band"
+      icon={BookOpen}
+      eyebrow="Comprendre la plateforme"
+      title="À propos de la Cartographie DCP"
+      description="Mission de l'ARTCI, définitions clés de la loi n°2013-450, cadre juridique et réponses aux questions fréquentes."
+    />
+    <div className="max-w-4xl mx-auto px-4 md:px-8 py-8 md:py-10">
       {/* Mission ARTCI */}
       <section className="mb-10">
-        <h1 className="text-3xl font-bold mb-4 flex items-center gap-3">
-          <BookOpen className="w-8 h-8 text-[var(--brand-primary)]" />
-          À Propos
-        </h1>
         <div className="card card-orange">
           <h2 className="text-xl font-bold mb-3">Mission de l'ARTCI</h2>
           <p className="text-gray-700 leading-relaxed mb-3">
@@ -233,5 +238,6 @@ export default function AProposPage() {
         </div>
       </section>
     </div>
+    </>
   );
 }

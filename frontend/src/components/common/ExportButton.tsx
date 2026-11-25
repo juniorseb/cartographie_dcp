@@ -23,7 +23,7 @@ export default function ExportButton({ onExport, isLoading }: ExportButtonProps)
   return (
     <div className="relative" ref={ref}>
       <button
-        className="btn btn-secondary flex items-center gap-2 py-2 px-4"
+        className="btn btn-outline flex items-center gap-2 py-2 px-4 text-sm"
         onClick={() => setOpen(!open)}
         disabled={isLoading}
       >
@@ -32,7 +32,7 @@ export default function ExportButton({ onExport, isLoading }: ExportButtonProps)
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-1 w-48 bg-white rounded shadow-lg border z-50">
+        <div className="absolute right-0 mt-2 w-52 overflow-hidden rounded-xl border border-[var(--brand-gray)] bg-white py-1 shadow-hover z-50">
           {[
             { format: 'excel' as const, label: 'Excel (.xlsx)' },
             { format: 'csv' as const, label: 'CSV (.csv)' },
@@ -40,7 +40,7 @@ export default function ExportButton({ onExport, isLoading }: ExportButtonProps)
           ].map(({ format, label }) => (
             <button
               key={format}
-              className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm"
+              className="w-full text-left px-4 py-2.5 text-sm hover:bg-[var(--brand-primary-soft)]"
               onClick={() => {
                 onExport(format);
                 setOpen(false);

@@ -123,7 +123,7 @@ export default function JournalEvenementsPage() {
       </p>
 
       {events.length === 0 ? (
-        <EmptyState title="Aucun événement" description="L'historique apparaîtra ici dès qu'une action sera enregistrée sur votre dossier." />
+        <EmptyState icon={Activity} title="Aucun événement" description="L'historique apparaîtra ici dès qu'une action sera enregistrée sur votre dossier." />
       ) : (
         <div className="space-y-2">
           {events.map((ev) => {

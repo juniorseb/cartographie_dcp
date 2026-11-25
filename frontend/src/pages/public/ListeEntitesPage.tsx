@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Eye, MapPin, Phone, Mail, User, Download } from 'lucide-react';
+import { Eye, MapPin, Phone, Mail, User, Download, Building2, RotateCcw, Map as MapIcon } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import * as publicApi from '@/api/public.api';
 import SearchBar from '@/components/common/SearchBar';
@@ -10,6 +10,8 @@ import EmptyState from '@/components/common/EmptyState';
 import ExportButton from '@/components/common/ExportButton';
 import Loading from '@/components/common/Loading';
 import ErrorDisplay from '@/components/common/ErrorDisplay';
+import PageHeader from '@/components/common/PageHeader';
+import { ROUTES } from '@/utils/constants';
 import type { EntiteFilter } from '@/types/entite';
 
 // Pagination dediee a la liste publique (10 par page).
@@ -54,14 +56,27 @@ export default function ListeEntitesPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-        <h1 className="text-2xl">Liste des Entités Conformes</h1>
-        <ExportButton onExport={handleExport} isLoading={exporting} />
-      </div>
-
+    <>
+    <PageHeader
+      variant="band"
+      icon={Building2}
+      eyebrow="Registre public"
+      title="Organismes conformes"
+      description="Organismes publics et privés évalués par l'ARTCI au titre de la loi n°2013-450 relative à la protection des données à caractère personnel."
+      actions={
+        <>
+          <Link to={ROUTES.MAP} className="btn btn-outline py-2 px-4 text-sm">
+            <MapIcon className="w-4 h-4" />
+            Voir sur la carte
+          </Link>
+          <ExportButton onExport={handleExport} isLoading={exporting} />
+        </>
+      }
+    />
+    <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 md:py-8">
       {/* Filtres — toutes les inputs/selects partagent la meme hauteur h-11 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-6 [&_input]:h-11 [&_select]:h-11">
+      <div className="card mb-6 p-4 md:p-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 [&_input]:h-11 [&_select]:h-11">
         <SearchBar
           value={filters.search ?? ''}
           onChange={(v) => updateFilter('search', v)}
@@ -121,6 +136,24 @@ export default function ListeEntitesPage() {
         </div>
       </div>
 
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[var(--brand-gray)] pt-3 text-sm">
+        <span className="text-[var(--brand-muted)]">
+          <strong className="font-display text-[var(--brand-dark)]">{data?.total ?? 0}</strong>{' '}
+          organisme{(data?.total ?? 0) > 1 ? 's' : ''} trouvé{(data?.total ?? 0) > 1 ? 's' : ''}
+        </span>
+        {Object.values(filters).some(Boolean) && (
+          <button
+            type="button"
+            onClick={() => { setFilters({}); setPage(1); }}
+            className="inline-flex items-center gap-1.5 font-semibold text-[var(--brand-primary-hover)] hover:underline"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            Réinitialiser les filtres
+          </button>
+        )}
+      </div>
+      </div>
+
       {/* Indicateur scroll mobile */}
       <p className="text-xs text-gray-400 mb-2 md:hidden flex items-center gap-1">
         <span>&larr;</span> Glissez horizontalement pour voir toutes les colonnes <span>&rarr;</span>
@@ -132,7 +165,15 @@ export default function ListeEntitesPage() {
       ) : error ? (
         <ErrorDisplay message={error} onRetry={refetch} />
       ) : !data || data.items.length === 0 ? (
-        <EmptyState />
+        <EmptyState
+          icon={Building2}
+          title={Object.values(filters).some(Boolean) ? 'Aucun organisme ne correspond' : 'Aucun organisme publié pour le moment'}
+          description={
+            Object.values(filters).some(Boolean)
+              ? 'Modifiez ou réinitialisez les filtres pour élargir la recherche.'
+              : "Les organismes évalués par l'ARTCI apparaîtront ici dès leur publication."
+          }
+        />
       ) : (
         <>
           <div className="table-container overflow-x-auto -mx-4 md:mx-0">
@@ -272,5 +313,6 @@ export default function ListeEntitesPage() {
         </>
       )}
     </div>
+    </>
   );
 }
