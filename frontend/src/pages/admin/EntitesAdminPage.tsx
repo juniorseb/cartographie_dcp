@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Eye, Plus, Database } from 'lucide-react';
+import { Eye, Plus, Database, CheckCircle2, Layers } from 'lucide-react';
+import { cn } from '@/utils/cn';
 import { useApi } from '@/hooks/useApi';
 import * as adminApi from '@/api/admin.api';
 import SearchBar from '@/components/common/SearchBar';
@@ -15,19 +16,46 @@ import { ROUTES, ITEMS_PER_PAGE } from '@/utils/constants';
 import type { AdminEntiteFilter } from '@/types/admin';
 import type { StatutConformite } from '@/types/enums';
 
+const STATUT_WF_LABELS: Record<string, string> = {
+  brouillon: 'Brouillon (entreprise)',
+  brouillon_artci: 'Brouillon ARTCI',
+  soumis: 'Soumis',
+  en_verification: 'En vérification',
+  en_attente_complements: 'Compléments demandés',
+  conforme_sous_reserve: 'Conforme sous réserve',
+  valide: 'Validé',
+  rejete: 'Rejeté',
+  publie: 'Publié',
+};
+
 export default function EntitesAdminPage() {
   const { user } = useAuth();
   const canCreate = user && hasMinRole(user.role, 'editor');
 
   const [filters, setFilters] = useState<AdminEntiteFilter>({});
   const [page, setPage] = useState(1);
+  // Onglet « validees » (defaut) : entites validees par admin/super-admin.
+  // Onglet « toutes » : inclut les brouillons (ex. recensement importe) pour
+  // pouvoir les ouvrir et les traiter. Cote serveur, un editeur ne recoit
+  // jamais les brouillons (scope force par le role).
+  const [vue, setVue] = useState<'validees' | 'toutes'>('validees');
 
-  // « Entités » = uniquement les entités validées par admin/super-admin (après review éditeur)
   const fetchEntites = useCallback(
-    () => adminApi.getEntites({ ...filters, validees: true, page, per_page: ITEMS_PER_PAGE }),
-    [filters, page]
+    () => adminApi.getEntites({
+      ...filters,
+      ...(vue === 'validees' ? { validees: true } : {}),
+      page,
+      per_page: ITEMS_PER_PAGE,
+    }),
+    [filters, page, vue]
   );
-  const { data, isLoading, error, refetch } = useApi(fetchEntites, [filters, page]);
+  const { data, isLoading, error, refetch } = useApi(fetchEntites, [filters, page, vue]);
+
+  function changerVue(v: 'validees' | 'toutes') {
+    setVue(v);
+    setFilters((prev) => ({ ...prev, statut_workflow: undefined }));
+    setPage(1);
+  }
 
   function updateFilter(key: keyof AdminEntiteFilter, value: string) {
     setFilters((prev) => ({ ...prev, [key]: value || undefined }));
@@ -37,12 +65,40 @@ export default function EntitesAdminPage() {
   return (
     <div>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-        <h1 className="text-2xl">Gestion des Entités</h1>
+        <div>
+          <h1 className="text-2xl md:text-[28px]">Gestion des entités</h1>
+          <p className="mt-1 text-sm text-[var(--brand-muted)]">
+            {vue === 'validees'
+              ? 'Entités validées par l’ARTCI (conformes sous réserve, validées ou publiées).'
+              : 'Toutes les entités, y compris les brouillons du recensement à traiter.'}
+          </p>
+        </div>
         {canCreate && (
           <Link to={ROUTES.ADMIN_ENTITE_CREATE} className="btn btn-primary flex items-center gap-2 text-sm no-underline">
             <Plus className="w-4 h-4" /> Nouvelle Entité
           </Link>
         )}
+      </div>
+
+      {/* Onglets de vue */}
+      <div className="mb-5 inline-flex rounded-xl border border-[var(--brand-gray)] bg-white p-1 shadow-sm">
+        {([
+          { key: 'validees', label: 'Validées', icon: CheckCircle2 },
+          { key: 'toutes', label: 'Toutes (brouillons inclus)', icon: Layers },
+        ] as const).map(({ key, label, icon: Icon }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => changerVue(key)}
+            className={cn(
+              'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors',
+              vue === key ? 'bg-[var(--brand-primary)] text-white' : 'text-gray-600 hover:bg-[var(--brand-primary-soft)]'
+            )}
+          >
+            <Icon className="w-4 h-4" />
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* Filtres — un filtre pour chaque colonne pertinente */}
@@ -104,7 +160,17 @@ export default function EntitesAdminPage() {
         </div>
         <div className="form-group mb-0">
           <select value={filters.statut_workflow ?? ''} onChange={(e) => updateFilter('statut_workflow', e.target.value)} className="w-full py-2.5">
-            <option value="">Tous les statuts (validés)</option>
+            <option value="">{vue === 'validees' ? 'Tous les statuts (validés)' : 'Tous les statuts'}</option>
+            {vue === 'toutes' && (
+              <>
+                <option value="brouillon_artci">Brouillon (saisie ARTCI)</option>
+                <option value="brouillon">Brouillon (entreprise)</option>
+                <option value="soumis">Soumis</option>
+                <option value="en_verification">En vérification</option>
+                <option value="en_attente_complements">En attente de compléments</option>
+                <option value="rejete">Rejeté</option>
+              </>
+            )}
             <option value="conforme_sous_reserve">Conforme sous réserve</option>
             <option value="valide">Validé</option>
             <option value="publie">Publié</option>
@@ -143,8 +209,16 @@ export default function EntitesAdminPage() {
       ) : !data || data.items.length === 0 ? (
         <EmptyState
           icon={Database}
-          title={Object.values(filters).some(Boolean) ? 'Aucune entité ne correspond aux filtres' : 'Aucune entité validée pour le moment'}
-          description="Cette liste ne contient que les entités validées (conformes, validées ou publiées). Les dossiers en brouillon ou en cours de traitement n'y figurent pas."
+          title={Object.values(filters).some(Boolean) ? 'Aucune entité ne correspond aux filtres' : vue === 'validees' ? 'Aucune entité validée pour le moment' : 'Aucune entité'}
+          description={vue === 'validees'
+            ? "Cet onglet ne contient que les entités validées. Les brouillons du recensement sont dans l'onglet « Toutes (brouillons inclus) »."
+            : 'Aucune entité ne correspond à ces critères.'}
+          action={vue === 'validees' && !Object.values(filters).some(Boolean) ? (
+            <button type="button" onClick={() => changerVue('toutes')} className="btn btn-outline text-sm">
+              <Layers className="w-4 h-4" />
+              Voir toutes les entités
+            </button>
+          ) : undefined}
         />
       ) : (
         <>
@@ -177,7 +251,7 @@ export default function EntitesAdminPage() {
                       <span className="badge badge-encours">{entite.origine_saisie ?? '-'}</span>
                     </td>
                     <td className="text-xs">
-                      <span className="badge badge-achevee">{entite.statut_workflow ?? '-'}</span>
+                      <span className="badge bg-[var(--brand-primary-soft)] text-[var(--brand-primary-hover)] whitespace-nowrap">{(entite.statut_workflow && STATUT_WF_LABELS[entite.statut_workflow]) || entite.statut_workflow || '-'}</span>
                     </td>
                     <td>
                       {entite.statut_conformite ? (
