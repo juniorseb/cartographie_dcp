@@ -91,9 +91,11 @@ export default function HomePage() {
   return (
     <div className="bg-[var(--brand-bg)]">
       {/* ========== HERO (visuels clairs en fondu) ========== */}
-      <section className="relative overflow-hidden bg-[#F7F9FD] min-h-[560px] md:min-h-[640px] flex items-center">
-        {/* Grand ecran (xl+) : l'image occupe la partie droite : l'illustration ne passe jamais sous le texte */}
-        <div aria-hidden className="absolute inset-0 xl:left-[38%] 2xl:left-[30%]">
+      <section className="relative overflow-hidden bg-[#F7F9FD] min-h-[520px] md:min-h-[600px] flex items-center">
+        {/* Grand ecran (xl+) : image entiere (non rognee) a droite, centree verticalement,
+            bords fondus et legerement transparente (effet "verre blanc").
+            Tablette/mobile : image en fond plein cadre sous un voile. */}
+        <div aria-hidden className="absolute inset-0 xl:left-[34%] 2xl:left-[30%] [--hero-img-op:1] xl:[--hero-img-op:0.62]">
           {SLIDES.map((sl, i) => (
             <img
               key={sl.src}
@@ -102,12 +104,10 @@ export default function HomePage() {
               sizes="(min-width: 1280px) 70vw, 100vw"
               alt=""
               decoding="async"
-              className="absolute inset-0 w-full h-full object-cover object-[72%_center] xl:object-right saturate-[0.85] transition-opacity duration-[1200ms] ease-in-out"
-              style={{ opacity: i === slide ? 1 : 0 }}
+              className="hero-slide absolute inset-0 w-full h-full object-cover object-[72%_center] xl:inset-auto xl:right-0 xl:top-1/2 xl:-translate-y-1/2 xl:h-auto saturate-[0.85] transition-opacity duration-[1200ms] ease-in-out"
+              style={{ opacity: i === slide ? 'var(--hero-img-op)' : 0 }}
             />
           ))}
-          {/* Verre blanc sur l'image : l'illustration reste presente mais en retrait */}
-          <div className="absolute inset-0 hidden xl:block bg-white/40" />
         </div>
         {/* Voile de lisibilite : fort a gauche (texte), transparent a droite (illustration) */}
         <div
@@ -150,22 +150,14 @@ export default function HomePage() {
               </Link>
             </div>
 
-            {/* Chiffres cles, ou message tant qu'aucun organisme n'est publie */}
-            {conformes + partiels > 0 ? (
+            {/* Chiffres cles (affiches des qu'au moins un organisme est publie) */}
+            {conformes + partiels > 0 && (
               <dl className="mt-8 flex flex-wrap gap-x-8 gap-y-4">
-                <HeroStat valeur={conformes + partiels} label="Organismes publiés" />
-                <HeroStat valeur={conformes} label="Conformes" dot="var(--status-conforme)" />
-                <HeroStat valeur={partiels} label="Partiellement conformes" dot="var(--status-achevee)" />
-                <HeroStat valeur={secteurs} label="Secteurs d'activité" />
-              </dl>
-            ) : (
-              <p className="mt-8 inline-flex items-start gap-3 rounded-xl bg-[var(--brand-secondary-soft)] border border-[#BFE8D2] px-4 py-3 text-sm text-[#334155] max-w-md">
-                <BadgeCheck className="w-5 h-5 mt-0.5 flex-shrink-0 text-[var(--brand-secondary)]" />
-                <span>
-                  <strong className="text-[var(--brand-dark)]">Évaluations en cours.</strong>{' '}
-                  Les organismes recensés apparaîtront sur la carte dès leur validation par l'ARTCI.
-                </span>
-              </p>
+                  <HeroStat valeur={conformes + partiels} label="Organismes publiés" />
+                  <HeroStat valeur={conformes} label="Conformes" dot="var(--status-conforme)" />
+                  <HeroStat valeur={partiels} label="Partiellement conformes" dot="var(--status-achevee)" />
+                  <HeroStat valeur={secteurs} label="Secteurs d'activité" />
+                </dl>
             )}
           </div>
 

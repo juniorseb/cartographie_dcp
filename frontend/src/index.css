@@ -511,3 +511,18 @@ table tbody tr:hover {
     border-bottom-width: 2px;
   }
 }
+
+/* Hero accueil : sur grand ecran, bords haut / bas / gauche de l'image fondus
+   dans le fond de page (masque applique a l'image elle-meme). */
+@media (min-width: 1280px) {
+  .hero-slide {
+    -webkit-mask-image:
+      linear-gradient(to bottom, transparent 0, #000 14%, #000 86%, transparent 100%),
+      linear-gradient(to right, transparent 0, #000 18%);
+    -webkit-mask-composite: source-in;
+    mask-image:
+      linear-gradient(to bottom, transparent 0, #000 14%, #000 86%, transparent 100%),
+      linear-gradient(to right, transparent 0, #000 18%);
+    mask-composite: intersect;
+  }
+}
