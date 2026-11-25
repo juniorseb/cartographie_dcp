@@ -110,7 +110,7 @@ export default function EntiteDetailAdminPage() {
               onClick={() => navigate(ROUTES.ADMIN_ENTITES)}
               className="flex items-center gap-2 text-sm text-gray-600 hover:text-[var(--brand-primary)]"
             >
-              <ArrowLeft className="w-4 h-4" /> Retour aux entites
+              <ArrowLeft className="w-4 h-4" /> Retour aux entités
             </button>
 
             {canPublish && (

@@ -561,6 +561,11 @@ def import_boloforms_csv(file, user_id):
                 data, user_id=user_id, origine='auto_recensement'
             )
 
+            # --- Reponses du formulaire DCP (affichees dans le formulaire admin/entreprise) ---
+            # Sans cela, l'entite importee apparait avec un formulaire vide :
+            # le formulaire lit exclusivement FormulaireDCP.reponses.
+            creer_formulaire_depuis_ligne(entite, row)
+
             # --- Mettre a jour les champs conformite (effectif, volume, has_dpo) ---
             from app.models import EntiteConformite
             conf = EntiteConformite.query.get(entite.id)
@@ -588,6 +593,33 @@ def import_boloforms_csv(file, user_id):
         'skipped': skipped,
         'errors': errors[:50],  # limiter le retour pour ne pas saturer
     }
+
+
+def creer_formulaire_depuis_ligne(entite, row, remplacer=False):
+    """Cree (ou remplace si `remplacer`) le FormulaireDCP d'une entite a partir
+    d'une ligne du questionnaire. Ne touche jamais un formulaire existant par
+    defaut (il a pu etre complete/corrige depuis la plateforme).
+    Retourne True si un formulaire a ete ecrit."""
+    from app.models import FormulaireDCP
+    from app.services.formulaire_recensement import build_reponses_from_row
+    from app.services.formalite_engine import determiner_formalite
+
+    form = FormulaireDCP.query.get(entite.id)
+    if form and form.reponses and not remplacer:
+        return False
+
+    reponses = build_reponses_from_row(row, numero_cc=entite.numero_cc)
+    formalite_type, motifs = determiner_formalite(reponses)
+    reponses['cadre_juridique']['formalite_calculee'] = formalite_type
+    reponses['cadre_juridique']['formalite_motifs'] = motifs
+
+    if form:
+        form.reponses = reponses
+        form.version = (form.version or 1) + 1
+    else:
+        db.session.add(FormulaireDCP(entite_id=entite.id, reponses=reponses, version=1))
+    db.session.commit()
+    return True
 
 
 def _safe_int(s):

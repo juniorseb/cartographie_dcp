@@ -436,7 +436,7 @@ export default function MonEnregistrementPage({ mode = 'entreprise', entiteId: e
         <h1 className="text-2xl md:text-[28px] font-bold text-[var(--brand-dark)]">
           {isAdminMode
             ? (adminEntiteId ? "Édition d'une entité" : 'Nouveau recensement (saisie ARTCI)')
-            : 'Mon enregistrement'}
+            : isViewMode ? 'Formulaire de recensement' : 'Mon enregistrement'}
         </h1>
       </div>
 
