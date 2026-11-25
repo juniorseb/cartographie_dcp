@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { UserCheck, CheckCircle, Activity, Plus, X } from 'lucide-react';
+import { UserCheck, CheckCircle, Activity, Plus, X, UserCog } from 'lucide-react';
 import * as adminApi from '@/api/admin.api';
 import { useApi } from '@/hooks/useApi';
 import Loading from '@/components/common/Loading';
@@ -151,7 +151,7 @@ export default function AssignationPage() {
       {isLoading ? (
         <Loading text="Chargement des assignations..." />
       ) : !assignations || assignations.length === 0 ? (
-        <EmptyState title="Aucune assignation" description="Aucune entité n'a encore été assignée." />
+        <EmptyState icon={UserCog} title="Aucune assignation" description="Aucune entité n'a encore été assignée." />
       ) : (
         <div className="table-container overflow-x-auto">
           <table className="w-full">

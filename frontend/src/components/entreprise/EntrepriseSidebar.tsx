@@ -144,8 +144,8 @@ export default function EntrepriseSidebar({ mobileOpen, onClose }: EntrepriseSid
                     cn(
                       'flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors no-underline',
                       isActive
-                        ? 'bg-[var(--brand-primary)] text-white'
-                        : 'text-gray-700 hover:bg-gray-100'
+                        ? 'bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(255,140,0,0.25)]'
+                        : 'text-gray-700 hover:bg-[var(--brand-primary-soft)] hover:text-[var(--brand-dark)]'
                     )
                   }
                 >

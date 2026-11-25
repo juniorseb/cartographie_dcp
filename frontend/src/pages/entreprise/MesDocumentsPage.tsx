@@ -77,6 +77,7 @@ export default function MesDocumentsPage() {
           Mes documents
         </h1>
         <EmptyState
+          icon={FileText}
           title="Aucun document"
           description="Vous n'avez pas encore déposé de documents. Ils apparaîtront ici dès que vous en aurez uploadé via l'inscription ou votre enregistrement."
         />

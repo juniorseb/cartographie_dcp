@@ -109,6 +109,6 @@ export const ITEMS_PER_PAGE = 20;
 
 /** Couleurs ARTCI pour graphiques Recharts */
 export const CHART_COLORS = [
-  '#FF8C00', '#228B22', '#4A90E2', '#DC143C', '#9B59B6',
-  '#1ABC9C', '#E67E22', '#2980B9', '#C0392B', '#27AE60',
+  '#FF8C00', '#009E49', '#0F172A', '#F59E0B', '#10B981',
+  '#64748B', '#FDBA74', '#6EE7B7', '#334155', '#DC143C',
 ];

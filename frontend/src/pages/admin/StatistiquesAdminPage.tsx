@@ -244,7 +244,7 @@ export default function StatistiquesAdminPage() {
                 <XAxis type="number" />
                 <YAxis type="category" dataKey="name" width={75} tick={{ fontSize: 12 }} />
                 <Tooltip />
-                <Bar dataKey="value" fill="#228B22" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="value" fill="#009E49" radius={[0, 6, 6, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

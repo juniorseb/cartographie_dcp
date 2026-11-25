@@ -76,7 +76,7 @@ export default function PanierPage() {
       </div>
 
       {isEmpty ? (
-        <EmptyState title="Panier vide" description="Aucune assignation ni nouvelle soumission à traiter." />
+        <EmptyState icon={Inbox} title="Panier vide" description="Aucune assignation ni nouvelle soumission à traiter." />
       ) : (
         <>
           {/* Section 1 : Nouvelles soumissions a assigner (admin/super) */}

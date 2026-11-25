@@ -62,7 +62,7 @@ export default function InscriptionsPage() {
       {isLoading && <Loading text="Chargement..." />}
       {error && <ErrorDisplay message={error} onRetry={refetch} />}
       {items && items.length === 0 && (
-        <EmptyState title="Aucune inscription" description={`Aucune inscription ${STATUT_LABEL[statut].toLowerCase()}.`} />
+        <EmptyState icon={UserCheck} title="Aucune inscription" description={`Aucune inscription ${STATUT_LABEL[statut].toLowerCase()}.`} />
       )}
 
       {items && items.length > 0 && (

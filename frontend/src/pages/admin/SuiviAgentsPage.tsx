@@ -2,7 +2,7 @@
  * Page "Suivi d'activité des agents" (spec §5.1, §5.2 reunion 07/05/2026).
  * Reservée Admin / Super Admin.
  */
-import { Activity, TrendingUp, Clock, CheckCircle } from 'lucide-react';
+import { Activity, TrendingUp, Clock, CheckCircle, Users } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import * as adminApi from '@/api/admin.api';
 import Loading from '@/components/common/Loading';
@@ -26,7 +26,7 @@ export default function SuiviAgentsPage() {
 
   if (isLoading) return <Loading fullPage text="Chargement de l'activité..." />;
   if (error) return <ErrorDisplay message={error} onRetry={refetch} />;
-  if (!agents || agents.length === 0) return <EmptyState title="Aucun agent" description="Aucun agent à suivre." />;
+  if (!agents || agents.length === 0) return <EmptyState icon={Users} title="Aucun agent" description="Aucun agent à suivre." />;
 
   // KPIs globaux
   const totalAffectes = agents.reduce((sum, a) => sum + a.nb_dossiers_affectes, 0);

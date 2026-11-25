@@ -663,3 +663,24 @@ table td a {
 .table-container tbody tr:last-child td {
   border-bottom: none;
 }
+
+/* Libelles de formulaire : plus legers (14px), champs aux couleurs de la charte */
+.form-group label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 6px;
+}
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+  color: #94A3B8;
+}
+input[type='range'] {
+  accent-color: var(--brand-primary);
+}
+input:disabled,
+textarea:disabled {
+  background-color: #f3f4f6;
+  color: #64748B;
+  cursor: not-allowed;
+}

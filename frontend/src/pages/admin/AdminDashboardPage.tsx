@@ -16,7 +16,7 @@ import { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Database, CheckCircle, AlertTriangle, XCircle, Users, Activity,
-  Inbox, Clock, UserPlus, Briefcase, Info,
+  Inbox, Clock, UserPlus, Briefcase, Info, ArrowUpRight,
 } from 'lucide-react';
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
@@ -129,35 +129,35 @@ export default function AdminDashboardPage() {
     {
       label: "En attente d'assignation",
       value: globalStats.kpi_en_attente_assignation ?? 0,
-      icon: Inbox, color: 'text-orange-700', bg: 'bg-orange-50',
+      icon: Inbox, color: '#E67E00', bg: '',
       link: ROUTES.ADMIN_PANIER,
     },
     {
       label: 'Assignés non traités',
       value: globalStats.kpi_assignes_non_traites ?? 0,
-      icon: Briefcase, color: 'text-blue-700', bg: 'bg-blue-50',
+      icon: Briefcase, color: '#2563EB', bg: '',
       link: ROUTES.ADMIN_ASSIGNATION,
     },
     {
       label: 'SLA dépassé (>7j)',
       value: globalStats.kpi_sla_depasse_7j ?? 0,
-      icon: Clock, color: 'text-red-700', bg: 'bg-red-50',
+      icon: Clock, color: '#DC2626', bg: '',
       link: ROUTES.ADMIN_PANIER,
     },
     {
       label: 'Inscriptions à valider',
       value: globalStats.kpi_inscriptions_en_attente ?? 0,
-      icon: UserPlus, color: 'text-purple-700', bg: 'bg-purple-50',
+      icon: UserPlus, color: '#7C3AED', bg: '',
       link: ROUTES.ADMIN_INSCRIPTIONS,
     },
   ];
 
   // KPI statistiques (vision externe)
   const summaryCards = [
-    { label: 'Total Entités', value: globalStats.total_entites, icon: Database, color: '#FF8C00', bg: 'bg-orange-50' },
-    { label: 'Conformes', value: conformes, icon: CheckCircle, color: '#228B22', bg: 'bg-green-50' },
-    { label: 'Partiellement', value: partiels, icon: AlertTriangle, color: '#FF8C00', bg: 'bg-yellow-50' },
-    { label: 'Non-conformes', value: nonConformes, icon: XCircle, color: '#DC143C', bg: 'bg-red-50' },
+    { label: 'Total entités', value: globalStats.total_entites, icon: Database, color: '#0F172A', bg: '' },
+    { label: 'Conformes', value: conformes, icon: CheckCircle, color: '#228B22', bg: '' },
+    { label: 'Partiellement', value: partiels, icon: AlertTriangle, color: '#FF8C00', bg: '' },
+    { label: 'Non-conformes', value: nonConformes, icon: XCircle, color: '#DC143C', bg: '' },
   ];
 
   const activite = globalStats.activite_recente ?? [];
@@ -166,16 +166,20 @@ export default function AdminDashboardPage() {
     <div>
       {/* En-tete + filtre temporel */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
-        <h1 className="text-2xl">Tableau de bord</h1>
-        <div className="inline-flex rounded-lg border border-gray-200 bg-white overflow-hidden">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.15em] text-[var(--brand-primary-hover)]">Administration ARTCI</p>
+          <h1 className="mt-1 text-2xl md:text-[28px]">Tableau de bord</h1>
+          <p className="mt-1 text-sm text-[var(--brand-muted)]">Pilotage des dossiers et vue d'ensemble de la conformité.</p>
+        </div>
+        <div className="inline-flex self-start sm:self-end rounded-xl border border-[var(--brand-gray)] bg-white p-1 shadow-sm">
           {PERIOD_OPTIONS.map((p) => (
             <button
               key={p.value}
               onClick={() => setPeriod(p.value)}
-              className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
                 period === p.value
-                  ? 'bg-[var(--brand-secondary)] text-white'
-                  : 'text-gray-700 hover:bg-gray-50'
+                  ? 'bg-[var(--brand-primary)] text-white'
+                  : 'text-gray-600 hover:bg-[var(--brand-primary-soft)]'
               }`}
             >
               {p.label}
@@ -186,7 +190,7 @@ export default function AdminDashboardPage() {
 
       {/* KPI OPERATIONNELS — cible admin (pilotage) */}
       <div className="mb-6">
-        <h2 className="text-sm font-bold uppercase text-gray-500 tracking-wider mb-3">
+        <h2 className="font-display text-xs font-bold uppercase text-[var(--brand-muted)] tracking-[0.12em] mb-3">
           Pilotage opérationnel
         </h2>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -194,15 +198,19 @@ export default function AdminDashboardPage() {
             <Link
               key={label}
               to={link}
-              className={`card ${bg} hover:shadow transition-shadow no-underline`}
+              className={`card card-lift group p-5 no-underline ${bg}`}
             >
-              <div className="flex items-center gap-3">
-                <Icon className={`w-7 h-7 ${color}`} />
-                <div>
-                  <p className="text-2xl font-bold leading-none">{formatNumber(value)}</p>
-                  <p className="text-xs text-gray-600 mt-0.5">{label}</p>
-                </div>
+              <div className="flex items-start justify-between">
+                <span
+                  className="flex h-10 w-10 items-center justify-center rounded-xl"
+                  style={{ background: `color-mix(in srgb, ${color} 12%, #fff)`, color }}
+                >
+                  <Icon className="w-5 h-5" />
+                </span>
+                <ArrowUpRight className="w-4 h-4 text-gray-300 transition-colors group-hover:text-[var(--brand-primary)]" />
               </div>
+              <p className="mt-3 font-display text-2xl font-extrabold leading-none text-[var(--brand-dark)]">{formatNumber(value)}</p>
+              <p className="mt-1 text-xs text-[var(--brand-muted)]">{label}</p>
             </Link>
           ))}
         </div>
@@ -210,7 +218,7 @@ export default function AdminDashboardPage() {
 
       {/* KPI STATISTIQUES — vision externe */}
       <div className="mb-2">
-        <h2 className="text-sm font-bold uppercase text-gray-500 tracking-wider mb-3">
+        <h2 className="font-display text-xs font-bold uppercase text-[var(--brand-muted)] tracking-[0.12em] mb-3">
           Vue d'ensemble
         </h2>
       </div>
@@ -230,12 +238,17 @@ export default function AdminDashboardPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {summaryCards.map(({ label, value, icon: Icon, color, bg }) => (
-          <div key={label} className={`card ${bg}`}>
+          <div key={label} className={`card p-5 ${bg}`} style={{ borderTop: `3px solid ${color}` }}>
             <div className="flex items-center gap-4">
-              <Icon className="w-10 h-10" style={{ color }} />
+              <span
+                className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl"
+                style={{ background: `color-mix(in srgb, ${color} 12%, #fff)`, color }}
+              >
+                <Icon className="w-6 h-6" />
+              </span>
               <div>
-                <p className="text-3xl font-bold">{formatNumber(value)}</p>
-                <p className="text-sm text-gray-500">{label}</p>
+                <p className="font-display text-3xl font-extrabold text-[var(--brand-dark)]">{formatNumber(value)}</p>
+                <p className="text-sm text-[var(--brand-muted)]">{label}</p>
               </div>
             </div>
           </div>
@@ -299,7 +312,7 @@ export default function AdminDashboardPage() {
                 <Tooltip
                   formatter={(v: number) => [`${formatNumber(v)} (${((v / secteurChart.total) * 100).toFixed(1)}%)`, 'Entités']}
                 />
-                <Bar dataKey="value" fill="#FF8C00" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="value" fill="#FF8C00" radius={[0, 6, 6, 0]} />
               </BarChart>
             </ResponsiveContainer>
 
@@ -367,7 +380,7 @@ export default function AdminDashboardPage() {
               <XAxis type="number" allowDecimals={false} />
               <YAxis type="category" dataKey="name" width={75} tick={{ fontSize: 12 }} />
               <Tooltip />
-              <Bar dataKey="value" fill="#228B22" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="value" fill="#009E49" radius={[0, 6, 6, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
