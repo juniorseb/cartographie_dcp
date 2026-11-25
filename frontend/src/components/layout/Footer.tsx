@@ -33,7 +33,8 @@ export default function Footer() {
         {/* Navigation */}
         <FooterCol titre="Consulter">
           <li><Link to={ROUTES.MAP} className={linkCls}>Carte des organismes</Link></li>
-          <li><Link to={ROUTES.ENTITES} className={linkCls}>Liste des organismes</Link></li>
+          <li><Link to={ROUTES.ENTITES} className={linkCls}>Organismes conformes</Link></li>
+          <li><Link to={`${ROUTES.ENTITES}?vue=responsables`} className={linkCls}>Responsables de traitement</Link></li>
           <li><Link to={ROUTES.STATISTIQUES} className={linkCls}>Statistiques</Link></li>
           <li><Link to={ROUTES.A_PROPOS} className={linkCls}>À propos</Link></li>
         </FooterCol>

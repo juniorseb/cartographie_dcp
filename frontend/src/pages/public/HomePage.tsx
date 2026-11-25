@@ -80,7 +80,7 @@ export default function HomePage() {
 
   const conformes = stats?.total_entites_conformes ?? 0;
   const partiels = stats?.total_partiellement_conformes ?? 0;
-  const secteurs = Object.keys(stats?.par_secteur ?? {}).length;
+  const nonConformes = stats?.total_non_conformes ?? 0;
 
   function rechercher(e: React.FormEvent) {
     e.preventDefault();
@@ -151,12 +151,12 @@ export default function HomePage() {
             </div>
 
             {/* Chiffres cles (affiches des qu'au moins un organisme est publie) */}
-            {conformes + partiels > 0 && (
+            {conformes + partiels + nonConformes > 0 && (
               <dl className="mt-8 flex flex-wrap gap-x-8 gap-y-4">
-                  <HeroStat valeur={conformes + partiels} label="Organismes publiés" />
+                  <HeroStat valeur={conformes + partiels + nonConformes} label="Organismes publiés" />
                   <HeroStat valeur={conformes} label="Conformes" dot="var(--status-conforme)" />
                   <HeroStat valeur={partiels} label="Partiellement conformes" dot="var(--status-achevee)" />
-                  <HeroStat valeur={secteurs} label="Secteurs d'activité" />
+                  <HeroStat valeur={nonConformes} label="Non conformes" dot="var(--status-rejete)" />
                 </dl>
             )}
           </div>

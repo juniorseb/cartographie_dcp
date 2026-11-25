@@ -93,4 +93,6 @@ export interface EntiteFilter {
   forme_juridique?: string;
   statut_conformite?: string;
   volume_donnees?: string;
+  /** Carte : uniquement les entites geolocalisees. */
+  avec_gps?: 'true';
 }

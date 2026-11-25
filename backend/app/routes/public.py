@@ -21,7 +21,7 @@ EMAIL_RE = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
 
 @public_bp.route('/entites', methods=['GET'])
 def list_entites():
-    """Liste paginée des entités conformes publiées."""
+    """Liste paginée des entités publiées par l'ARTCI (tous statuts, filtrable)."""
     filters = {
         'search': request.args.get('search'),
         'secteur_activite': request.args.get('secteur_activite'),
@@ -37,8 +37,12 @@ def list_entites():
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
 
+    # avec_gps=true : seulement les entites geolocalisees (carte).
+    # Sans parametre : registre public complet (liste).
+    avec_gps = request.args.get('avec_gps') == 'true'
+
     result = PublicService.get_entites_conformes(
-        filters=filters or None, page=page, per_page=per_page
+        filters=filters or None, page=page, per_page=per_page, avec_gps=avec_gps,
     )
     return success_response(result)
 
@@ -93,8 +97,11 @@ def list_entites_publiees_anonymise():
         StatutConformiteEnum.partiellement_conforme,
         StatutConformiteEnum.demarche_en_cours,
         StatutConformiteEnum.demarche_achevee,
+        StatutConformiteEnum.non_conforme,
     ]
-    if statut_filter == 'conforme':
+    if statut_filter == 'non_conforme':
+        eligible_statuts = [StatutConformiteEnum.non_conforme]
+    elif statut_filter == 'conforme':
         eligible_statuts = [StatutConformiteEnum.conforme]
     elif statut_filter == 'partiellement_conforme':
         eligible_statuts = [

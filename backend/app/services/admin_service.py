@@ -814,22 +814,16 @@ class AdminService:
     @staticmethod
     def publier_entite(entite_id):
         """Publier une entite sur la cartographie publique.
-        Seules les entites Conforme ou Demarche en cours sont eligibles."""
+        Toute entite evaluee (statut de conformite renseigne) est publiable,
+        y compris non conforme (decision ARTCI)."""
         entite = EntiteBase.query.get(entite_id)
         if not entite:
             raise ValueError('Entite non trouvee.')
         conformite = EntiteConformite.query.get(entite_id)
         statut = conformite.statut_conformite if conformite else None
-        # On accepte aussi les anciennes valeurs historiques par compat
-        if statut not in (
-            StatutConformiteEnum.conforme,
-            StatutConformiteEnum.partiellement_conforme,
-            StatutConformiteEnum.demarche_en_cours,
-            StatutConformiteEnum.demarche_achevee,
-        ):
+        if statut is None:
             raise ValueError(
-                "Seules les entites 'Conforme' ou 'Partiellement conforme' "
-                'peuvent etre publiees.'
+                "L'entite doit avoir un statut de conformite pour etre publiee."
             )
         entite.publie_sur_carte = True
         db.session.commit()

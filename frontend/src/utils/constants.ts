@@ -86,7 +86,7 @@ export const STATUT_CONFORMITE_LABELS: Record<StatutConformite, string> = {
 export const STATUT_CONFORMITE_BADGE: Record<StatutConformite, string> = {
   'Conforme': 'badge badge-conforme',
   'Partiellement conforme': 'badge badge-achevee',
-  'Non conforme': 'badge badge-encours',
+  'Non conforme': 'badge badge-rejete',
   'Démarche achevée': 'badge badge-achevee',
   'Démarche en cours': 'badge badge-achevee',
 };

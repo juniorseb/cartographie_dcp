@@ -12,10 +12,12 @@ import { cn } from '@/utils/cn';
 interface StatutFilter {
   conforme: boolean;
   partiellement: boolean;
+  nonConforme: boolean;
 }
 
 const COLOR_CONFORME = STATUT_COLORS['Conforme'];
 const COLOR_PARTIEL = STATUT_COLORS['Partiellement conforme'];
+const COLOR_NON = STATUT_COLORS['Non conforme'];
 
 export default function CartePage() {
   const [search, setSearch] = useState('');
@@ -25,6 +27,7 @@ export default function CartePage() {
   const [statuts, setStatuts] = useState<StatutFilter>({
     conforme: true,
     partiellement: true,
+    nonConforme: true,
   });
 
   // Mobile states
@@ -51,6 +54,7 @@ export default function CartePage() {
       selected.push('Démarche achevée');
       selected.push('Démarche en cours');
     }
+    if (statuts.nonConforme) selected.push('Non conforme');
     return selected.length > 0 ? selected.join(',') : undefined;
   }, [statuts]);
 
@@ -62,7 +66,8 @@ export default function CartePage() {
   const regionsDisponibles = Object.keys(statsData?.par_region ?? {}).sort();
   const nbConformes = statsData?.total_entites_conformes ?? 0;
   const nbPartiels = statsData?.total_partiellement_conformes ?? 0;
-  const totalPublies = nbConformes + nbPartiels;
+  const nbNonConformes = statsData?.total_non_conformes ?? 0;
+  const totalPublies = nbConformes + nbPartiels + nbNonConformes;
 
   const fetchEntites = useCallback(
     () =>
@@ -71,6 +76,7 @@ export default function CartePage() {
         secteur_activite: secteur || undefined,
         region: region || undefined,
         statut_conformite: buildStatutParam(),
+        avec_gps: 'true',
         per_page: 2000,
       }),
     [search, secteur, region, buildStatutParam]
@@ -81,23 +87,24 @@ export default function CartePage() {
     region,
     statuts.conforme,
     statuts.partiellement,
+    statuts.nonConforme,
   ]);
 
   const handleStatutChange = (key: keyof StatutFilter) => {
     setStatuts((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const hasStatutSelected = statuts.conforme || statuts.partiellement;
+  const hasStatutSelected = statuts.conforme || statuts.partiellement || statuts.nonConforme;
 
   // Filtres reellement restrictifs (les 2 statuts coches = etat par defaut)
   const activeFilterCount =
-    (!statuts.conforme || !statuts.partiellement ? 1 : 0) +
+    (!statuts.conforme || !statuts.partiellement || !statuts.nonConforme ? 1 : 0) +
     (secteur ? 1 : 0) +
     (region ? 1 : 0) +
     (search ? 1 : 0);
 
   const resetFilters = () => {
-    setStatuts({ conforme: true, partiellement: true });
+    setStatuts({ conforme: true, partiellement: true, nonConforme: true });
     setSecteur('');
     setRegion('');
     setSearchInput('');
@@ -190,6 +197,14 @@ export default function CartePage() {
             onToggle={() => handleStatutChange('partiellement')}
             large={isMobile}
           />
+          <StatutToggle
+            label="Non conforme"
+            color={COLOR_NON}
+            count={nbNonConformes}
+            checked={statuts.nonConforme}
+            onToggle={() => handleStatutChange('nonConforme')}
+            large={isMobile}
+          />
         </div>
       </div>
 
@@ -246,7 +261,7 @@ export default function CartePage() {
             <p className="text-xs font-bold uppercase tracking-[0.15em] text-[var(--brand-primary)]">
               Cartographie nationale
             </p>
-            <h1 className="mt-1 text-2xl">Organismes conformes</h1>
+            <h1 className="mt-1 text-2xl">Responsables de traitement</h1>
             <p className="mt-1 text-sm text-[var(--brand-muted)]">
               {formatNumber(totalPublies)} organisme{totalPublies > 1 ? 's' : ''} publié{totalPublies > 1 ? 's' : ''} par l'ARTCI
             </p>
@@ -323,6 +338,9 @@ export default function CartePage() {
                 </li>
                 <li className="flex items-center gap-2">
                   <LegendPin color={COLOR_PARTIEL} /> Partiellement conforme
+                </li>
+                <li className="flex items-center gap-2">
+                  <LegendPin color={COLOR_NON} /> Non conforme
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[var(--brand-dark)] text-[8px] font-bold text-white ring-2 ring-[var(--brand-primary)]">

@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Eye, MapPin, Phone, Mail, User, Download, Building2, RotateCcw, Map as MapIcon } from 'lucide-react';
+import { Eye, MapPin, Phone, Mail, User, Download, Building2, RotateCcw, Map as MapIcon, BadgeCheck, Users } from 'lucide-react';
+import { cn } from '@/utils/cn';
 import { useApi } from '@/hooks/useApi';
 import * as publicApi from '@/api/public.api';
 import SearchBar from '@/components/common/SearchBar';
@@ -17,9 +18,16 @@ import type { EntiteFilter } from '@/types/entite';
 // Pagination dediee a la liste publique (10 par page).
 const PER_PAGE_PUBLIC_LIST = 10;
 
+/** Statuts de l'onglet « Organismes conformes » (anciens libelles inclus). */
+const STATUTS_CONFORMES = 'Conforme,Partiellement conforme,Démarche achevée,Démarche en cours';
+
 export default function ListeEntitesPage() {
   // ?search=... : recherche lancee depuis la page d'accueil ("Verifier la conformite")
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Deux vues du registre public :
+  //  - « conformes »    : Conforme + Partiellement conforme (anciens libelles inclus)
+  //  - « responsables » : tous les responsables de traitement publies, quel que soit le statut
+  const vue: 'conformes' | 'responsables' = searchParams.get('vue') === 'responsables' ? 'responsables' : 'conformes';
   const [filters, setFilters] = useState<EntiteFilter>(() => {
     const q = searchParams.get('search');
     return q ? { search: q } : {};
@@ -27,11 +35,23 @@ export default function ListeEntitesPage() {
   const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState(false);
 
+  const statutParam = vue === 'conformes'
+    ? STATUTS_CONFORMES
+    : (filters.statut_conformite || undefined);
+
   const fetchEntites = useCallback(
-    () => publicApi.getEntites({ ...filters, page, per_page: PER_PAGE_PUBLIC_LIST }),
-    [filters, page]
+    () => publicApi.getEntites({ ...filters, statut_conformite: statutParam, page, per_page: PER_PAGE_PUBLIC_LIST }),
+    [filters, page, statutParam]
   );
-  const { data, isLoading, error, refetch } = useApi(fetchEntites, [filters, page]);
+  const { data, isLoading, error, refetch } = useApi(fetchEntites, [filters, page, statutParam]);
+
+  function changerVue(v: 'conformes' | 'responsables') {
+    const next = new URLSearchParams(searchParams);
+    if (v === 'responsables') next.set('vue', 'responsables'); else next.delete('vue');
+    setSearchParams(next, { replace: true });
+    setFilters((prev) => ({ ...prev, statut_conformite: undefined }));
+    setPage(1);
+  }
 
   // Stats publiques : leurs cles par_secteur / par_region / par_ville donnent
   // les valeurs reellement presentes en base (filtrees aux entites publiables
@@ -40,6 +60,8 @@ export default function ListeEntitesPage() {
   const secteurs = Object.keys(stats?.par_secteur ?? {}).sort();
   const regions = Object.keys(stats?.par_region ?? {}).sort();
   const villes = Object.keys(stats?.par_ville ?? {}).sort();
+  const nbConformes = (stats?.total_entites_conformes ?? 0) + (stats?.total_partiellement_conformes ?? 0);
+  const nbTotal = nbConformes + (stats?.total_non_conformes ?? 0);
 
   function updateFilter(key: keyof EntiteFilter, value: string) {
     setFilters((prev) => ({ ...prev, [key]: value || undefined }));
@@ -49,7 +71,7 @@ export default function ListeEntitesPage() {
   async function handleExport(format: 'excel' | 'csv' | 'pdf') {
     setExporting(true);
     try {
-      await publicApi.exportEntites(format, filters);
+      await publicApi.exportEntites(format, { ...filters, statut_conformite: statutParam });
     } finally {
       setExporting(false);
     }
@@ -61,8 +83,10 @@ export default function ListeEntitesPage() {
       variant="band"
       icon={Building2}
       eyebrow="Registre public"
-      title="Organismes conformes"
-      description="Organismes publics et privés évalués par l'ARTCI au titre de la loi n°2013-450 relative à la protection des données à caractère personnel."
+      title={vue === 'conformes' ? 'Organismes conformes' : 'Responsables de traitement'}
+      description={vue === 'conformes'
+        ? "Organismes jugés conformes ou partiellement conformes par l'ARTCI au titre de la loi n°2013-450."
+        : "Ensemble des responsables de traitement publiés par l'ARTCI, quel que soit leur niveau de conformité."}
       actions={
         <>
           <Link to={ROUTES.MAP} className="btn btn-outline py-2 px-4 text-sm">
@@ -74,14 +98,71 @@ export default function ListeEntitesPage() {
       }
     />
     <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 md:py-8">
+      {/* Onglets du registre */}
+      <div className="mb-5 grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl">
+        {([
+          { key: 'conformes', label: 'Organismes conformes', sub: 'Conformes et partiellement conformes', icon: BadgeCheck, count: nbConformes },
+          { key: 'responsables', label: 'Responsables de traitement', sub: 'Tous les statuts, non conformes inclus', icon: Users, count: nbTotal },
+        ] as const).map(({ key, label, sub, icon: Icon, count }) => {
+          const actif = vue === key;
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => changerVue(key)}
+              aria-pressed={actif}
+              className={cn(
+                'flex items-center gap-3 rounded-[var(--radius-card)] border-2 bg-white p-4 text-left transition-all',
+                actif ? 'border-[var(--brand-primary)] shadow-card' : 'border-transparent hover:border-[var(--brand-gray)]'
+              )}
+            >
+              <span className={cn(
+                'flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl transition-colors',
+                actif ? 'bg-[var(--brand-primary)] text-white' : 'bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]'
+              )}>
+                <Icon className="w-5 h-5" />
+              </span>
+              <span className="flex-1 min-w-0">
+                <span className="block font-display font-bold text-[15px] text-[var(--brand-dark)]">{label}</span>
+                <span className="block text-xs text-[var(--brand-muted)]">{sub}</span>
+              </span>
+              <span className={cn(
+                'rounded-full px-2.5 py-0.5 text-xs font-bold',
+                actif ? 'bg-[var(--brand-primary)] text-white' : 'bg-[var(--brand-gray)] text-[var(--brand-dark)]'
+              )}>
+                {count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* Filtres — toutes les inputs/selects partagent la meme hauteur h-11 */}
       <div className="card mb-6 p-4 md:p-5">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 [&_input]:h-11 [&_select]:h-11">
+      <div className={cn(
+        'grid grid-cols-1 sm:grid-cols-2 gap-3 [&_input]:h-11 [&_select]:h-11',
+        vue === 'responsables' ? 'lg:grid-cols-3 xl:grid-cols-6' : 'lg:grid-cols-5'
+      )}>
         <SearchBar
           value={filters.search ?? ''}
           onChange={(v) => updateFilter('search', v)}
           placeholder="Rechercher..."
         />
+        {vue === 'responsables' && (
+          <div className="form-group mb-0">
+            <select
+              value={filters.statut_conformite ?? ''}
+              onChange={(e) => updateFilter('statut_conformite', e.target.value)}
+              className="w-full py-2.5"
+              aria-label="Statut de conformité"
+            >
+              <option value="">Tous les statuts</option>
+              <option value="Conforme">Conforme</option>
+              <option value={'Partiellement conforme,Démarche achevée,Démarche en cours'}>Partiellement conforme</option>
+              <option value="Non conforme">Non conforme</option>
+            </select>
+          </div>
+        )}
         <div className="form-group mb-0">
           <select
             value={filters.secteur_activite ?? ''}
@@ -167,7 +248,7 @@ export default function ListeEntitesPage() {
       ) : !data || data.items.length === 0 ? (
         <EmptyState
           icon={Building2}
-          title={Object.values(filters).some(Boolean) ? 'Aucun organisme ne correspond' : 'Aucun organisme publié pour le moment'}
+          title={Object.values(filters).some(Boolean) ? 'Aucun organisme ne correspond' : vue === 'conformes' ? 'Aucun organisme conforme publié pour le moment' : 'Aucun responsable de traitement publié pour le moment'}
           description={
             Object.values(filters).some(Boolean)
               ? 'Modifiez ou réinitialisez les filtres pour élargir la recherche.'
@@ -181,6 +262,7 @@ export default function ListeEntitesPage() {
               <thead>
                 <tr>
                   <th className="whitespace-nowrap">Dénomination</th>
+                  <th className="whitespace-nowrap">Statut</th>
                   <th className="whitespace-nowrap">Forme juridique</th>
                   <th className="whitespace-nowrap">Secteur</th>
                   <th className="whitespace-nowrap">Ville</th>
@@ -189,7 +271,6 @@ export default function ListeEntitesPage() {
                   <th className="whitespace-nowrap">CPD (DPO)</th>
                   <th className="whitespace-nowrap">Coordonnées DPO</th>
                   <th className="whitespace-nowrap">Autorisation</th>
-                  <th className="whitespace-nowrap">Statut</th>
                   <th className="whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
@@ -197,6 +278,9 @@ export default function ListeEntitesPage() {
                 {data.items.map((entite) => (
                   <tr key={entite.id}>
                     <td className="font-semibold whitespace-nowrap">{entite.denomination}</td>
+                    <td className="whitespace-nowrap">
+                      <StatusBadge statut={entite.statut_conformite} />
+                    </td>
                     <td className="text-sm whitespace-nowrap">{entite.forme_juridique ?? '-'}</td>
                     <td className="text-sm whitespace-nowrap">{entite.secteur_activite ?? '-'}</td>
                     <td className="text-sm whitespace-nowrap">{entite.ville ?? '-'}</td>
@@ -284,9 +368,6 @@ export default function ListeEntitesPage() {
                       ) : (
                         <span className="text-gray-300">-</span>
                       )}
-                    </td>
-                    <td>
-                      <StatusBadge statut={entite.statut_conformite} />
                     </td>
                     <td>
                       <Link

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { CheckCircle2, CircleDashed, Building2, Layers, MapPinned, BarChart3, Map as MapIcon } from 'lucide-react';
+import { CheckCircle2, CircleDashed, XCircle, Building2, Layers, MapPinned, BarChart3, Map as MapIcon } from 'lucide-react';
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -54,7 +54,8 @@ export default function StatistiquesPage() {
 
   const conformes = stats.total_entites_conformes;
   const partiels = stats.total_partiellement_conformes ?? 0;
-  const total = conformes + partiels;
+  const nonConformes = stats.total_non_conformes ?? 0;
+  const total = conformes + partiels + nonConformes;
   const secteurData = toChartData(stats.par_secteur);
   const regionData = toChartData(stats.par_region);
   const villeData = toChartData(stats.par_ville).slice(0, 15);
@@ -63,6 +64,7 @@ export default function StatistiquesPage() {
     { label: 'Organismes publiés', value: total, icon: Building2, color: 'var(--brand-dark)' },
     { label: 'Conformes', value: conformes, icon: CheckCircle2, color: STATUT_COLORS['Conforme'] },
     { label: 'Partiellement conformes', value: partiels, icon: CircleDashed, color: STATUT_COLORS['Partiellement conforme'] },
+    { label: 'Non conformes', value: nonConformes, icon: XCircle, color: STATUT_COLORS['Non conforme'] },
     { label: "Secteurs d'activité", value: secteurData.length, icon: Layers, color: 'var(--brand-secondary)' },
     { label: 'Régions couvertes', value: regionData.length, icon: MapPinned, color: 'var(--brand-primary)' },
   ];
@@ -74,7 +76,7 @@ export default function StatistiquesPage() {
       {header}
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 md:py-8">
         {/* Indicateurs cles */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
           {kpis.map(({ label, value, icon: Icon, color }) => (
             <div key={label} className="card p-5">
               <span
@@ -107,6 +109,7 @@ export default function StatistiquesPage() {
                 {[
                   { label: 'Conformes', value: conformes, color: STATUT_COLORS['Conforme'] },
                   { label: 'Partiellement conformes', value: partiels, color: STATUT_COLORS['Partiellement conforme'] },
+                  { label: 'Non conformes', value: nonConformes, color: STATUT_COLORS['Non conforme'] },
                 ].map((r) => (
                   <div key={r.label}>
                     <div className="flex justify-between text-sm mb-1.5">

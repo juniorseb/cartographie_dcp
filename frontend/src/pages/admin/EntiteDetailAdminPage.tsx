@@ -94,10 +94,10 @@ export default function EntiteDetailAdminPage() {
   if (error) return <ErrorDisplay message={error} onRetry={refetch} />;
   if (!entite) return <ErrorDisplay message="Entite introuvable." />;
 
-  // Spec H3 : la publication n'est proposee que si l'entite est Conforme
-  // ou Partiellement conforme.
+  // Regle ARTCI : toute entite evaluee est publiable, y compris non conforme
+  // (le public filtre par statut sur la carte et le registre).
   const statutConf = entite.conformite?.statut_conformite as StatutConformite | undefined;
-  const peutPublier = statutConf === 'Conforme' || statutConf === 'Partiellement conforme';
+  const peutPublier = Boolean(statutConf);
   const estPubliee = Boolean(entite.publie_sur_carte);
 
   return (
