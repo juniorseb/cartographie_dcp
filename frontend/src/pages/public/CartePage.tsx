@@ -1,16 +1,21 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Search, Filter, X, ChevronDown } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Search, SlidersHorizontal, X, ChevronDown, RotateCcw, Check, UserPlus } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import * as publicApi from '@/api/public.api';
 import MapView from '@/components/map/MapContainer';
 import ErrorDisplay from '@/components/common/ErrorDisplay';
-import Loading from '@/components/common/Loading';
 import { formatNumber } from '@/utils/format';
+import { ROUTES, STATUT_COLORS } from '@/utils/constants';
+import { cn } from '@/utils/cn';
 
 interface StatutFilter {
   conforme: boolean;
   partiellement: boolean;
 }
+
+const COLOR_CONFORME = STATUT_COLORS['Conforme'];
+const COLOR_PARTIEL = STATUT_COLORS['Partiellement conforme'];
 
 export default function CartePage() {
   const [search, setSearch] = useState('');
@@ -28,12 +33,11 @@ export default function CartePage() {
   const dragRef = useRef<{ startY: number; startTranslate: number } | null>(null);
 
   // Debounce search
-  const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleSearchChange = (val: string) => {
     setSearchInput(val);
-    if (debounceTimer) clearTimeout(debounceTimer);
-    const timer = setTimeout(() => setSearch(val), 300);
-    setDebounceTimer(timer);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setSearch(val), 300);
   };
 
   // Build statut_conformite param.
@@ -50,15 +54,15 @@ export default function CartePage() {
     return selected.length > 0 ? selected.join(',') : undefined;
   }, [statuts]);
 
-  const { data: statsData, isLoading: statsLoading } = useApi(
-    () => publicApi.getStats(),
-    []
-  );
+  const { data: statsData } = useApi(() => publicApi.getStats(), []);
 
   // Dropdowns alimentes par les vraies valeurs en base (filtrees aux entites
   // publiables visibles). Plus de listes hardcodees.
   const secteursDisponibles = Object.keys(statsData?.par_secteur ?? {}).sort();
   const regionsDisponibles = Object.keys(statsData?.par_region ?? {}).sort();
+  const nbConformes = statsData?.total_entites_conformes ?? 0;
+  const nbPartiels = statsData?.total_partiellement_conformes ?? 0;
+  const totalPublies = nbConformes + nbPartiels;
 
   const fetchEntites = useCallback(
     () =>
@@ -85,15 +89,13 @@ export default function CartePage() {
 
   const hasStatutSelected = statuts.conforme || statuts.partiellement;
 
-  // Count active filters
+  // Filtres reellement restrictifs (les 2 statuts coches = etat par defaut)
   const activeFilterCount =
-    (statuts.conforme ? 1 : 0) +
-    (statuts.partiellement ? 1 : 0) +
+    (!statuts.conforme || !statuts.partiellement ? 1 : 0) +
     (secteur ? 1 : 0) +
     (region ? 1 : 0) +
     (search ? 1 : 0);
 
-  // Reset filters
   const resetFilters = () => {
     setStatuts({ conforme: true, partiellement: true });
     setSecteur('');
@@ -104,11 +106,7 @@ export default function CartePage() {
 
   // Body scroll lock when bottom sheet is open
   useEffect(() => {
-    if (bottomSheetOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
+    document.body.style.overflow = bottomSheetOpen ? 'hidden' : '';
     return () => {
       document.body.style.overflow = '';
     };
@@ -116,12 +114,8 @@ export default function CartePage() {
 
   // Bottom sheet drag-to-close
   const handleTouchStart = (e: React.TouchEvent) => {
-    dragRef.current = {
-      startY: e.touches[0].clientY,
-      startTranslate: 0,
-    };
+    dragRef.current = { startY: e.touches[0].clientY, startTranslate: 0 };
   };
-
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!dragRef.current || !sheetRef.current) return;
     const diff = e.touches[0].clientY - dragRef.current.startY;
@@ -130,78 +124,86 @@ export default function CartePage() {
       dragRef.current.startTranslate = diff;
     }
   };
-
   const handleTouchEnd = () => {
     if (!dragRef.current || !sheetRef.current) return;
-    if (dragRef.current.startTranslate > 100) {
-      setBottomSheetOpen(false);
-    }
+    if (dragRef.current.startTranslate > 100) setBottomSheetOpen(false);
     sheetRef.current.style.transform = '';
     dragRef.current = null;
   };
 
-  // Shared filter content (used in desktop sidebar and mobile bottom sheet)
+  // Message affiche sur la carte quand elle est vide
+  const empty =
+    activeFilterCount > 0
+      ? { title: 'Aucun résultat', text: 'Aucun organisme publié ne correspond à ces filtres.' }
+      : {
+          title: 'Aucun organisme publié pour le moment',
+          text: "Les organismes évalués par l'ARTCI apparaîtront ici dès leur publication.",
+        };
+
+  const nbSurCarte = entitesData?.total ?? 0;
+
+  const labelCls = 'block font-display text-xs font-bold uppercase tracking-[0.06em] text-[var(--brand-dark)] mb-2.5';
+  const selectCls =
+    'w-full appearance-none rounded-[10px] border border-gray-300 bg-white pl-3 pr-9 text-[var(--brand-text)] focus:outline-none focus:border-[var(--brand-primary)] focus:ring-[3px] focus:ring-[rgba(255,140,0,0.18)]';
+
+  // Contenu des filtres (sidebar desktop + bottom sheet mobile)
   const filterContent = (isMobile: boolean) => (
-    <>
+    <div className="space-y-6">
       {/* Recherche */}
-      <div className={isMobile ? 'mb-5' : 'mb-6'}>
+      <div>
+        <label htmlFor={isMobile ? 'carte-search-m' : 'carte-search'} className={labelCls}>
+          Rechercher
+        </label>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
-            type="text"
+            id={isMobile ? 'carte-search-m' : 'carte-search'}
+            type="search"
             value={searchInput}
             onChange={(e) => handleSearchChange(e.target.value)}
-            placeholder="Rechercher une entité..."
-            className={`w-full pl-10 pr-4 border border-gray-300 rounded-lg focus:outline-none focus:border-[var(--brand-primary)] ${
+            placeholder="Nom de l'organisme…"
+            className={cn(
+              'w-full pl-10 pr-4 rounded-[10px] border border-gray-300 focus:outline-none focus:border-[var(--brand-primary)] focus:ring-[3px] focus:ring-[rgba(255,140,0,0.18)]',
               isMobile ? 'py-3 text-base' : 'py-2.5 text-sm'
-            }`}
+            )}
           />
         </div>
       </div>
 
-      {/* Statut */}
-      <div className={isMobile ? 'mb-5' : 'mb-6'}>
-        <label className={`block font-bold text-black ${isMobile ? 'text-base mb-3' : 'text-sm mb-2.5'}`}>
-          Statut
-        </label>
-        <div className={isMobile ? 'space-y-4' : 'space-y-3'}>
-          <label className={`flex items-center gap-3 cursor-pointer ${isMobile ? 'min-h-[44px]' : ''}`}>
-            <input
-              type="checkbox"
-              checked={statuts.conforme}
-              onChange={() => handleStatutChange('conforme')}
-              className={isMobile ? 'w-5 h-5' : 'w-4 h-4'}
-            />
-            <span className={`text-black ${isMobile ? 'text-base' : 'text-sm'}`}>
-              Conforme
-            </span>
-          </label>
-          <label className={`flex items-center gap-3 cursor-pointer ${isMobile ? 'min-h-[44px]' : ''}`}>
-            <input
-              type="checkbox"
-              checked={statuts.partiellement}
-              onChange={() => handleStatutChange('partiellement')}
-              className={isMobile ? 'w-5 h-5' : 'w-4 h-4'}
-            />
-            <span className={`text-black ${isMobile ? 'text-base' : 'text-sm'}`}>
-              Partiellement conforme
-            </span>
-          </label>
+      {/* Statut : cartes a bascule aux couleurs des marqueurs */}
+      <div>
+        <span className={labelCls}>Statut de conformité</span>
+        <div className="space-y-2">
+          <StatutToggle
+            label="Conforme"
+            color={COLOR_CONFORME}
+            count={nbConformes}
+            checked={statuts.conforme}
+            onToggle={() => handleStatutChange('conforme')}
+            large={isMobile}
+          />
+          <StatutToggle
+            label="Partiellement conforme"
+            color={COLOR_PARTIEL}
+            count={nbPartiels}
+            checked={statuts.partiellement}
+            onToggle={() => handleStatutChange('partiellement')}
+            large={isMobile}
+          />
         </div>
       </div>
 
       {/* Secteur */}
-      <div className={isMobile ? 'mb-5' : 'mb-6'}>
-        <label className={`block font-bold text-black ${isMobile ? 'text-base mb-3' : 'text-sm mb-2.5'}`}>
+      <div>
+        <label htmlFor={isMobile ? 'carte-secteur-m' : 'carte-secteur'} className={labelCls}>
           Secteur d&apos;activité
         </label>
         <div className="relative">
           <select
+            id={isMobile ? 'carte-secteur-m' : 'carte-secteur'}
             value={secteur}
             onChange={(e) => setSecteur(e.target.value)}
-            className={`w-full px-3 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:border-[var(--brand-primary)] ${
-              isMobile ? 'py-3 text-base' : 'py-2.5 text-sm'
-            }`}
+            className={cn(selectCls, isMobile ? 'py-3 text-base' : 'py-2.5 text-sm')}
           >
             <option value="">Tous les secteurs</option>
             {secteursDisponibles.map((s) => (
@@ -212,18 +214,17 @@ export default function CartePage() {
         </div>
       </div>
 
-      {/* Région */}
-      <div className={isMobile ? 'mb-5' : 'mb-6'}>
-        <label className={`block font-bold text-black ${isMobile ? 'text-base mb-3' : 'text-sm mb-2.5'}`}>
+      {/* Region */}
+      <div>
+        <label htmlFor={isMobile ? 'carte-region-m' : 'carte-region'} className={labelCls}>
           Région
         </label>
         <div className="relative">
           <select
+            id={isMobile ? 'carte-region-m' : 'carte-region'}
             value={region}
             onChange={(e) => setRegion(e.target.value)}
-            className={`w-full px-3 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:border-[var(--brand-primary)] ${
-              isMobile ? 'py-3 text-base' : 'py-2.5 text-sm'
-            }`}
+            className={cn(selectCls, isMobile ? 'py-3 text-base' : 'py-2.5 text-sm')}
           >
             <option value="">Toutes les régions</option>
             {regionsDisponibles.map((r) => (
@@ -233,152 +234,139 @@ export default function CartePage() {
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
         </div>
       </div>
-    </>
+    </div>
   );
 
   return (
-    <div className="flex carte-page-container">
+    <div className="flex carte-page-container bg-[var(--brand-bg)]">
       {/* ===== DESKTOP SIDEBAR ===== */}
-      <aside className="hidden lg:flex lg:flex-col w-[300px] flex-shrink-0 bg-white border-r border-gray-200 overflow-y-auto">
-        <div className="p-5 flex-1 flex flex-col">
-          <h2 className="text-xl font-bold text-black mb-5 flex items-center gap-2">
-            <Filter className="w-5 h-5" />
-            Filtres
-          </h2>
+      <aside className="hidden lg:flex lg:flex-col w-[320px] flex-shrink-0 bg-white border-r border-[var(--brand-gray)] overflow-y-auto">
+        <div className="p-6 flex-1 flex flex-col">
+          <div className="mb-6">
+            <p className="text-xs font-bold uppercase tracking-[0.15em] text-[var(--brand-primary)]">
+              Cartographie nationale
+            </p>
+            <h1 className="mt-1 text-2xl">Organismes conformes</h1>
+            <p className="mt-1 text-sm text-[var(--brand-muted)]">
+              {formatNumber(totalPublies)} organisme{totalPublies > 1 ? 's' : ''} publié{totalPublies > 1 ? 's' : ''} par l'ARTCI
+            </p>
+          </div>
+
           {filterContent(false)}
-          <p className="text-xs text-gray-400 text-center mt-auto pt-4">&copy; 2026 ARTCI</p>
+
+          {activeFilterCount > 0 && (
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="mt-6 inline-flex items-center justify-center gap-2 text-sm font-semibold text-[var(--brand-primary-hover)] hover:underline"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Réinitialiser les filtres
+            </button>
+          )}
+
+          {/* Appel a l'action */}
+          <div className="mt-auto pt-8">
+            <div className="rounded-[var(--radius-card)] bg-[var(--brand-primary-soft)] p-4">
+              <p className="font-display text-sm font-bold text-[var(--brand-dark)]">
+                Votre organisme n&apos;est pas sur la carte ?
+              </p>
+              <p className="mt-1 text-xs text-[#334155]">
+                Inscrivez-le et renseignez sa cartographie pour être évalué par l&apos;ARTCI.
+              </p>
+              <Link to={ROUTES.REGISTER} className="btn btn-primary mt-3 w-full py-2 text-sm">
+                <UserPlus className="w-4 h-4" />
+                S&apos;inscrire
+              </Link>
+            </div>
+          </div>
         </div>
       </aside>
 
-      {/* ===== ZONE PRINCIPALE ===== */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Mini-stats : 2 cards alignees sur les 2 statuts publiables.
-            Mobile : scroll horizontal. Desktop : grid 2 colonnes. */}
-        <div className="lg:grid lg:grid-cols-2 lg:gap-5 lg:px-5 lg:py-4">
-          {/* Mobile: horizontal scroll */}
-          <div className="lg:hidden overflow-x-auto scrollbar-hide">
-            <div className="flex gap-3 px-4 py-3" style={{ minWidth: 'max-content' }}>
-              {statsLoading ? (
-                <div className="flex justify-center py-4 w-full">
-                  <Loading size="sm" />
-                </div>
-              ) : (
-                <>
-                  <div className="flex-shrink-0 w-[160px] bg-white rounded-lg shadow-md p-3 border-l-[3px] border-[#228B22]">
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-0.5">Conformes</p>
-                    <p className="text-2xl font-bold text-black">
-                      {formatNumber(statsData?.total_entites_conformes ?? 0)}
-                    </p>
-                  </div>
-                  <div className="flex-shrink-0 w-[160px] bg-white rounded-lg shadow-md p-3 border-l-[3px] border-[#FF8C00]">
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-0.5">
-                      Partiellement conformes
-                    </p>
-                    <p className="text-2xl font-bold text-black">
-                      {formatNumber(statsData?.total_partiellement_conformes ?? 0)}
-                    </p>
-                  </div>
-                </>
-              )}
-            </div>
+      {/* ===== CARTE ===== */}
+      <div className="flex-1 relative lg:p-4">
+        {error ? (
+          <div className="p-4"><ErrorDisplay message={error} /></div>
+        ) : !hasStatutSelected ? (
+          <div className="h-full flex items-center justify-center lg:rounded-[var(--radius-card)] bg-white text-[var(--brand-muted)] text-center px-4">
+            Sélectionnez au moins un statut pour afficher les organismes.
           </div>
+        ) : (
+          <div className="h-full lg:rounded-[var(--radius-card)] lg:shadow-card overflow-hidden">
+            <MapView
+              entites={entitesData?.items ?? []}
+              isLoading={entitesLoading}
+              emptyTitle={empty.title}
+              emptyText={empty.text}
+            />
+          </div>
+        )}
 
-          {/* Desktop: grid 2 colonnes */}
-          <div className="hidden lg:contents">
-            {statsLoading ? (
-              <div className="col-span-2 flex justify-center py-4">
-                <Loading size="sm" />
+        {/* Pastilles flottantes : compteur + legende */}
+        {hasStatutSelected && !error && (
+          <>
+            <div className="pointer-events-none absolute left-3 top-3 lg:left-7 lg:top-7 z-[400]">
+              <div className="rounded-full bg-white/95 px-4 py-2 shadow-card">
+                <span className="font-display text-sm font-bold text-[var(--brand-dark)]">
+                  {entitesLoading ? '…' : formatNumber(nbSurCarte)}
+                </span>
+                <span className="ml-1.5 text-sm text-[var(--brand-muted)]">
+                  organisme{nbSurCarte > 1 ? 's' : ''} sur la carte
+                </span>
               </div>
-            ) : (
-              <>
-                <div className="bg-white rounded-lg shadow-md p-5 border-l-4 border-[#228B22]">
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
-                    Entit&eacute;s Conformes
-                  </p>
-                  <p className="text-3xl font-bold text-black">
-                    {formatNumber(statsData?.total_entites_conformes ?? 0)}
-                  </p>
-                </div>
-                <div className="bg-white rounded-lg shadow-md p-5 border-l-4 border-[#FF8C00]">
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
-                    Partiellement Conformes
-                  </p>
-                  <p className="text-3xl font-bold text-black">
-                    {formatNumber(statsData?.total_partiellement_conformes ?? 0)}
-                  </p>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Carte */}
-        <div className="flex-1 lg:px-5 lg:pb-5 relative">
-          {error ? (
-            <ErrorDisplay message={error} />
-          ) : !hasStatutSelected ? (
-            <div
-              className="flex items-center justify-center bg-gray-100 lg:rounded-lg text-gray-500 text-center px-4"
-              style={{ height: '100%', minHeight: '300px' }}
-            >
-              Sélectionnez au moins un statut pour afficher les entités.
             </div>
-          ) : (
-            <div className="h-full" style={{ minHeight: '300px' }}>
-              <MapView
-                entites={entitesData?.items ?? []}
-                isLoading={entitesLoading}
-              />
-            </div>
-          )}
 
-          {/* Compteur sur la carte (desktop) */}
-          {entitesData && !entitesLoading && hasStatutSelected && (
-            <p className="hidden lg:block text-sm text-gray-500 py-2 text-center">
-              {formatNumber(entitesData.total)} entité{entitesData.total > 1 ? 's' : ''} sur la carte
-            </p>
-          )}
-        </div>
+            <div className="pointer-events-none absolute left-3 bottom-[96px] lg:left-7 lg:bottom-9 z-[400]">
+              <ul className="rounded-xl bg-white/95 px-3.5 py-2.5 shadow-card space-y-1.5 text-xs text-[#334155]">
+                <li className="flex items-center gap-2">
+                  <LegendPin color={COLOR_CONFORME} /> Conforme
+                </li>
+                <li className="flex items-center gap-2">
+                  <LegendPin color={COLOR_PARTIEL} /> Partiellement conforme
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[var(--brand-dark)] text-[8px] font-bold text-white ring-2 ring-[var(--brand-primary)]">
+                    3
+                  </span>
+                  Regroupement
+                </li>
+              </ul>
+            </div>
+          </>
+        )}
       </div>
 
-      {/* ===== MOBILE: BOUTON FILTRES STICKY BOTTOM ===== */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-[998] bg-white border-t border-gray-200 px-4 py-2.5 shadow-[0_-2px_8px_rgba(0,0,0,0.1)]">
+      {/* ===== MOBILE : BOUTON FILTRES STICKY BOTTOM ===== */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-[998] bg-white border-t border-[var(--brand-gray)] px-4 py-3 shadow-[0_-4px_16px_rgba(15,23,42,0.08)]">
         <button
           onClick={() => setBottomSheetOpen(true)}
-          className="w-full flex items-center justify-center gap-2 py-3 bg-[var(--brand-primary)] text-white font-bold text-base rounded-lg active:bg-[var(--brand-primary-hover)] transition-colors"
+          className="btn btn-primary w-full py-3 text-base"
         >
-          <Filter className="w-5 h-5" />
-          Filtres
+          <SlidersHorizontal className="w-5 h-5" />
+          Filtrer la carte
           {activeFilterCount > 0 && (
-            <span className="ml-1 bg-white text-[var(--brand-primary)] text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+            <span className="ml-1 bg-white text-[var(--brand-primary-hover)] text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
               {activeFilterCount}
             </span>
           )}
         </button>
-        {/* Compteur mobile */}
-        {entitesData && !entitesLoading && hasStatutSelected && (
-          <p className="text-xs text-gray-400 text-center mt-1">
-            {formatNumber(entitesData.total)} entité{entitesData.total > 1 ? 's' : ''} sur la carte
-          </p>
-        )}
       </div>
 
-      {/* ===== MOBILE: BOTTOM SHEET FILTRES ===== */}
+      {/* ===== MOBILE : BOTTOM SHEET FILTRES ===== */}
       {bottomSheetOpen && (
         <>
-          {/* Overlay */}
           <div
-            className="lg:hidden fixed inset-0 bg-black/50 z-[999] bottom-sheet-overlay"
+            className="lg:hidden fixed inset-0 bg-[rgba(15,23,42,0.5)] z-[999] bottom-sheet-overlay"
             onClick={() => setBottomSheetOpen(false)}
           />
-
-          {/* Sheet */}
           <div
             ref={sheetRef}
-            className="lg:hidden fixed bottom-0 left-0 right-0 z-[1000] bg-white rounded-t-2xl bottom-sheet-enter flex flex-col"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Filtres de la carte"
+            className="lg:hidden fixed bottom-0 left-0 right-0 z-[1000] bg-white rounded-t-3xl bottom-sheet-enter flex flex-col"
             style={{ maxHeight: '85vh' }}
           >
-            {/* Drag Handle */}
             <div
               className="flex justify-center py-3 cursor-grab"
               onTouchStart={handleTouchStart}
@@ -388,40 +376,74 @@ export default function CartePage() {
               <div className="w-12 h-1 bg-gray-300 rounded-full" />
             </div>
 
-            {/* Header */}
-            <div className="flex items-center justify-between px-5 pb-4 border-b border-gray-200">
-              <h3 className="text-xl font-bold text-black">Filtres</h3>
+            <div className="flex items-center justify-between px-5 pb-4 border-b border-[var(--brand-gray)]">
+              <h3 className="text-xl">Filtrer la carte</h3>
               <button
                 onClick={() => setBottomSheetOpen(false)}
+                aria-label="Fermer"
                 className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Content (scrollable) */}
-            <div className="flex-1 overflow-y-auto px-5 py-4">
-              {filterContent(true)}
-            </div>
+            <div className="flex-1 overflow-y-auto px-5 py-5">{filterContent(true)}</div>
 
-            {/* Footer buttons */}
-            <div className="flex gap-3 px-5 py-4 border-t border-gray-200 bg-white">
-              <button
-                onClick={resetFilters}
-                className="flex-[4] py-3 border-2 border-[var(--brand-primary)] text-[var(--brand-primary)] font-bold text-base rounded-lg active:bg-[var(--brand-primary-soft)] transition-colors"
-              >
+            <div className="flex gap-3 px-5 py-4 border-t border-[var(--brand-gray)] bg-white">
+              <button onClick={resetFilters} className="btn btn-outline flex-[4] py-3">
                 Réinitialiser
               </button>
-              <button
-                onClick={() => setBottomSheetOpen(false)}
-                className="flex-[6] py-3 bg-[var(--brand-primary)] text-white font-bold text-base rounded-lg active:bg-[var(--brand-primary-hover)] transition-colors"
-              >
-                Appliquer
+              <button onClick={() => setBottomSheetOpen(false)} className="btn btn-primary flex-[6] py-3">
+                Voir {entitesLoading ? '' : formatNumber(nbSurCarte)} résultat{nbSurCarte > 1 ? 's' : ''}
               </button>
             </div>
           </div>
         </>
       )}
     </div>
+  );
+}
+
+/** Carte a bascule pour un statut : pastille couleur, libelle, nombre. */
+function StatutToggle({
+  label, color, count, checked, onToggle, large,
+}: {
+  label: string; color: string; count: number; checked: boolean; onToggle: () => void; large?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={checked}
+      onClick={onToggle}
+      className={cn(
+        'w-full flex items-center gap-3 rounded-[10px] border px-3 text-left transition-colors',
+        large ? 'py-3 min-h-[48px]' : 'py-2.5',
+        checked ? 'bg-white shadow-sm' : 'bg-gray-50 border-gray-200 opacity-60 hover:opacity-90'
+      )}
+      style={checked ? { borderColor: color } : undefined}
+    >
+      <span
+        className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border-2"
+        style={{ borderColor: color, background: checked ? color : 'transparent' }}
+      >
+        {checked && <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />}
+      </span>
+      <span className={cn('flex-1 font-medium text-[var(--brand-text)]', large ? 'text-base' : 'text-sm')}>
+        {label}
+      </span>
+      <span className="rounded-full px-2 py-0.5 text-xs font-bold text-white" style={{ background: color }}>
+        {formatNumber(count)}
+      </span>
+    </button>
+  );
+}
+
+function LegendPin({ color }: { color: string }) {
+  return (
+    <svg width="12" height="16" viewBox="0 0 30 42" aria-hidden="true">
+      <path d="M15 1C7.3 1 1 7.3 1 15c0 10.8 14 26 14 26s14-15.2 14-26C29 7.3 22.7 1 15 1z" fill={color} stroke="#fff" strokeWidth="2" />
+      <circle cx="15" cy="15" r="5.5" fill="#fff" />
+    </svg>
   );
 }

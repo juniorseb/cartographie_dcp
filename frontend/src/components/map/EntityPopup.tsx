@@ -1,58 +1,78 @@
 import { Link } from 'react-router-dom';
+import { MapPin, Briefcase, ArrowRight } from 'lucide-react';
 import type { EntiteListItem } from '@/types/entite';
-import StatusBadge from '@/components/common/StatusBadge';
+import { STATUT_COLORS, STATUT_CONFORMITE_LABELS } from '@/utils/constants';
 
 interface EntityPopupProps {
   entite: EntiteListItem;
 }
 
 export default function EntityPopup({ entite }: EntityPopupProps) {
+  const statut = entite.statut_conformite;
+  const color = (statut && STATUT_COLORS[statut]) || '#94A3B8';
+  const lieu = [entite.ville, entite.region].filter(Boolean).join(', ');
+
   return (
-    <div className="p-4 min-w-[280px] max-w-[300px]">
-      {/* Nom */}
-      <h4 className="font-bold text-lg mb-1 text-black leading-tight">
-        {entite.denomination}
-      </h4>
-
-      {/* Secteur */}
-      {entite.secteur_activite && (
-        <p className="text-sm text-gray-500 mb-1">{entite.secteur_activite}</p>
-      )}
-
-      {/* Localisation */}
-      {entite.ville && (
-        <p className="text-sm text-gray-500 mb-4">
-          {entite.ville}{entite.region ? `, ${entite.region}` : ''}
-        </p>
-      )}
-
-      {/* Statut */}
-      <div className="mb-4">
-        <span className="text-sm text-black">Statut : </span>
-        <StatusBadge statut={entite.statut_conformite} />
+    <div className="min-w-[280px] max-w-[300px] overflow-hidden">
+      {/* Bandeau statut */}
+      <div className="flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-white" style={{ background: color }}>
+        <span className="h-2 w-2 rounded-full bg-white" />
+        {statut ? STATUT_CONFORMITE_LABELS[statut] : 'Statut non renseigné'}
       </div>
 
-      {/* Finalités de traitement */}
-      {entite.finalites_top && entite.finalites_top.length > 0 && (
-        <div className="mb-4">
-          <p className="text-sm font-bold text-black mb-2">Finalités de traitement :</p>
-          <ul className="space-y-1">
-            {entite.finalites_top.map((f, i) => (
-              <li key={i} className="text-[13px] text-gray-700">
-                &bull; {f.nom} : {f.pourcentage}%
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <div className="p-4">
+        <h4 className="font-display text-base font-bold leading-snug text-[var(--brand-dark)]">
+          {entite.denomination}
+        </h4>
 
-      {/* Bouton Voir Détails */}
-      <Link
-        to={`/entites/${entite.id}`}
-        className="popup-btn block w-full text-center py-3 bg-[var(--brand-primary)] text-white font-bold text-sm rounded hover:bg-[var(--brand-primary-hover)] transition-colors no-underline"
-      >
-        Voir Détails
-      </Link>
+        <div className="mt-2 space-y-1">
+          {entite.secteur_activite && (
+            <p className="flex items-start gap-1.5 text-[13px] text-[var(--brand-muted)]">
+              <Briefcase className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+              {entite.secteur_activite}
+            </p>
+          )}
+          {lieu && (
+            <p className="flex items-start gap-1.5 text-[13px] text-[var(--brand-muted)]">
+              <MapPin className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+              {lieu}
+            </p>
+          )}
+        </div>
+
+        {/* Finalites principales en barres */}
+        {entite.finalites_top && entite.finalites_top.length > 0 && (
+          <div className="mt-4">
+            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--brand-dark)]">
+              Finalités principales
+            </p>
+            <ul className="space-y-2">
+              {entite.finalites_top.map((f, i) => (
+                <li key={i}>
+                  <div className="flex justify-between gap-2 text-[12px] text-[#334155]">
+                    <span className="truncate">{f.nom}</span>
+                    <span className="font-semibold">{f.pourcentage}%</span>
+                  </div>
+                  <div className="mt-1 h-1.5 rounded-full bg-[var(--brand-gray)]">
+                    <div
+                      className="h-full rounded-full bg-[var(--brand-primary)]"
+                      style={{ width: `${Math.min(100, Math.max(0, f.pourcentage))}%` }}
+                    />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <Link
+          to={`/entites/${entite.id}`}
+          className="popup-btn mt-4 flex w-full items-center justify-center gap-1.5 rounded-[10px] bg-[var(--brand-primary)] py-2.5 font-display text-sm font-bold text-white no-underline transition-colors hover:bg-[var(--brand-primary-hover)]"
+        >
+          Voir la fiche
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+      </div>
     </div>
   );
 }

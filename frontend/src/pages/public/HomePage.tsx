@@ -95,7 +95,7 @@ export default function HomePage() {
         {/* Grand ecran (xl+) : image entiere (non rognee) a droite, centree verticalement,
             bords fondus et legerement transparente (effet "verre blanc").
             Tablette/mobile : image en fond plein cadre sous un voile. */}
-        <div aria-hidden className="absolute inset-0 xl:left-[34%] 2xl:left-[30%] [--hero-img-op:1] xl:[--hero-img-op:0.62]">
+        <div aria-hidden className="absolute inset-0 xl:left-[42%] 2xl:left-[38%] [--hero-img-op:1] xl:[--hero-img-op:0.62]">
           {SLIDES.map((sl, i) => (
             <img
               key={sl.src}
@@ -122,17 +122,17 @@ export default function HomePage() {
 
         <div className="relative w-full max-w-7xl mx-auto px-4 md:px-8 pt-12 pb-20 md:pt-16 md:pb-24">
           {/* Couche de lisibilite : panneau translucide derriere le texte */}
-          <div className="max-w-[600px] rounded-3xl bg-white/80 backdrop-blur-md border border-white/70 shadow-[0_20px_60px_rgba(15,23,42,0.12)] p-6 sm:p-8 md:p-10">
+          <div className="max-w-[640px] xl:max-w-[820px] xl:w-[56vw] rounded-3xl bg-white/80 backdrop-blur-md border border-white/70 shadow-[0_20px_60px_rgba(15,23,42,0.12)] p-6 sm:p-8 md:p-10 xl:px-8">
             <span className="inline-flex items-center gap-2 rounded-full bg-white border border-[var(--brand-gray)] shadow-sm px-3 py-1 text-xs font-bold tracking-wide uppercase text-[var(--brand-dark)]">
               <ShieldCheck className="w-4 h-4 text-[var(--brand-secondary)]" />
               Plateforme officielle de l'ARTCI
             </span>
-            <h1 className="mt-5 text-[26px] md:text-[34px] font-extrabold leading-[1.2] text-[var(--brand-dark)]">
+            <h1 className="mt-5 text-[28px] md:text-[38px] xl:text-[clamp(32px,2.5vw,36px)] font-extrabold leading-[1.18] tracking-[-0.015em] text-[var(--brand-dark)]">
               Cartographie nationale des organismes{' '}
               <span className="text-[var(--brand-primary)]">conformes</span> à la protection des
               données personnelles
             </h1>
-            <p className="mt-4 text-[15px] md:text-base text-[#334155]">
+            <p className="mt-4 text-base md:text-[17px] text-[#334155]">
               Consultez librement les organismes publics et privés évalués par l'ARTCI, et
               inscrivez votre organisme pour figurer sur la carte de la conformité en Côte d'Ivoire.
             </p>
