@@ -104,7 +104,6 @@ SECTEURS = [
     ('Commerce', ['Commerce / Distribution']),
     ('Santé', ['Santé / Médical']),
     ('Transports', ['Transport / Logistique']),
-    ('Sécurité', ['Sécurité / Gardiennage']),
     ('Éducation', ['Éducation / Formation']),
     ('Administration publique', ['Administration publique']),
     ('Agriculture', ['Agriculture / Agro-industrie']),
@@ -240,9 +239,11 @@ def _categorie(row, col_detail, col_orig, col_ind, col_duree, col_dest, items, o
 
 
 def _secteurs(v: Optional[str]) -> List[str]:
+    # Mot entier uniquement : « communication » ne doit pas matcher « telecommunications ».
     out: List[str] = []
+    n = _norm(v)
     for mot, codes in SECTEURS:
-        if _norm(mot) in _norm(v):
+        if re.search(r'(?<![a-z])' + re.escape(_norm(mot)), n):
             for c in codes:
                 if c not in out:
                     out.append(c)
