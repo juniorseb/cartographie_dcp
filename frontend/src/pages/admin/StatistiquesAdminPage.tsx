@@ -67,7 +67,11 @@ export default function StatistiquesAdminPage() {
   return (
     <div>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-        <h1 className="text-2xl">Statistiques Avancées</h1>
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.15em] text-[var(--brand-primary-hover)]">Administration ARTCI</p>
+          <h1 className="mt-1 text-2xl md:text-[28px]">Statistiques avancées</h1>
+          <p className="mt-1 text-sm text-[var(--brand-muted)]">Analyse de l'ensemble des dossiers, filtrable par période.</p>
+        </div>
         <button
           type="button"
           onClick={handleExport}
@@ -112,12 +116,17 @@ export default function StatistiquesAdminPage() {
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {summaryCards.map(({ label, value, icon: Icon, color, cardClass }) => (
-          <div key={label} className={cardClass}>
+          <div key={label} className={`${cardClass.replace(/card-(orange|green)/, '')} p-5`} style={{ borderTop: `3px solid ${color}` }}>
             <div className="flex items-center gap-4">
-              <Icon className="w-10 h-10" style={{ color }} />
+              <span
+                className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl"
+                style={{ background: `color-mix(in srgb, ${color} 12%, #fff)`, color }}
+              >
+                <Icon className="w-6 h-6" />
+              </span>
               <div>
-                <p className="text-3xl font-bold">{formatNumber(value)}</p>
-                <p className="text-sm text-gray-500">{label}</p>
+                <p className="font-display text-3xl font-extrabold text-[var(--brand-dark)]">{formatNumber(value)}</p>
+                <p className="text-sm text-[var(--brand-muted)]">{label}</p>
               </div>
             </div>
           </div>
@@ -138,9 +147,10 @@ export default function StatistiquesAdminPage() {
                   nameKey="name"
                   cx="50%"
                   cy="50%"
-                  outerRadius={100}
-                  label={({ percent }) => (percent < 0.05 ? '' : `${(percent * 100).toFixed(0)}%`)}
-                  labelLine={false}
+                  innerRadius={55}
+                  outerRadius={95}
+                  paddingAngle={2}
+                  stroke="none"
                 >
                   {workflowData.map((_, i) => (
                     <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
@@ -165,9 +175,10 @@ export default function StatistiquesAdminPage() {
                   nameKey="name"
                   cx="50%"
                   cy="50%"
-                  outerRadius={100}
-                  label={({ percent }) => (percent < 0.05 ? '' : `${(percent * 100).toFixed(0)}%`)}
-                  labelLine={false}
+                  innerRadius={55}
+                  outerRadius={95}
+                  paddingAngle={2}
+                  stroke="none"
                 >
                   {conformiteData.map((_, i) => (
                     <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
@@ -184,25 +195,14 @@ export default function StatistiquesAdminPage() {
         {secteurData.length > 0 && (
           <div className="card">
             <h3 className="text-lg font-bold mb-4">Par secteur d'activité</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={secteurData}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={100}
-                  label={({ percent }) => (percent < 0.05 ? '' : `${(percent * 100).toFixed(0)}%`)}
-                  labelLine={false}
-                >
-                  {secteurData.map((_, i) => (
-                    <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
+            <ResponsiveContainer width="100%" height={Math.max(260, secteurData.length * 28)}>
+              <BarChart data={secteurData} layout="vertical" margin={{ left: 10, right: 16 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E5E7EB" />
+                <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12, fill: '#64748B' }} />
+                <YAxis type="category" dataKey="name" width={170} interval={0} tick={{ fontSize: 12, fill: '#334155' }} />
+                <Tooltip cursor={{ fill: 'rgba(255,140,0,0.06)' }} />
+                <Bar dataKey="value" name="Entités" fill="#FF8C00" radius={[0, 6, 6, 0]} barSize={16} />
+              </BarChart>
             </ResponsiveContainer>
           </div>
         )}
@@ -219,9 +219,10 @@ export default function StatistiquesAdminPage() {
                   nameKey="name"
                   cx="50%"
                   cy="50%"
-                  outerRadius={100}
-                  label={({ percent }) => (percent < 0.05 ? '' : `${(percent * 100).toFixed(0)}%`)}
-                  labelLine={false}
+                  innerRadius={55}
+                  outerRadius={95}
+                  paddingAngle={2}
+                  stroke="none"
                 >
                   {origineData.map((_, i) => (
                     <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />

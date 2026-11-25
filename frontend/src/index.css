@@ -684,3 +684,15 @@ textarea:disabled {
   color: #64748B;
   cursor: not-allowed;
 }
+
+/* Tableaux : toute la largeur du conteneur */
+.table-container > table {
+  width: 100%;
+}
+
+/* Champ avec icone positionnee (loupe...) : le champ en bloc evite
+   l'espace de ligne sous l'input qui decentrait l'icone. */
+.relative > input,
+.relative > select {
+  display: block;
+}

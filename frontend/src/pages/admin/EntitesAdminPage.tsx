@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Eye, Plus } from 'lucide-react';
+import { Eye, Plus, Database } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import * as adminApi from '@/api/admin.api';
 import SearchBar from '@/components/common/SearchBar';
@@ -141,7 +141,11 @@ export default function EntitesAdminPage() {
       ) : error ? (
         <ErrorDisplay message={error} onRetry={refetch} />
       ) : !data || data.items.length === 0 ? (
-        <EmptyState />
+        <EmptyState
+          icon={Database}
+          title={Object.values(filters).some(Boolean) ? 'Aucune entité ne correspond aux filtres' : 'Aucune entité validée pour le moment'}
+          description="Cette liste ne contient que les entités validées (conformes, validées ou publiées). Les dossiers en brouillon ou en cours de traitement n'y figurent pas."
+        />
       ) : (
         <>
           <div className="table-container overflow-x-auto">

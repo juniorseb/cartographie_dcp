@@ -30,7 +30,7 @@ export default function SearchBar({
   }, [localValue, debounceMs, onChange, value]);
 
   return (
-    <div className="relative">
+    <div className="relative self-start">
       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
       <input
         type="search"
