@@ -102,10 +102,12 @@ export default function HomePage() {
               sizes="(min-width: 1280px) 70vw, 100vw"
               alt=""
               decoding="async"
-              className="absolute inset-0 w-full h-full object-cover object-[72%_center] xl:object-right transition-opacity duration-[1200ms] ease-in-out"
+              className="absolute inset-0 w-full h-full object-cover object-[72%_center] xl:object-right saturate-[0.85] transition-opacity duration-[1200ms] ease-in-out"
               style={{ opacity: i === slide ? 1 : 0 }}
             />
           ))}
+          {/* Verre blanc sur l'image : l'illustration reste presente mais en retrait */}
+          <div className="absolute inset-0 hidden xl:block bg-white/40" />
         </div>
         {/* Voile de lisibilite : fort a gauche (texte), transparent a droite (illustration) */}
         <div
@@ -113,18 +115,19 @@ export default function HomePage() {
           className="absolute inset-0 hidden xl:block"
           style={{
             background:
-              'linear-gradient(90deg, rgba(247,249,253,1) 0%, rgba(247,249,253,0.95) 36%, rgba(247,249,253,0.4) 48%, rgba(247,249,253,0) 58%)',
+              'linear-gradient(90deg, rgba(247,249,253,0.9) 0%, rgba(247,249,253,0.7) 38%, rgba(247,249,253,0) 56%)',
           }}
         />
-        <div aria-hidden className="absolute inset-0 xl:hidden bg-[rgba(247,249,253,0.86)]" />
+        <div aria-hidden className="absolute inset-0 xl:hidden bg-[rgba(247,249,253,0.55)]" />
 
         <div className="relative w-full max-w-7xl mx-auto px-4 md:px-8 pt-12 pb-20 md:pt-16 md:pb-24">
-          <div className="max-w-[600px]">
+          {/* Couche de lisibilite : panneau translucide derriere le texte */}
+          <div className="max-w-[680px] rounded-3xl bg-white/80 backdrop-blur-md border border-white/70 shadow-[0_20px_60px_rgba(15,23,42,0.12)] p-6 sm:p-8 md:p-10">
             <span className="inline-flex items-center gap-2 rounded-full bg-white border border-[var(--brand-gray)] shadow-sm px-3 py-1 text-xs font-bold tracking-wide uppercase text-[var(--brand-dark)]">
               <ShieldCheck className="w-4 h-4 text-[var(--brand-secondary)]" />
               Plateforme officielle de l'ARTCI
             </span>
-            <h1 className="mt-5 text-[30px] md:text-[44px] font-extrabold leading-[1.15] text-[var(--brand-dark)]">
+            <h1 className="mt-5 text-[30px] md:text-[40px] font-extrabold leading-[1.15] text-[var(--brand-dark)]">
               Cartographie nationale des organismes{' '}
               <span className="text-[var(--brand-primary)]">conformes</span> à la protection des
               données personnelles
@@ -149,14 +152,14 @@ export default function HomePage() {
 
             {/* Chiffres cles, ou message tant qu'aucun organisme n'est publie */}
             {conformes + partiels > 0 ? (
-              <dl className="mt-10 flex flex-wrap gap-x-8 gap-y-4">
+              <dl className="mt-8 flex flex-wrap gap-x-8 gap-y-4">
                 <HeroStat valeur={conformes + partiels} label="Organismes publiés" />
                 <HeroStat valeur={conformes} label="Conformes" dot="var(--status-conforme)" />
                 <HeroStat valeur={partiels} label="Partiellement conformes" dot="var(--status-achevee)" />
                 <HeroStat valeur={secteurs} label="Secteurs d'activité" />
               </dl>
             ) : (
-              <p className="mt-10 inline-flex items-start gap-3 rounded-xl bg-white/90 border border-[var(--brand-gray)] shadow-sm px-4 py-3 text-sm text-[#334155] max-w-md">
+              <p className="mt-8 inline-flex items-start gap-3 rounded-xl bg-[var(--brand-secondary-soft)] border border-[#BFE8D2] px-4 py-3 text-sm text-[#334155] max-w-md">
                 <BadgeCheck className="w-5 h-5 mt-0.5 flex-shrink-0 text-[var(--brand-secondary)]" />
                 <span>
                   <strong className="text-[var(--brand-dark)]">Évaluations en cours.</strong>{' '}
@@ -224,7 +227,7 @@ export default function HomePage() {
         <ol className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {ETAPES.map(({ icon: Icon, titre, texte }, i) => (
             <li key={titre} className="card card-lift relative">
-              <span className="absolute top-5 right-5 text-4xl font-extrabold text-[var(--brand-primary-soft)] select-none">
+              <span aria-hidden className="absolute top-4 right-5 font-display text-5xl font-extrabold leading-none text-[var(--brand-primary)] opacity-30 select-none">
                 {i + 1}
               </span>
               <span className="w-12 h-12 rounded-xl bg-[var(--brand-primary)] text-white flex items-center justify-center mb-4">
