@@ -696,3 +696,10 @@ textarea:disabled {
 .relative > select {
   display: block;
 }
+
+/* En-tetes de tableau sur fond clair impose par la page (bg-gray-50/100) :
+   le texte blanc du style commun devient illisible -> texte bleu nuit. */
+table thead[class*="bg-gray"],
+table thead[class*="bg-white"] {
+  color: var(--brand-dark);
+}

@@ -1,4 +1,5 @@
 import { useParams, Link } from 'react-router-dom';
+import { BASE_LEGALE_LABELS } from '@/utils/constants';
 import { ArrowLeft, MapPin, Shield, Users, FileText, UserCheck, Phone, Mail, Download } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import * as publicApi from '@/api/public.api';
@@ -223,7 +224,7 @@ export default function FicheEntitePage() {
                   {entite.finalites.map((f) => (
                     <tr key={f.id}>
                       <td className="text-sm">{f.finalite}</td>
-                      <td className="text-sm">{f.base_legale}</td>
+                      <td className="text-sm">{BASE_LEGALE_LABELS[f.base_legale] ?? f.base_legale}</td>
                       <td>
                         {f.pourcentage != null && (
                           <div className="flex items-center gap-2">

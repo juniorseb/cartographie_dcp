@@ -28,19 +28,19 @@ const TYPE_OPTIONS: {
   {
     value: 'personne_physique',
     label: 'Personne physique',
-    description: "Vous vous inscrivez en votre nom propre, sans entreprise ni document justificatif.",
+    description: "En votre nom propre, sans entreprise.",
     icon: User,
   },
   {
     value: 'pm_droit_prive',
     label: 'Personne morale de droit privé',
-    description: 'Entreprise, association... (RCCM et DFE requis).',
+    description: 'Entreprise, association. RCCM et DFE requis.',
     icon: Building2,
   },
   {
     value: 'pm_droit_public',
     label: 'Personne morale de droit public',
-    description: 'Administration, établissement public, collectivité... (décret/arrêté de création requis).',
+    description: 'Administration, établissement public, collectivité. Acte de création requis.',
     icon: Landmark,
   },
 ];
@@ -304,31 +304,35 @@ export default function RegisterPage() {
   if (!statutJuridique) {
     return (
       <div>
-        <h2 className="text-xl font-bold text-center mb-1" style={{ color: 'var(--artci-black)' }}>
-          Inscription
-        </h2>
-        <p className="text-sm text-gray-500 text-center mb-6">
+        <p className="text-xs font-bold uppercase tracking-[0.15em] text-[var(--brand-primary-hover)] text-center">
+          Création de compte
+        </p>
+        <h2 className="mt-1 text-2xl text-center">Inscription</h2>
+        <p className="mt-1 text-sm text-[var(--brand-muted)] text-center mb-7">
           Quel type de compte souhaitez-vous créer ?
         </p>
-        <div className="space-y-3">
+        <div className="grid gap-3 md:grid-cols-3">
           {TYPE_OPTIONS.map(({ value, label, description, icon: Icon }) => (
             <button
               key={value}
               type="button"
               onClick={() => setStatutJuridique(value)}
-              className="w-full text-left border border-gray-300 rounded-lg p-4 flex items-start gap-3 hover:border-[var(--brand-primary)] hover:bg-orange-50 transition-colors"
+              className="group flex flex-col items-start text-left rounded-[var(--radius-card)] border-2 border-[var(--brand-gray)] bg-white p-5 transition-all hover:border-[var(--brand-primary)] hover:shadow-card hover:-translate-y-0.5 focus:outline-none focus-visible:border-[var(--brand-primary)]"
             >
-              <Icon className="w-6 h-6 text-[var(--brand-primary)] flex-shrink-0 mt-0.5" />
-              <div>
-                <div className="font-bold text-sm">{label}</div>
-                <div className="text-xs text-gray-500 mt-0.5">{description}</div>
-              </div>
+              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] transition-colors group-hover:bg-[var(--brand-primary)] group-hover:text-white">
+                <Icon className="w-6 h-6" />
+              </span>
+              <span className="mt-4 font-display font-bold text-[15px] leading-snug text-[var(--brand-dark)]">{label}</span>
+              <span className="mt-1.5 text-xs text-[var(--brand-muted)] leading-relaxed">{description}</span>
+              <span className="mt-auto pt-4 inline-flex items-center gap-1 text-sm font-semibold text-[var(--brand-primary-hover)]">
+                Choisir <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+              </span>
             </button>
           ))}
         </div>
-        <p className="text-sm text-center mt-6 text-gray-500">
+        <p className="text-sm text-center mt-7 text-[var(--brand-muted)]">
           Déjà un compte ?{' '}
-          <Link to={ROUTES.LOGIN} className="text-[var(--brand-primary)] font-semibold hover:underline">
+          <Link to={ROUTES.LOGIN} className="text-[var(--brand-primary-hover)] font-semibold hover:underline">
             Se connecter
           </Link>
         </p>

@@ -112,3 +112,16 @@ export const CHART_COLORS = [
   '#FF8C00', '#009E49', '#0F172A', '#F59E0B', '#10B981',
   '#64748B', '#FDBA74', '#6EE7B7', '#334155', '#DC143C',
 ];
+
+/** Libelles lisibles des bases legales (codes stockes en base). */
+export const BASE_LEGALE_LABELS: Record<string, string> = {
+  consentement: 'Consentement',
+  contrat: 'Exécution d’un contrat',
+  execution_contrat: 'Exécution d’un contrat',
+  obligation_legale: 'Obligation légale',
+  mission_publique: 'Mission d’intérêt public',
+  mission_interet_public: 'Mission d’intérêt public',
+  interet_legitime: 'Intérêt légitime',
+  interet_vital: 'Sauvegarde de la vie',
+  sauvegarde_vie: 'Sauvegarde de la vie',
+};

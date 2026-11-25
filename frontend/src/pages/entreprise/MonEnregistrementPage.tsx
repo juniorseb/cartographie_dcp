@@ -454,7 +454,7 @@ export default function MonEnregistrementPage({ mode = 'entreprise', entiteId: e
           <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
           <div>
             <strong>Saisie ARTCI</strong> — Vous êtes en train de remplir le questionnaire pour
-            le compte d'une entreprise. L'entité sera marquée <code>origine_saisie = saisie_artci</code>.
+            le compte d'une entreprise. L'entité sera enregistrée comme « saisie par l'ARTCI ».
             {!adminEntiteId && (
               <span> La première sauvegarde créera l'entité dans la base.</span>
             )}

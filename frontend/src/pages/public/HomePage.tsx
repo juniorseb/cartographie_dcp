@@ -54,7 +54,7 @@ const ATOUTS = [
   {
     icon: Lock,
     titre: 'Sécurité & traçabilité',
-    texte: 'Accès protégé par OTP, historique complet des échanges et des décisions sur chaque dossier.',
+    texte: 'Accès sécurisé et suivi rigoureux de chaque dossier par l’ARTCI.',
   },
   {
     icon: Globe,

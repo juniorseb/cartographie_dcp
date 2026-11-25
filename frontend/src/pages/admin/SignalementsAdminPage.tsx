@@ -87,17 +87,17 @@ export default function SignalementsAdminPage() {
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2 mb-6">
+      <div className="mb-6 inline-flex flex-wrap gap-1 rounded-xl border border-[var(--brand-gray)] bg-white p-1 shadow-sm">
         {STATUT_PILLS.map((p) => {
           const active = filter === p.key;
           return (
             <button
               key={p.key}
               onClick={() => setFilter(p.key)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+              className={`rounded-lg px-3.5 py-1.5 text-sm font-semibold transition-colors ${
                 active
-                  ? 'bg-[var(--brand-secondary)] text-white border-[var(--brand-secondary)]'
-                  : `${p.className} border-transparent hover:opacity-80`
+                  ? 'bg-[var(--brand-primary)] text-white'
+                  : 'text-gray-600 hover:bg-[var(--brand-primary-soft)]'
               }`}
             >
               {p.label}

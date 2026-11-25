@@ -9,7 +9,7 @@ import * as entrepriseApi from '@/api/entreprise.api';
 import Loading from '@/components/common/Loading';
 import ErrorDisplay from '@/components/common/ErrorDisplay';
 import EmptyState from '@/components/common/EmptyState';
-import { ROUTES } from '@/utils/constants';
+import { ROUTES, BASE_LEGALE_LABELS } from '@/utils/constants';
 import { formatDate, formatDateTime } from '@/utils/format';
 import { cn } from '@/utils/cn';
 import type { DossierComplet } from '@/types/entreprise';
@@ -234,7 +234,7 @@ function IdentiteTab({ dossier }: { dossier: DossierComplet }) {
                 {dossier.finalites.map((f, i) => (
                   <tr key={f.id ?? i}>
                     <td className="text-sm">{f.finalite}</td>
-                    <td className="text-sm">{f.base_legale}</td>
+                    <td className="text-sm">{BASE_LEGALE_LABELS[f.base_legale] ?? f.base_legale}</td>
                     <td className="text-sm">{f.pourcentage ?? '-'}%</td>
                   </tr>
                 ))}
