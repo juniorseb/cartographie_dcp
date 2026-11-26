@@ -207,9 +207,14 @@ h3 { font-size: 22px; }
   -webkit-overflow-scrolling: touch;
 }
 
+/* En-tete de tableau clair : fond gris bleute, texte bleu nuit,
+   liseré orange de la charte. */
 table thead {
-  background-color: var(--brand-dark);
-  color: #fff;
+  background-color: #F1F5F9;
+  color: #334155;
+}
+table thead th {
+  border-bottom: 2px solid var(--brand-primary);
 }
 
 table th, table td {
