@@ -1,4 +1,4 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import { BASE_LEGALE_LABELS } from '@/utils/constants';
 import { ArrowLeft, MapPin, Shield, Users, FileText, UserCheck, Phone, Mail, Download } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
@@ -9,6 +9,10 @@ import ErrorDisplay from '@/components/common/ErrorDisplay';
 
 export default function FicheEntitePage() {
   const { id } = useParams<{ id: string }>();
+  // Page d'origine (liste avec son onglet, ou carte) transmise par le lien.
+  const origine = (useLocation().state as { from?: string } | null)?.from;
+  const retourVers = origine && origine.startsWith('/') ? origine : '/entites';
+  const retourLabel = retourVers.startsWith('/carte') ? 'Retour à la carte' : 'Retour à la liste';
 
   const { data: entite, isLoading, error } = useApi(
     () => publicApi.getEntiteDetail(id!),
@@ -20,8 +24,8 @@ export default function FicheEntitePage() {
   if (error || !entite) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-6">
-        <Link to="/entites" className="flex items-center gap-2 text-[var(--brand-primary)] mb-4 hover:underline">
-          <ArrowLeft className="w-4 h-4" /> Retour à la liste
+        <Link to={retourVers} className="flex items-center gap-2 text-[var(--brand-primary)] mb-4 hover:underline">
+          <ArrowLeft className="w-4 h-4" /> {retourLabel}
         </Link>
         <ErrorDisplay message={error ?? 'Entité non trouvée ou non conforme.'} />
       </div>
@@ -31,8 +35,8 @@ export default function FicheEntitePage() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">
       {/* Navigation */}
-      <Link to="/entites" className="flex items-center gap-2 text-[var(--brand-primary)] mb-6 hover:underline">
-        <ArrowLeft className="w-4 h-4" /> Retour à la liste
+      <Link to={retourVers} className="flex items-center gap-2 text-[var(--brand-primary)] mb-6 hover:underline">
+        <ArrowLeft className="w-4 h-4" /> {retourLabel}
       </Link>
 
       {/* En-tête */}

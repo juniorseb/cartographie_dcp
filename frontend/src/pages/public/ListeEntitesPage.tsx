@@ -378,6 +378,7 @@ export default function ListeEntitesPage() {
                     <td>
                       <Link
                         to={`/entites/${entite.id}`}
+                        state={{ from: `/entites${vue === 'responsables' ? '?vue=responsables' : ''}` }}
                         className="text-[var(--brand-primary)] hover:underline flex items-center gap-1 whitespace-nowrap"
                       >
                         <Eye className="w-4 h-4" />

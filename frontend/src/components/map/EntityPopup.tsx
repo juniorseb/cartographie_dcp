@@ -67,6 +67,7 @@ export default function EntityPopup({ entite }: EntityPopupProps) {
 
         <Link
           to={`/entites/${entite.id}`}
+          state={{ from: '/carte' }}
           className="popup-btn mt-4 flex w-full items-center justify-center gap-1.5 rounded-[10px] bg-[var(--brand-primary)] py-2.5 font-display text-sm font-bold text-white no-underline transition-colors hover:bg-[var(--brand-primary-hover)]"
         >
           Voir la fiche
