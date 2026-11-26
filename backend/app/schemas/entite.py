@@ -116,7 +116,7 @@ class DPOSchema(Schema):
     prenom = fields.String(validate=validate.Length(max=200))
     email = fields.Email(load_default=None)
     telephone = fields.String(validate=validate.Length(max=20))
-    type = fields.String(required=True, validate=validate.OneOf(['interne', 'externe']))
+    type = EnumField(required=True, validate=validate.OneOf(['interne', 'externe']))
     organisme = fields.String(validate=validate.Length(max=255))
     date_designation = fields.Date()
 
@@ -164,7 +164,7 @@ class CategorieDonneesSchema(Schema):
         unknown = EXCLUDE
     id = fields.String(dump_only=True)
     registre_traitement_id = fields.String()
-    categorie = fields.String(required=True, validate=validate.OneOf([
+    categorie = EnumField(required=True, validate=validate.OneOf([
         'identite', 'contact', 'financieres', 'sante', 'biometriques',
         'localisation', 'professionnelles', 'sensibles', 'mineurs', 'autre'
     ]))
@@ -177,7 +177,7 @@ class FinaliteBaseLegaleSchema(Schema):
         unknown = EXCLUDE
     id = fields.String(dump_only=True)
     finalite = fields.String(required=True, validate=validate.Length(min=1, max=255))
-    base_legale = fields.String(required=True, validate=validate.OneOf([
+    base_legale = EnumField(required=True, validate=validate.OneOf([
         'consentement', 'contrat', 'obligation_legale',
         'interet_vital', 'mission_publique', 'interet_legitime'
     ]))
@@ -212,7 +212,7 @@ class MesureSecuriteSchema(Schema):
     class Meta:
         unknown = EXCLUDE
     id = fields.String(dump_only=True)
-    type_mesure = fields.String(required=True, validate=validate.OneOf([
+    type_mesure = EnumField(required=True, validate=validate.OneOf([
         'technique', 'organisationnelle', 'physique'
     ]))
     description = fields.String(required=True)
