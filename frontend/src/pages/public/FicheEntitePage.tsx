@@ -13,6 +13,8 @@ export default function FicheEntitePage() {
   const origine = (useLocation().state as { from?: string } | null)?.from;
   const retourVers = origine && origine.startsWith('/') ? origine : '/entites';
   const retourLabel = retourVers.startsWith('/carte') ? 'Retour à la carte' : 'Retour à la liste';
+  // Fiche ouverte depuis « Responsables de traitement » : identification seule, sans statut.
+  const depuisRegistre = retourVers.includes('vue=responsables');
 
   const { data: entite, isLoading, error } = useApi(
     () => publicApi.getEntiteDetail(id!),
@@ -32,6 +34,10 @@ export default function FicheEntitePage() {
     );
   }
 
+  // Le statut n'est montre que pour un organisme publie (l'API ne le renvoie
+  // pas sinon) et jamais dans le contexte du registre des responsables.
+  const afficherStatut = !depuisRegistre && !!entite.statut_conformite;
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">
       {/* Navigation */}
@@ -45,7 +51,7 @@ export default function FicheEntitePage() {
           <div>
             <h1 className="text-2xl mb-1">{entite.denomination}</h1>
           </div>
-          <StatusBadge statut={entite.statut_conformite} />
+          {afficherStatut && <StatusBadge statut={entite.statut_conformite} />}
         </div>
       </div>
 
@@ -101,14 +107,16 @@ export default function FicheEntitePage() {
           <div className="card">
             <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
               <Shield className="w-5 h-5 text-[var(--brand-secondary)]" />
-              Conformité
+              {afficherStatut ? 'Conformité' : 'Protection des données'}
             </h3>
             <div className="space-y-3">
-              <div>
-                <span className="text-sm font-semibold">Statut :</span>{' '}
-                <StatusBadge statut={entite.statut_conformite} />
-              </div>
-              {entite.score_conformite != null && (
+              {afficherStatut && (
+                <div>
+                  <span className="text-sm font-semibold">Statut :</span>{' '}
+                  <StatusBadge statut={entite.statut_conformite} />
+                </div>
+              )}
+              {afficherStatut && entite.score_conformite != null && (
                 <div>
                   <span className="text-sm font-semibold">Score :</span>
                   <div className="progress mt-1">

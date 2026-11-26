@@ -26,8 +26,9 @@ export default function ListeEntitesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   // Deux vues du registre public :
   //  - « conformes »    : Conforme + Partiellement conforme (anciens libelles inclus)
-  //  - « responsables » : toute la base des responsables de traitement evalues,
-  //    quel que soit le statut et sans attendre la publication (registre=tous)
+  //  - « responsables » : toute la base des responsables de traitement recenses
+  //    (registre=tous), informations d'identification seulement, SANS statut :
+  //    les statuts ne concernent que l'onglet « Organismes conformes ».
   const vue: 'conformes' | 'responsables' = searchParams.get('vue') === 'responsables' ? 'responsables' : 'conformes';
   const [filters, setFilters] = useState<EntiteFilter>(() => {
     const q = searchParams.get('search');
@@ -36,9 +37,7 @@ export default function ListeEntitesPage() {
   const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState(false);
 
-  const statutParam = vue === 'conformes'
-    ? STATUTS_CONFORMES
-    : (filters.statut_conformite || undefined);
+  const statutParam = vue === 'conformes' ? STATUTS_CONFORMES : undefined;
 
   const registre = vue === 'responsables' ? ('tous' as const) : undefined;
 
@@ -67,7 +66,7 @@ export default function ListeEntitesPage() {
   const regions = Object.keys(stats?.par_region ?? {}).sort();
   const villes = Object.keys(stats?.par_ville ?? {}).sort();
   const nbConformes = (statsPublies?.total_entites_conformes ?? 0) + (statsPublies?.total_partiellement_conformes ?? 0);
-  const nbTotal = (statsBase?.total_entites_conformes ?? 0) + (statsBase?.total_partiellement_conformes ?? 0) + (statsBase?.total_non_conformes ?? 0);
+  const nbTotal = statsBase?.total_recenses ?? 0;
 
   function updateFilter(key: keyof EntiteFilter, value: string) {
     setFilters((prev) => ({ ...prev, [key]: value || undefined }));
@@ -92,7 +91,7 @@ export default function ListeEntitesPage() {
       title={vue === 'conformes' ? 'Organismes conformes' : 'Responsables de traitement'}
       description={vue === 'conformes'
         ? "Organismes jugés conformes ou partiellement conformes par l'ARTCI au titre de la loi n°2013-450."
-        : "Ensemble des responsables de traitement recensés par l'ARTCI, quel que soit leur niveau de conformité."}
+        : "Ensemble des responsables de traitement recensés par l'ARTCI."}
       actions={
         <>
           <Link to={ROUTES.MAP} className="btn btn-outline py-2 px-4 text-sm">
@@ -108,7 +107,7 @@ export default function ListeEntitesPage() {
       <div className="mb-5 grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl">
         {([
           { key: 'conformes', label: 'Organismes conformes', sub: 'Conformes et partiellement conformes', icon: BadgeCheck, count: nbConformes },
-          { key: 'responsables', label: 'Responsables de traitement', sub: 'Tous les statuts, non conformes inclus', icon: Users, count: nbTotal },
+          { key: 'responsables', label: 'Responsables de traitement', sub: 'Tous les organismes recensés', icon: Users, count: nbTotal },
         ] as const).map(({ key, label, sub, icon: Icon, count }) => {
           const actif = vue === key;
           return (
@@ -147,28 +146,13 @@ export default function ListeEntitesPage() {
       <div className="card mb-6 p-4 md:p-5">
       <div className={cn(
         'grid grid-cols-1 sm:grid-cols-2 gap-3 [&_input]:h-11 [&_select]:h-11',
-        vue === 'responsables' ? 'lg:grid-cols-3 xl:grid-cols-6' : 'lg:grid-cols-5'
+        'lg:grid-cols-5'
       )}>
         <SearchBar
           value={filters.search ?? ''}
           onChange={(v) => updateFilter('search', v)}
           placeholder="Rechercher..."
         />
-        {vue === 'responsables' && (
-          <div className="form-group mb-0">
-            <select
-              value={filters.statut_conformite ?? ''}
-              onChange={(e) => updateFilter('statut_conformite', e.target.value)}
-              className="w-full py-2.5"
-              aria-label="Statut de conformité"
-            >
-              <option value="">Tous les statuts</option>
-              <option value="Conforme">Conforme</option>
-              <option value={'Partiellement conforme,Démarche achevée,Démarche en cours'}>Partiellement conforme</option>
-              <option value="Non conforme">Non conforme</option>
-            </select>
-          </div>
-        )}
         <div className="form-group mb-0">
           <select
             value={filters.secteur_activite ?? ''}
@@ -268,7 +252,7 @@ export default function ListeEntitesPage() {
               <thead>
                 <tr>
                   <th className="whitespace-nowrap">Dénomination</th>
-                  <th className="whitespace-nowrap">Statut</th>
+                  {vue === 'conformes' && <th className="whitespace-nowrap">Statut</th>}
                   <th className="whitespace-nowrap">Forme juridique</th>
                   <th className="whitespace-nowrap">Secteur</th>
                   <th className="whitespace-nowrap">Ville</th>
@@ -284,9 +268,11 @@ export default function ListeEntitesPage() {
                 {data.items.map((entite) => (
                   <tr key={entite.id}>
                     <td className="font-semibold whitespace-nowrap">{entite.denomination}</td>
-                    <td className="whitespace-nowrap">
-                      <StatusBadge statut={entite.statut_conformite} />
-                    </td>
+                    {vue === 'conformes' && (
+                      <td className="whitespace-nowrap">
+                        <StatusBadge statut={entite.statut_conformite} />
+                      </td>
+                    )}
                     <td className="text-sm whitespace-nowrap">{entite.forme_juridique ?? '-'}</td>
                     <td className="text-sm whitespace-nowrap">{entite.secteur_activite ?? '-'}</td>
                     <td className="text-sm whitespace-nowrap">{entite.ville ?? '-'}</td>

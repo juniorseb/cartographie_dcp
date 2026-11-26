@@ -21,7 +21,7 @@ const ORGANISMES_MENU = [
     to: `${ROUTES.ENTITES}?vue=responsables`,
     vue: 'responsables',
     label: 'Responsables de traitement',
-    description: 'Tous les statuts, non conformes inclus',
+    description: 'Tous les organismes recensés',
     icon: Users,
   },
   {

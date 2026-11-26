@@ -10,6 +10,8 @@ export interface PublicStats {
   total_partiellement_conformes: number;
   /** Entites 'Non conforme' publiees (score < 70). */
   total_non_conformes?: number;
+  /** Registre complet (registre=tous) : nombre d'organismes recenses, sans repartition par statut. */
+  total_recenses?: number;
   /** Compat ascendante : anciens compteurs (toujours retournes par l'API, valent 0). */
   total_demarche_achevee?: number;
   total_demarche_en_cours?: number;

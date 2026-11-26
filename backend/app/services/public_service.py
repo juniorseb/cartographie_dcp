@@ -12,6 +12,18 @@ from app.utils.pagination import paginate
 from app.utils.export import prepare_export_data, export_to_excel, export_to_csv, export_to_pdf
 
 
+# Champs d'evaluation reserves aux organismes publies (vue « Organismes
+# conformes » / carte). Le registre des responsables de traitement ne
+# presente que les informations d'identification de l'organisme recense.
+_CHAMPS_EVALUATION = ('statut_conformite', 'score_conformite', 'statut_workflow')
+
+
+def _masquer_evaluation(item):
+    for champ in _CHAMPS_EVALUATION:
+        item.pop(champ, None)
+    return item
+
+
 class PublicService:
 
     # Statuts publiables : tous les statuts evalues. Regle metier (decision
@@ -86,11 +98,16 @@ class PublicService:
                 except ValueError:
                     pass
 
+        if registre_complet:
+            statut_filter = None  # pas de filtre par statut dans le registre
         query = PublicService._build_publiable_query(
             filters, statut_filter, avec_gps=avec_gps, registre_complet=registre_complet,
         )
         query = query.order_by(EntiteBase.denomination.asc())
-        return paginate(query, EntiteListOutputSchema(), page=page, per_page=per_page)
+        result = paginate(query, EntiteListOutputSchema(), page=page, per_page=per_page)
+        if registre_complet:
+            result['items'] = [_masquer_evaluation(i) for i in result['items']]
+        return result
 
     @staticmethod
     def get_entite_public_detail(entite_id):
@@ -106,7 +123,11 @@ class PublicService:
         if entite.archive or not entite.conformite or not entite.conformite.statut_conformite:
             return None
 
-        return EntitePublicDetailSchema().dump(entite)
+        data = EntitePublicDetailSchema().dump(entite)
+        # Organisme non publie : fiche d'identification seulement, sans statut.
+        if not entite.publie_sur_carte:
+            _masquer_evaluation(data)
+        return data
 
     @staticmethod
     def get_public_stats(registre_complet=False):
@@ -173,6 +194,11 @@ class PublicService:
             elif statut == StatutConformiteEnum.non_conforme:
                 stats['total_non_conformes'] = count
 
+        # Registre complet : pas de repartition par statut, seulement le
+        # nombre d'organismes recenses.
+        if registre_complet:
+            stats = {'total_recenses': sum(c for _, c in conformite_counts)}
+
         # Repartitions geographiques — meme univers que ci-dessus.
         secteur_counts = db.session.query(
             EntiteBase.secteur_activite, func.count(EntiteBase.id),
@@ -201,6 +227,8 @@ class PublicService:
     def export_entites(format_type, filters=None, registre_complet=False):
         """Exporter les entités du registre (publiees, ou toute la base si registre_complet)."""
         statut_filter = None
+        if registre_complet and filters:
+            filters.pop('statut_conformite', None)
         if filters and filters.get('statut_conformite'):
             statut_filter = []
             for sv in [x.strip() for x in filters.pop('statut_conformite').split(',')]:
@@ -214,6 +242,10 @@ class PublicService:
         query = query.order_by(EntiteBase.denomination.asc())
         entites = query.all()
         data = prepare_export_data(entites)
+        if registre_complet:
+            for row in data:
+                row.pop('Statut conformité', None)
+                row.pop('Score', None)
 
         if format_type == 'excel':
             return export_to_excel(data)

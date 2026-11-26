@@ -117,7 +117,10 @@ def export_to_pdf(data, filename=None):
 
         if data:
             # Colonnes réduites pour le PDF
-            cols = ['Entité', 'N° CC', 'Secteur d\'activité', 'Ville', 'Statut conformité', 'DPO']
+            cols = [
+                c for c in ['Entité', 'N° CC', 'Secteur d\'activité', 'Ville', 'Statut conformité', 'DPO']
+                if c in data[0]
+            ]
             # Cellules en Paragraph : le texte long passe a la ligne au lieu de
             # deborder de la page.
             cell = ParagraphStyle('cell', parent=styles['Normal'], fontSize=8, leading=10)
@@ -129,8 +132,10 @@ def export_to_pdf(data, filename=None):
                 ])
 
             largeur = doc.width
-            parts = [0.26, 0.12, 0.20, 0.12, 0.14, 0.16]
-            table = Table(table_data, colWidths=[largeur * p for p in parts], repeatRows=1)
+            poids = {'Entité': 26, 'N° CC': 12, "Secteur d'activité": 20, 'Ville': 12,
+                     'Statut conformité': 14, 'DPO': 16}
+            total_poids = sum(poids[c] for c in cols)
+            table = Table(table_data, colWidths=[largeur * poids[c] / total_poids for c in cols], repeatRows=1)
             table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#FF8C00')),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
