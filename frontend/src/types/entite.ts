@@ -86,6 +86,8 @@ export interface FinaliteBaseLegale {
 
 /** Filtres pour la recherche d'entités */
 export interface EntiteFilter {
+  /** 'tous' : registre complet (toute la base evaluee, publiee ou non). */
+  registre?: 'tous';
   search?: string;
   secteur_activite?: string;
   ville?: string;

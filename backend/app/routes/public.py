@@ -40,9 +40,13 @@ def list_entites():
     # avec_gps=true : seulement les entites geolocalisees (carte).
     # Sans parametre : registre public complet (liste).
     avec_gps = request.args.get('avec_gps') == 'true'
+    # registre=tous : vue « Responsables de traitement » -> toute la base
+    # evaluee, publiee ou non.
+    registre_complet = request.args.get('registre') == 'tous'
 
     result = PublicService.get_entites_conformes(
-        filters=filters or None, page=page, per_page=per_page, avec_gps=avec_gps,
+        filters=filters or None, page=page, per_page=per_page,
+        avec_gps=avec_gps, registre_complet=registre_complet,
     )
     return success_response(result)
 
@@ -163,7 +167,9 @@ def get_entite_detail(entite_id):
 @public_bp.route('/stats', methods=['GET'])
 def get_stats():
     """Statistiques agrégées publiques."""
-    stats = PublicService.get_public_stats()
+    stats = PublicService.get_public_stats(
+        registre_complet=request.args.get('registre') == 'tous',
+    )
     return success_response(stats)
 
 
@@ -177,12 +183,14 @@ def export_entites():
         'secteur_activite': request.args.get('secteur_activite'),
         'ville': request.args.get('ville'),
         'region': request.args.get('region'),
+        'statut_conformite': request.args.get('statut_conformite'),
     }
     filters = {k: v for k, v in filters.items() if v}
 
     try:
         file_data = PublicService.export_entites(
-            format_type, filters=filters or None
+            format_type, filters=filters or None,
+            registre_complet=request.args.get('registre') == 'tous',
         )
         mime_types = {
             'excel': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

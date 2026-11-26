@@ -26,7 +26,8 @@ export default function ListeEntitesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   // Deux vues du registre public :
   //  - « conformes »    : Conforme + Partiellement conforme (anciens libelles inclus)
-  //  - « responsables » : tous les responsables de traitement publies, quel que soit le statut
+  //  - « responsables » : toute la base des responsables de traitement evalues,
+  //    quel que soit le statut et sans attendre la publication (registre=tous)
   const vue: 'conformes' | 'responsables' = searchParams.get('vue') === 'responsables' ? 'responsables' : 'conformes';
   const [filters, setFilters] = useState<EntiteFilter>(() => {
     const q = searchParams.get('search');
@@ -39,11 +40,13 @@ export default function ListeEntitesPage() {
     ? STATUTS_CONFORMES
     : (filters.statut_conformite || undefined);
 
+  const registre = vue === 'responsables' ? ('tous' as const) : undefined;
+
   const fetchEntites = useCallback(
-    () => publicApi.getEntites({ ...filters, statut_conformite: statutParam, page, per_page: PER_PAGE_PUBLIC_LIST }),
-    [filters, page, statutParam]
+    () => publicApi.getEntites({ ...filters, registre, statut_conformite: statutParam, page, per_page: PER_PAGE_PUBLIC_LIST }),
+    [filters, page, statutParam, registre]
   );
-  const { data, isLoading, error, refetch } = useApi(fetchEntites, [filters, page, statutParam]);
+  const { data, isLoading, error, refetch } = useApi(fetchEntites, [filters, page, statutParam, registre]);
 
   function changerVue(v: 'conformes' | 'responsables') {
     const next = new URLSearchParams(searchParams);
@@ -56,12 +59,15 @@ export default function ListeEntitesPage() {
   // Stats publiques : leurs cles par_secteur / par_region / par_ville donnent
   // les valeurs reellement presentes en base (filtrees aux entites publiables
   // visibles sur la carte). Plus de listes hardcodees qui derivent du reel.
-  const { data: stats } = useApi(() => publicApi.getStats(), []);
+  // Deux univers : organismes publies (vue conformes) et base complete (vue responsables).
+  const { data: statsPublies } = useApi(() => publicApi.getStats(), []);
+  const { data: statsBase } = useApi(() => publicApi.getStats({ registre: 'tous' }), []);
+  const stats = vue === 'responsables' ? statsBase : statsPublies;
   const secteurs = Object.keys(stats?.par_secteur ?? {}).sort();
   const regions = Object.keys(stats?.par_region ?? {}).sort();
   const villes = Object.keys(stats?.par_ville ?? {}).sort();
-  const nbConformes = (stats?.total_entites_conformes ?? 0) + (stats?.total_partiellement_conformes ?? 0);
-  const nbTotal = nbConformes + (stats?.total_non_conformes ?? 0);
+  const nbConformes = (statsPublies?.total_entites_conformes ?? 0) + (statsPublies?.total_partiellement_conformes ?? 0);
+  const nbTotal = (statsBase?.total_entites_conformes ?? 0) + (statsBase?.total_partiellement_conformes ?? 0) + (statsBase?.total_non_conformes ?? 0);
 
   function updateFilter(key: keyof EntiteFilter, value: string) {
     setFilters((prev) => ({ ...prev, [key]: value || undefined }));
@@ -71,7 +77,7 @@ export default function ListeEntitesPage() {
   async function handleExport(format: 'excel' | 'csv' | 'pdf') {
     setExporting(true);
     try {
-      await publicApi.exportEntites(format, { ...filters, statut_conformite: statutParam });
+      await publicApi.exportEntites(format, { ...filters, registre, statut_conformite: statutParam });
     } finally {
       setExporting(false);
     }
@@ -86,7 +92,7 @@ export default function ListeEntitesPage() {
       title={vue === 'conformes' ? 'Organismes conformes' : 'Responsables de traitement'}
       description={vue === 'conformes'
         ? "Organismes jugés conformes ou partiellement conformes par l'ARTCI au titre de la loi n°2013-450."
-        : "Ensemble des responsables de traitement publiés par l'ARTCI, quel que soit leur niveau de conformité."}
+        : "Ensemble des responsables de traitement recensés par l'ARTCI, quel que soit leur niveau de conformité."}
       actions={
         <>
           <Link to={ROUTES.MAP} className="btn btn-outline py-2 px-4 text-sm">
@@ -248,7 +254,7 @@ export default function ListeEntitesPage() {
       ) : !data || data.items.length === 0 ? (
         <EmptyState
           icon={Building2}
-          title={Object.values(filters).some(Boolean) ? 'Aucun organisme ne correspond' : vue === 'conformes' ? 'Aucun organisme conforme publié pour le moment' : 'Aucun responsable de traitement publié pour le moment'}
+          title={Object.values(filters).some(Boolean) ? 'Aucun organisme ne correspond' : vue === 'conformes' ? 'Aucun organisme conforme publié pour le moment' : 'Aucun responsable de traitement enregistré pour le moment'}
           description={
             Object.values(filters).some(Boolean)
               ? 'Modifiez ou réinitialisez les filtres pour élargir la recherche.'

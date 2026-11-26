@@ -25,8 +25,9 @@ export async function getEntiteDetail(id: string): Promise<EntitePublicDetail> {
   return response.data.data!;
 }
 
-export async function getStats(): Promise<PublicStats> {
-  const response = await apiClient.get<ApiResponse<PublicStats>>('/public/stats');
+/** `registre: 'tous'` : statistiques sur toute la base evaluee (publiee ou non). */
+export async function getStats(params: { registre?: 'tous' } = {}): Promise<PublicStats> {
+  const response = await apiClient.get<ApiResponse<PublicStats>>('/public/stats', { params });
   return response.data.data!;
 }
 
