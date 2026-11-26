@@ -3,6 +3,7 @@ Utilitaires d'export pour ARTCI DCP Platform.
 Génération de fichiers Excel, CSV, PDF à partir des données entités.
 """
 import io
+from xml.sax.saxutils import escape
 from datetime import datetime
 from flask import send_file
 import pandas as pd
@@ -93,15 +94,20 @@ def export_to_pdf(data, filename=None):
         from reportlab.lib.pagesizes import A4, landscape
         from reportlab.lib import colors
         from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-        from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import cm
 
         output = io.BytesIO()
-        doc = SimpleDocTemplate(output, pagesize=landscape(A4))
+        doc = SimpleDocTemplate(
+            output, pagesize=landscape(A4),
+            leftMargin=1.2 * cm, rightMargin=1.2 * cm, topMargin=1.2 * cm, bottomMargin=1.2 * cm,
+            title='ARTCI - Registre des organismes',
+        )
         styles = getSampleStyleSheet()
         elements = []
 
         # Titre
-        elements.append(Paragraph('ARTCI - Entités Conformes', styles['Title']))
+        elements.append(Paragraph('ARTCI - Registre des organismes (protection des DCP)', styles['Title']))
         elements.append(Spacer(1, 20))
         elements.append(Paragraph(
             f'Date d\'export : {datetime.now().strftime("%d/%m/%Y %H:%M")}',
@@ -112,17 +118,26 @@ def export_to_pdf(data, filename=None):
         if data:
             # Colonnes réduites pour le PDF
             cols = ['Entité', 'N° CC', 'Secteur d\'activité', 'Ville', 'Statut conformité', 'DPO']
-            table_data = [cols]
+            # Cellules en Paragraph : le texte long passe a la ligne au lieu de
+            # deborder de la page.
+            cell = ParagraphStyle('cell', parent=styles['Normal'], fontSize=8, leading=10)
+            head = ParagraphStyle('head', parent=cell, fontName='Helvetica-Bold', textColor=colors.white)
+            table_data = [[Paragraph(c, head) for c in cols]]
             for row in data:
-                table_data.append([str(row.get(c, ''))[:40] for c in cols])
+                table_data.append([
+                    Paragraph(escape(str(row.get(c) or '')), cell) for c in cols
+                ])
 
-            table = Table(table_data)
+            largeur = doc.width
+            parts = [0.26, 0.12, 0.20, 0.12, 0.14, 0.16]
+            table = Table(table_data, colWidths=[largeur * p for p in parts], repeatRows=1)
             table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#FF8C00')),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
                 ('FONTSIZE', (0, 0), (-1, 0), 10),
                 ('FONTSIZE', (0, 1), (-1, -1), 8),
                 ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
                 ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F5F5F5')]),
             ]))
             elements.append(table)
