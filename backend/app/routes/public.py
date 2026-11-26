@@ -188,22 +188,10 @@ def export_entites():
     filters = {k: v for k, v in filters.items() if v}
 
     try:
-        file_data = PublicService.export_entites(
+        # Les utilitaires d'export renvoient deja une reponse Flask (send_file).
+        return PublicService.export_entites(
             format_type, filters=filters or None,
             registre_complet=request.args.get('registre') == 'tous',
-        )
-        mime_types = {
-            'excel': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'csv': 'text/csv; charset=utf-8',
-            'pdf': 'application/pdf',
-        }
-        extensions = {'excel': 'xlsx', 'csv': 'csv', 'pdf': 'pdf'}
-
-        return send_file(
-            file_data,
-            mimetype=mime_types.get(format_type, 'application/octet-stream'),
-            as_attachment=True,
-            download_name=f'entites_conformes.{extensions.get(format_type, "xlsx")}'
         )
     except ValueError as e:
         return error_response(str(e), 400)
